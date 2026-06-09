@@ -1,302 +1,535 @@
+import { Icon } from '@/components/ui/icon';
+import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { useUIStore } from '@/store/ui';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Gradients, Shadow } from '@/constants/brand';
-import { api } from '@/lib/api';
-import { Icon } from '@/components/ui/icon';
 
-type Method = 'email' | 'whatsapp';
+const { width } = Dimensions.get('window');
 
-export default function AuthLanding() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const inputRef = useRef<TextInput>(null);
-
-  const [identifier, setIdentifier] = useState('');
-  const [method, setMethod] = useState<Method>('email');
-  const [loading, setLoading] = useState(false);
-
-  const isEmail = identifier.includes('@');
-
-  const handleSendOtp = async () => {
-    if (!identifier.trim() || identifier.trim().length < 3) {
-      Alert.alert('Enter your email or phone number');
-      return;
-    }
-    setLoading(true);
-    try {
-      await api.auth.requestOtp(identifier.trim(), method, 'login');
-      router.push({ pathname: '/(auth)/verify', params: { identifier: identifier.trim(), method } });
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    if (!identifier.trim() || identifier.trim().length < 3) {
-      Alert.alert('Enter your email or phone number');
-      return;
-    }
-    setLoading(true);
-    try {
-      await api.auth.requestOtp(identifier.trim(), method, 'signup');
-      router.push({
-        pathname: '/(auth)/verify',
-        params: { identifier: identifier.trim(), method, mode: 'signup' },
-      });
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === 'web') {
+    return <View style={{ flex: 1 }}>{children}</View>;
+  }
   return (
-    <View style={styles.root}>
-      {/* Gradient background */}
-      <LinearGradient
-        colors={[Colors.oxbloodDeep, Colors.oxblood, Colors.oxblood2]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Logo area */}
-          <View style={styles.logoArea}>
-            <View style={styles.sealCircle}>
-              <Text style={styles.sealText}>RR</Text>
-            </View>
-            <Text style={styles.wordmark}>
-              Richy <Text style={styles.wordmarkItalic}>Reach</Text>
-            </Text>
-            <Text style={styles.tagline}>Where creators get Rich · Brands get Reach</Text>
-          </View>
-
-          {/* Auth card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome back</Text>
-            <Text style={styles.cardSub}>Enter your email or phone to continue</Text>
-
-            {/* Identifier input — tap anywhere in the row to focus */}
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => inputRef.current?.focus()}
-              style={styles.inputWrap}
-            >
-              <Icon name={isEmail ? 'send' : 'mic'} size={18} color={Colors.rose} />
-              <TextInput
-                ref={inputRef}
-                style={styles.input}
-                placeholder="Email or phone number"
-                placeholderTextColor="rgba(63,3,11,0.4)"
-                value={identifier}
-                onChangeText={setIdentifier}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </TouchableOpacity>
-
-            {/* OTP method selector */}
-            <Text style={styles.methodLabel}>Send OTP via</Text>
-            <View style={styles.methodRow}>
-              {(['email', 'whatsapp'] as Method[]).map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => setMethod(m)}
-                  activeOpacity={0.8}
-                  style={[styles.methodBtn, method === m && styles.methodBtnActive]}
-                >
-                  <Icon
-                    name={m === 'email' ? 'send' : 'chat'}
-                    size={16}
-                    color={method === m ? Colors.cream : Colors.oxblood}
-                  />
-                  <Text style={[styles.methodBtnText, method === m && styles.methodBtnTextActive]}>
-                    {m === 'email' ? 'Email' : 'WhatsApp'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* CTA */}
-            <TouchableOpacity
-              onPress={handleSendOtp}
-              activeOpacity={0.85}
-              disabled={loading}
-              style={styles.ctaBtn}
-            >
-              <LinearGradient
-                colors={[Gradients.rose[0], Gradients.rose[1]]}
-                style={styles.ctaBtnInner}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.ctaBtnText}>{loading ? 'Sending…' : 'Send OTP'}</Text>
-                <Icon name="arrow" size={18} color="#fff" />
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Terms */}
-            <Text style={styles.terms}>
-              By continuing you agree to our{' '}
-              <Text style={styles.termsLink}>Terms</Text>
-              {' & '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
-            </Text>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>New to Richy Reach?</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Sign up CTA */}
-          <TouchableOpacity
-            onPress={handleSignUp}
-            activeOpacity={0.8}
-            disabled={loading}
-            style={[styles.signupBtn, loading && { opacity: 0.6 }]}
-          >
-            <Text style={styles.signupBtnText}>Create an account →</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {children}
+    </TouchableWithoutFeedback>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  kav: { flex: 1 },
-  scroll: { paddingHorizontal: 20 },
+export default function AuthScreen() {
+  const router = useRouter();
+  const setSession = useAuthStore((s) => s.setSession);
+  const setRole = useAuthStore((s) => s.setRole);
+  const showModal = useUIStore((s) => s.showModal);
 
-  logoArea: { alignItems: 'center', paddingBottom: 36 },
-  sealCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.rose,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    ...Shadow.button,
-    shadowColor: Colors.rose,
-  },
-  sealText: { fontFamily: FontFamily.serif, fontSize: 28, fontWeight: '700', color: Colors.cream },
-  wordmark: { fontFamily: FontFamily.serif, fontSize: 32, fontWeight: '700', color: Colors.cream, letterSpacing: 0.5 },
-  wordmarkItalic: { fontStyle: 'italic', fontWeight: '500' },
-  tagline: {
-    fontSize: 13,
-    color: 'rgba(232,216,204,0.6)',
-    marginTop: 8,
-    textAlign: 'center',
-    fontFamily: FontFamily.sansMedium,
-  },
+  const [step, setStep] = useState<'request' | 'verify'>('request');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [method, setMethod] = useState<'email' | 'whatsapp'>('email');
+  const [role, setLocalRole] = useState<'influencer' | 'brand'>('influencer');
 
-  card: { backgroundColor: Colors.creamLite, borderRadius: 28, padding: 24, ...Shadow.tab },
-  cardTitle: { fontFamily: FontFamily.serif, fontSize: 26, fontWeight: '700', color: Colors.ink, marginBottom: 4 },
-  cardSub: {
-    fontSize: 14,
-    color: 'rgba(63,3,11,0.55)',
-    marginBottom: 22,
-    fontFamily: FontFamily.sansMedium,
-  },
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(63,3,11,0.1)',
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.ink,
-    fontFamily: FontFamily.sansMedium,
-    paddingVertical: 0,
-  },
+  const otpInputRef = useRef<TextInput>(null);
 
-  methodLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(63,3,11,0.55)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  methodRow: { flexDirection: 'row', gap: 10, marginBottom: 22 },
-  methodBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    backgroundColor: 'rgba(63,3,11,0.07)',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  methodBtnActive: { backgroundColor: Colors.oxblood, borderColor: Colors.oxblood },
-  methodBtnText: { fontFamily: FontFamily.sans, fontSize: 13, fontWeight: '700', color: Colors.oxblood },
-  methodBtnTextActive: { color: Colors.cream },
+  // Animations for toggles
+  const modeAnim = useRef(new Animated.Value(mode === 'login' ? 0 : 1)).current;
+  const roleAnim = useRef(new Animated.Value(role === 'influencer' ? 0 : 1)).current;
+  const methodAnim = useRef(new Animated.Value(method === 'email' ? 0 : 1)).current;
 
-  ctaBtn: { borderRadius: 16, overflow: 'hidden', ...Shadow.button, shadowColor: Colors.roseDeep },
-  ctaBtnInner: { height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  ctaBtnText: { fontFamily: FontFamily.sans, fontSize: 16, fontWeight: '800', color: '#fff' },
+  useEffect(() => {
+    Animated.timing(modeAnim, {
+      toValue: mode === 'login' ? 0 : 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [mode]);
 
-  terms: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: 'rgba(63,3,11,0.45)',
-    marginTop: 16,
-    lineHeight: 18,
-  },
-  termsLink: { color: Colors.rose, fontWeight: '700' },
+  useEffect(() => {
+    Animated.timing(roleAnim, {
+      toValue: role === 'influencer' ? 0 : 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [role]);
 
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(232,216,204,0.25)' },
-  dividerText: { fontSize: 13, color: 'rgba(232,216,204,0.55)', fontFamily: FontFamily.sansMedium },
+  useEffect(() => {
+    Animated.timing(methodAnim, {
+      toValue: method === 'email' ? 0 : 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [method]);
 
-  signupBtn: {
-    alignSelf: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(232,216,204,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-  },
-  signupBtnText: { fontFamily: FontFamily.sans, fontWeight: '700', fontSize: 14, color: Colors.cream },
-});
+  const getIdentifier = () => {
+    return method === 'email' ? email.trim() : phone.trim();
+  };
+
+  const handleRequestOtp = async () => {
+    const identifier = getIdentifier();
+
+    // Basic Validations
+    if (mode === 'signup' && name.trim().length < 2) {
+      showModal({
+        title: 'Validation Error',
+        message: 'Please enter your full name (minimum 2 characters).',
+      });
+      return;
+    }
+
+    if (!identifier) {
+      showModal({
+        title: 'Input Required',
+        message: `Please enter your ${method === 'email' ? 'email address' : 'WhatsApp number'} to continue.`,
+      });
+      return;
+    }
+
+    if (method === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(identifier)) {
+        showModal({
+          title: 'Invalid Email',
+          message: 'Please enter a valid email address.',
+        });
+        return;
+      }
+    } else {
+      // WhatsApp phone validation (allow digits, plus, min 10 chars)
+      const phoneDigits = identifier.replace(/[^0-9]/g, '');
+      if (phoneDigits.length < 10) {
+        showModal({
+          title: 'Invalid Phone Number',
+          message: 'Please enter a valid phone number (minimum 10 digits).',
+        });
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      await api.auth.requestOtp(identifier, method, mode);
+      setStep('verify');
+      setOtp(''); // Clear previous OTP entry if any
+    } catch (err: any) {
+      showModal({
+        title: 'Request Failed',
+        message: err?.message || 'Failed to send verification code. Please check your details and try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const identifier = getIdentifier();
+
+    if (otp.length !== 6) {
+      showModal({
+        title: 'Verification Code Required',
+        message: 'Please enter the complete 6-digit OTP sent to you.',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await api.auth.verifyOtp(identifier, otp, role, mode === 'signup' ? name : undefined);
+
+      // Update local role and session
+      setRole(role);
+      await setSession(data as any);
+
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      showModal({
+        title: 'Verification Failed',
+        message: err?.message || 'The OTP entered is incorrect or has expired. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const codeArray = Array(6).fill(0);
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: 'rgba(244,236,228,0.9)' }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <PageWrapper>
+          <View className="flex-1 justify-center px-8 py-10">
+
+            {step === 'request' ? (
+              <>
+                {/* Header / Logo */}
+                <View className="items-center mb-8">
+                  <Image
+                    source={require('@/assets/images/richyreach-logo.png')}
+                    style={{ width: 100, height: 100 }}
+                    contentFit="cover"
+                  />
+                  <Text style={{ fontFamily: FontFamily.serif, fontSize: 36, color: Colors.ink, textAlign: 'center', lineHeight: 42 }}>
+                    RichyReach
+                  </Text>
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.rose, marginTop: 8, textAlign: 'center' }}>
+                    Where creators get <Text style={{ fontStyle: 'italic', fontWeight: 'bold' }}>Rich</Text>, and brands get <Text style={{ fontStyle: 'italic', fontWeight: 'bold' }}>Reach</Text>.
+                  </Text>
+                </View>
+
+                {/* Login / Signup Selector */}
+                <View className="flex-row mb-6 relative w-56 self-center">
+                  <Animated.View
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: modeAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] }),
+                      width: '50%',
+                      height: 2,
+                      backgroundColor: Colors.oxblood,
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setMode('login')}
+                    className="flex-1 py-2 items-center"
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{
+                      fontFamily: mode === 'login' ? FontFamily.sans : FontFamily.sansMedium,
+                      color: mode === 'login' ? Colors.oxblood : 'rgba(63,3,11,0.4)',
+                      fontSize: 16
+                    }}>
+                      Log In
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setMode('signup')}
+                    className="flex-1 py-2 items-center"
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{
+                      fontFamily: mode === 'signup' ? FontFamily.sans : FontFamily.sansMedium,
+                      color: mode === 'signup' ? Colors.oxblood : 'rgba(63,3,11,0.4)',
+                      fontSize: 16
+                    }}>
+                      Sign Up
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Role Toggle */}
+                <View className="mb-6 bg-white rounded-full p-1.5" style={Shadow.card}>
+                  <View className="flex-row relative">
+                    <Animated.View
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: roleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] }),
+                        width: '50%',
+                        backgroundColor: Colors.oxblood,
+                        borderRadius: 999,
+                      }}
+                    />
+                    <TouchableOpacity
+                      className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                      onPress={() => setLocalRole('influencer')}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="sparkle" size={16} color={role === 'influencer' ? Colors.cream : Colors.oxblood} />
+                      <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'influencer' ? Colors.cream : Colors.oxblood }}>Creator</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                      onPress={() => setLocalRole('brand')}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="briefcase" size={16} color={role === 'brand' ? Colors.cream : Colors.oxblood} />
+                      <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'brand' ? Colors.cream : Colors.oxblood }}>Brand</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Method Selector (Email vs WhatsApp) */}
+                <View className="mb-6 bg-white rounded-xl p-1" style={Shadow.card}>
+                  <View className="flex-row relative">
+                    <Animated.View
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: methodAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] }),
+                        width: '50%',
+                        backgroundColor: Colors.rose,
+                        borderRadius: 8,
+                      }}
+                    />
+                    <TouchableOpacity
+                      className="flex-1 py-2.5 rounded-lg items-center justify-center flex-row z-10"
+                      onPress={() => setMethod('email')}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="mail" size={16} color={method === 'email' ? '#fff' : Colors.rose} />
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, marginLeft: 6, color: method === 'email' ? '#fff' : Colors.rose }}>Email OTP</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 py-2.5 rounded-lg items-center justify-center flex-row z-10"
+                      onPress={() => setMethod('whatsapp')}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="phone" size={16} color={method === 'whatsapp' ? '#fff' : Colors.rose} />
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, marginLeft: 6, color: method === 'whatsapp' ? '#fff' : Colors.rose }}>WhatsApp OTP</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Form Input Fields */}
+                <View className="gap-4 mb-8">
+                  {mode === 'signup' && (
+                    <View>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Full Name</Text>
+                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                        <Icon name="user" size={18} color={Colors.rose} />
+                        <TextInput
+                          className="flex-1 ml-3 h-full"
+                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          placeholder="Enter your name"
+                          placeholderTextColor="rgba(63,3,11,0.3)"
+                          value={name}
+                          onChangeText={setName}
+                          autoCapitalize="words"
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {method === 'email' ? (
+                    <View>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Email Address</Text>
+                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                        <Icon name="mail" size={18} color={Colors.rose} />
+                        <TextInput
+                          className="flex-1 ml-3 h-full"
+                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          placeholder="Enter your email"
+                          placeholderTextColor="rgba(63,3,11,0.3)"
+                          value={email}
+                          onChangeText={setEmail}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <View>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>WhatsApp Number</Text>
+                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                        <Icon name="phone" size={18} color={Colors.rose} />
+                        <TextInput
+                          className="flex-1 ml-3 h-full"
+                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          placeholder="+91 XXXXX XXXXX"
+                          placeholderTextColor="rgba(63,3,11,0.3)"
+                          value={phone}
+                          onChangeText={setPhone}
+                          keyboardType="phone-pad"
+                          autoCapitalize="none"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Action Button */}
+                <TouchableOpacity
+                  onPress={handleRequestOtp}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                  style={[Shadow.button, { borderRadius: Radius.xl }]}
+                >
+                  <LinearGradient
+                    colors={[Colors.oxblood, Colors.oxbloodDeep]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ paddingVertical: 18, borderRadius: Radius.xl, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color={Colors.cream} />
+                    ) : (
+                      <>
+                        <Text style={{ fontFamily: FontFamily.sans, fontSize: 16, color: Colors.cream, marginRight: 8, letterSpacing: 0.5 }}>
+                          Send Verification Code
+                        </Text>
+                        <Icon name="arrow" size={18} color={Colors.cream} />
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <View className="items-center mt-8">
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', textAlign: 'center', lineHeight: 18 }}>
+                    By continuing, you agree to RichyReach's{'\n'}
+                    <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Terms of Service</Text> and <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Privacy Policy</Text>
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Back Button */}
+                <TouchableOpacity
+                  onPress={() => setStep('request')}
+                  className="absolute top-12 left-6 p-2 rounded-full bg-white/40"
+                  style={Shadow.card}
+                >
+                  <Icon name="back" size={20} color={Colors.oxblood} />
+                </TouchableOpacity>
+
+                {/* Verification Header */}
+                <View className="items-center mb-8">
+                  <View className="w-16 h-16 bg-white rounded-full items-center justify-center mb-6" style={Shadow.card}>
+                    <Icon name={method === 'email' ? 'mail' : 'phone'} size={28} color={Colors.rose} />
+                  </View>
+                  <Text style={{ fontFamily: FontFamily.serif, fontSize: 32, color: Colors.ink, textAlign: 'center', lineHeight: 38 }}>
+                    Verify Your Account
+                  </Text>
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.rose, marginTop: 12, textAlign: 'center', lineHeight: 20, paddingHorizontal: 12 }}>
+                    We've sent a 6-digit OTP code to{'\n'}
+                  <Text style={{ fontWeight: 'bold', color: Colors.oxblood }}>{getIdentifier()}</Text>
+                  </Text>
+                </View>
+
+                {/* OTP Box Inputs */}
+                <View className="items-center w-full">
+                  <View style={{ position: 'relative', width: '100%', height: 64, marginVertical: 24 }}>
+                    {/* The OTP Box display */}
+                    <View className="flex-row justify-between w-full h-full px-1" pointerEvents="none">
+                      {codeArray.map((_, index) => {
+                        const char = otp[index] || '';
+                        const isFocused = otp.length === index;
+                        return (
+                          <View
+                            key={index}
+                            className="w-[44px] h-16 bg-white rounded-2xl items-center justify-center border"
+                            style={[
+                              Shadow.card,
+                              {
+                                borderColor: isFocused ? Colors.oxblood : 'rgba(63,3,11,0.06)',
+                                borderWidth: isFocused ? 2 : 1
+                              }
+                            ]}
+                          >
+                            <Text style={{ fontFamily: FontFamily.serif, fontSize: 24, fontWeight: '700', color: Colors.ink }}>
+                              {char}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* The hidden text input overlaying the boxes */}
+                    <TextInput
+                      ref={otpInputRef}
+                      value={otp}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9]/g, '').slice(0, 6);
+                        setOtp(cleaned);
+                      }}
+                      keyboardType="number-pad"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        opacity: 0.01,
+                        fontSize: 18,
+                        color: 'transparent',
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {})
+                      } as any}
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </View>
+                </View>
+
+                {/* Verify Button */}
+                <TouchableOpacity
+                  onPress={handleVerifyOtp}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                  style={[Shadow.button, { borderRadius: Radius.xl }]}
+                  className="mt-6"
+                >
+                  <LinearGradient
+                    colors={[Colors.oxblood, Colors.oxbloodDeep]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ paddingVertical: 18, borderRadius: Radius.xl, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color={Colors.cream} />
+                    ) : (
+                      <>
+                        <Text style={{ fontFamily: FontFamily.sans, fontSize: 16, color: Colors.cream, marginRight: 8, letterSpacing: 0.5 }}>
+                          Verify & Login
+                        </Text>
+                        <Icon name="check" size={18} color={Colors.cream} />
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Resend Actions */}
+                <View className="flex-row justify-center mt-8 items-center">
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 13, color: 'rgba(63,3,11,0.5)' }}>
+                    Didn't receive the code?
+                  </Text>
+                  <TouchableOpacity onPress={handleRequestOtp} disabled={loading}>
+                    <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, color: Colors.roseDeep, marginLeft: 6, fontWeight: '700' }}>
+                      Resend OTP
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+          </View>
+        </PageWrapper>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}

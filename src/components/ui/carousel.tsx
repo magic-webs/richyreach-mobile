@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
+import ReanimatedCarousel from 'react-native-reanimated-carousel';
 import { Colors } from '@/constants/brand';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -11,59 +12,44 @@ interface CarouselProps {
   autoInterval?: number;
 }
 
-export function Carousel({ slides, height = 200, dotColor = Colors.cream, autoInterval = 4200 }: CarouselProps) {
+export function Carousel({
+  slides,
+  height = 200,
+  dotColor = Colors.cream,
+  autoInterval = 4200,
+}: CarouselProps) {
   const [index, setIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
-  const n = slides.length;
-
-  const goTo = useCallback((i: number) => {
-    setIndex(i);
-    scrollRef.current?.scrollTo({ x: i * SCREEN_W, animated: true });
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      goTo((index + 1) % n);
-    }, autoInterval);
-    return () => clearInterval(timer);
-  }, [index, n, goTo, autoInterval]);
-
-  const onMomentumEnd = (e: any) => {
-    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-    setIndex(newIndex);
-  };
+  const slideWidth = SCREEN_W - 36;
 
   return (
-    <View style={[styles.wrapper, { height, borderRadius: 24 }]}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onMomentumEnd}
-        scrollEventThrottle={16}
-        style={styles.scroll}
-      >
-        {slides.map((slide, k) => (
-          <View key={k} style={{ width: SCREEN_W - 36, height }}>
-            {slide}
-          </View>
-        ))}
-      </ScrollView>
+    <View style={[styles.wrapper, { height }]}>
+      <ReanimatedCarousel
+        loop
+        width={slideWidth}
+        height={height}
+        autoPlay={true}
+        autoPlayInterval={autoInterval}
+        scrollAnimationDuration={700}
+        data={slides}
+        onSnapToItem={setIndex}
+        renderItem={({ item }) => (
+          <View style={{ width: slideWidth, height }}>{item}</View>
+        )}
+      />
 
-      <View style={styles.dots}>
+      <View style={styles.dots} pointerEvents="none">
         {slides.map((_, k) => (
-          <TouchableOpacity key={k} onPress={() => goTo(k)}>
-            <View
-              style={[
-                styles.dot,
-                {
-                  width: k === index ? 22 : 6,
-                  backgroundColor: k === index ? dotColor : 'rgba(232,216,204,0.4)',
-                },
-              ]}
-            />
-          </TouchableOpacity>
+          <View
+            key={k}
+            style={[
+              styles.dot,
+              {
+                width: k === index ? 22 : 6,
+                backgroundColor:
+                  k === index ? dotColor : 'rgba(232,216,204,0.4)',
+              },
+            ]}
+          />
         ))}
       </View>
     </View>
@@ -74,9 +60,7 @@ const styles = StyleSheet.create({
   wrapper: {
     overflow: 'hidden',
     position: 'relative',
-  },
-  scroll: {
-    flex: 1,
+    borderRadius: 24,
   },
   dots: {
     position: 'absolute',

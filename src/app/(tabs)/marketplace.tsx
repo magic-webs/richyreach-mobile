@@ -45,8 +45,14 @@ export default function MarketplaceScreen() {
           }));
           setCampaignList(mapped);
         }
-      } catch (err) {
-        console.error("Failed to load campaigns on MarketplaceScreen:", err);
+      } catch (err: any) {
+        // Silently fall back to mock data for auth/role errors — no console noise
+        const msg: string = err?.message ?? '';
+        const isPermissionError = msg.includes('Forbidden') || msg.includes('401') || msg.includes('403');
+        if (!isPermissionError) {
+          console.warn("MarketplaceScreen: could not load live campaigns, showing mock data.", err);
+        }
+        // campaignList already initialized with mock campaigns — nothing to do
       }
     };
     fetchCampaigns();

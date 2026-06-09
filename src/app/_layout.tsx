@@ -15,10 +15,14 @@ import {
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { getToken } from '@/lib/storage';
+import { getOnboardingSeen, getToken } from '@/lib/storage';
+import { SplashLoader } from '@/components/splash-loader';
+import { ActionModal } from '@/components/ui/action-modal';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,11 +32,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const session = useAuthStore((s) => s.session);
   const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const onboardingSeen = useAuthStore((s) => s.onboardingSeen);
 
   useEffect(() => {
     (async () => {
       try {
-        const token = await getToken();
+        const [token, seen] = await Promise.all([getToken(), getOnboardingSeen()]);
+        useAuthStore.setState({ onboardingSeen: seen });
         if (token) {
           const data = await api.auth.session() as any;
           if (data && data.user) {
@@ -46,6 +52,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error("Failed to restore session:", err);
+        useAuthStore.setState({ onboardingSeen: false });
       } finally {
         useAuthStore.setState({ isLoading: false });
       }
@@ -53,14 +60,44 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || onboardingSeen === null) return;
     const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth) {
-      router.replace('/(auth)');
-    } else if (session && inAuth) {
-      router.replace('/(tabs)');
+    const inOnboarding = inAuth && segments[1] === 'onboarding';
+
+    if (!session) {
+      if (!onboardingSeen) {
+        if (!inOnboarding) {
+          router.replace('/(auth)/onboarding');
+        }
+      } else {
+        if (!inAuth || inOnboarding) {
+          router.replace('/(auth)');
+        }
+      }
+    } else {
+      if (inAuth) {
+        router.replace('/(tabs)');
+      }
     }
-  }, [session, segments, isLoading]);
+  }, [session, segments, isLoading, onboardingSeen]);
+
+  const isAllowed = React.useMemo(() => {
+    if (isLoading || onboardingSeen === null) return false;
+    const inAuth = segments[0] === '(auth)';
+    const inOnboarding = inAuth && segments[1] === 'onboarding';
+
+    if (!session) {
+      if (!onboardingSeen) {
+        return inOnboarding;
+      } else {
+        return inAuth && !inOnboarding;
+      }
+    } else {
+      return !inAuth;
+    }
+  }, [session, segments, isLoading, onboardingSeen]);
+
+  if (!isAllowed) return <SplashLoader />;
 
   return <>{children}</>;
 }
@@ -78,10 +115,15 @@ export default function RootLayout() {
   if (!bodoniLoaded || !montserratLoaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <AuthGuard>
-        <Slot />
-      </AuthGuard>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <AuthGuard>
+            <Slot />
+            <ActionModal />
+          </AuthGuard>
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

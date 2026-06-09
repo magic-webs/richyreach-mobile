@@ -150,6 +150,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const role = useAuthStore((s) => s.role);
   const setRole = useAuthStore((s) => s.setRole);
+  const session = useAuthStore((s) => s.session);
+  const logout = useAuthStore((s) => s.logout);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('Portfolio');
   const [sheet, setSheet] = useState<SheetType>(null);
@@ -206,8 +208,8 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.name}>{acct.name}</Text>
-                {acct.verified && <Icon name="verified" size={18} color={Colors.rose} />}
+                <Text style={styles.name}>{session?.user?.name || acct.name}</Text>
+                {(session?.user?.verified ?? acct.verified) && <Icon name="verified" size={18} color={Colors.rose} />}
               </View>
               <Text style={styles.handle}>{acct.handle} · {acct.kind}</Text>
             </View>
@@ -320,6 +322,18 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={() => setAccountSheetOpen(true)} style={styles.switchAccountBtn} activeOpacity={0.8}>
               <Icon name="swap" size={18} color={Colors.oxblood} />
               <Text style={styles.switchAccountText}>Switch or add account</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={async () => {
+                await logout();
+                router.replace('/(auth)');
+              }} 
+              style={[styles.switchAccountBtn, { borderColor: 'rgba(255,59,48,0.3)', marginTop: 8 }]} 
+              activeOpacity={0.8}
+            >
+              <Icon name="logout" size={18} color="#FF3B30" />
+              <Text style={[styles.switchAccountText, { color: '#FF3B30' }]}>Logout</Text>
             </TouchableOpacity>
           </View>
         </View>

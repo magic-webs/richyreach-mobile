@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "richyreach-mobile",
-    "slug": "richyreach-mobile",
+    "name": "richyreach",
+    "slug": "richyreach",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.abhijit969.richyreach"
     },
     "web": {
       "output": "static",
@@ -35,11 +36,18 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "532be49c-1dd3-47da-bbca-d4176e64aedf"
+      }
     }
   }
 }

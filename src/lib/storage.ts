@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const TOKEN_KEY = 'rr_session_token';
+const ONBOARDING_KEY = 'rr_onboarding_seen';
 
 export async function saveToken(token: string) {
   if (Platform.OS === 'web') {
@@ -23,5 +24,21 @@ export async function deleteToken() {
     localStorage.removeItem(TOKEN_KEY);
   } else {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+  }
+}
+
+export async function getOnboardingSeen(): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    return !!localStorage.getItem(ONBOARDING_KEY);
+  }
+  const val = await SecureStore.getItemAsync(ONBOARDING_KEY);
+  return val === 'true';
+}
+
+export async function setOnboardingSeen() {
+  if (Platform.OS === 'web') {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+  } else {
+    await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
   }
 }

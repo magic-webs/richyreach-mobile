@@ -1,13 +1,12 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { GlassView } from 'expo-glass-effect';
-import Animated, { FadeIn, FadeOut, FadeInRight, FadeOutLeft, LinearTransition } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { FloatingChatButton } from '@/components/floating-chat-button';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TABS = [
   { key: 'index', icon: 'home', label: 'Home' },
@@ -16,56 +15,113 @@ const TABS = [
   { key: 'profile', icon: 'user', label: 'Profile' },
 ] as const;
 
-function CustomTabBar({ state, descriptors, navigation }: any) {
+interface TabBarItemProps {
+  tab: typeof TABS[number];
+  on: boolean;
+  navigation: any;
+}
+
+function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
+  const progress = useSharedValue(on ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(on ? 1 : 0, {
+      duration: 250,
+      easing: Easing.bezier(0.25, 1, 0.5, 1),
+    });
+  }, [on, progress]);
+
+  const animatedItemStyle = useAnimatedStyle(() => {
+    return {
+      flex: 1 + progress.value * 1.2,
+    };
+  });
+
+  const animatedBgStyle = useAnimatedStyle(() => {
+    return {
+      opacity: progress.value,
+      transform: [
+        { scale: 0.95 + 0.05 * progress.value },
+      ],
+    };
+  });
+
+  const animatedIconActiveStyle = useAnimatedStyle(() => {
+    return {
+      opacity: progress.value,
+      transform: [{ scale: 0.5 + 0.5 * progress.value }],
+    };
+  });
+
+  const animatedIconInactiveStyle = useAnimatedStyle(() => {
+    return {
+      opacity: 1 - progress.value,
+      transform: [{ scale: 1 - 0.2 * progress.value }],
+    };
+  });
+
+  const animatedLabelStyle = useAnimatedStyle(() => {
+    return {
+      opacity: progress.value,
+      maxWidth: progress.value * 90,
+      marginLeft: progress.value * 8,
+      transform: [
+        { translateX: (1 - progress.value) * -10 }
+      ]
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.tabItem, animatedItemStyle]}>
+      {/* Background Pill */}
+      <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]} pointerEvents="none">
+        <GradientView variant="oxblood" style={styles.tabGradientAbsolute} />
+      </Animated.View>
+
+      {/* Button for touch interaction */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate(tab.key)}
+        activeOpacity={0.7}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Content */}
+      <View style={styles.contentContainer} pointerEvents="none">
+        <View style={styles.iconWrapper}>
+          <Animated.View style={[styles.absoluteIcon, animatedIconActiveStyle]}>
+            <Icon name={tab.icon} size={22} color={Colors.cream} />
+          </Animated.View>
+          <Animated.View style={[styles.absoluteIcon, animatedIconInactiveStyle]}>
+            <Icon name={tab.icon} size={22} color="rgba(63, 3, 11, 0.69)" />
+          </Animated.View>
+        </View>
+
+        <Animated.View style={[styles.labelWrapper, animatedLabelStyle]}>
+          <Animated.Text numberOfLines={1} style={styles.tabLabelActive}>
+            {tab.label}
+          </Animated.Text>
+        </Animated.View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const activeIdx = state.index;
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBar}>
-        <GlassView style={StyleSheet.absoluteFill} glassEffectStyle="regular" pointerEvents="none" />
-        <View style={styles.glassShine} pointerEvents="none" />
         {TABS.map((tab, i) => {
           const on = i === activeIdx;
           return (
-            <Animated.View
+            <TabBarItem
               key={tab.key}
-              layout={LinearTransition.springify().mass(0.8).damping(16).stiffness(150)}
-              style={[styles.tabItem, on && styles.tabItemActive]}
-            >
-              <TouchableOpacity
-                onPress={() => navigation.navigate(tab.key)}
-                activeOpacity={0.8}
-                style={StyleSheet.absoluteFill}
-              />
-              {on ? (
-                <Animated.View
-                  entering={FadeIn.duration(200)}
-                  exiting={FadeOut.duration(150)}
-                  pointerEvents="none"
-                  style={styles.activeContainer}
-                >
-                  <GradientView variant="oxblood" style={styles.tabGradient}>
-                    <Icon name={tab.icon} size={22} color={Colors.cream} />
-                    <Animated.Text
-                      entering={FadeInRight.delay(60).duration(200)}
-                      exiting={FadeOutLeft.duration(120)}
-                      style={styles.tabLabelActive}
-                    >
-                      {tab.label}
-                    </Animated.Text>
-                  </GradientView>
-                </Animated.View>
-              ) : (
-                <Animated.View
-                  entering={FadeIn.duration(200)}
-                  exiting={FadeOut.duration(150)}
-                  pointerEvents="none"
-                >
-                  <Icon name={tab.icon} size={22} color="rgba(63,3,11,0.5)" />
-                </Animated.View>
-              )}
-            </Animated.View>
+              tab={tab}
+              on={on}
+              navigation={navigation}
+            />
           );
         })}
       </View>
@@ -105,62 +161,58 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 14,
     paddingTop: 8,
-    backgroundColor: 'transparent',
-    zIndex: 20,
+    backgroundColor: 'transparent'
   },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 7,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     ...Shadow.tab,
     borderWidth: 0.8,
     borderColor: 'rgba(255,255,255,0.65)',
     overflow: 'hidden',
   },
-  glassShine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: 'rgba(255,255,255,0.45)',
-    borderBottomLeftRadius: 50,
-    borderBottomRightRadius: 50,
-  },
   tabItem: {
     height: 48,
-    paddingHorizontal: 16,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 7,
   },
-  tabItemActive: {
-    flex: 1,
-    borderRadius: 22,
-  },
-  activeContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    height: '100%',
-    alignItems: 'center',
-  },
-  tabGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingHorizontal: 18,
-    height: 48,
+  tabGradientAbsolute: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     borderRadius: 22,
     ...Shadow.button,
     shadowColor: Colors.oxblood,
     shadowOpacity: 0.55,
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    zIndex: 1,
+  },
+  iconWrapper: {
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  absoluteIcon: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelWrapper: {
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
   tabLabelActive: {
     fontFamily: FontFamily.sans,

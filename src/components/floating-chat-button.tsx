@@ -1,7 +1,6 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Shadow } from '@/constants/brand';
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GradientView } from './ui/gradient-view';
 import { Icon } from './ui/icon';
 
@@ -15,10 +14,10 @@ export function FloatingChatButton() {
     >
       <GradientView variant="rose" style={styles.btn}>
         <Icon name="chat" size={25} color="#fff" />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>3</Text>
-        </View>
       </GradientView>
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>3</Text>
+      </View>
     </TouchableOpacity>
   );
 }

@@ -11,6 +11,7 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
+import { useUIStore } from '@/store/ui';
 
 export default function CollabDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,26 +28,31 @@ export default function CollabDetail() {
       if (!id) return;
       try {
         const c = await api.campaigns.get(id) as any;
-        if (active && c) {
-          setCm({
-            id: c.id,
-            brand: c.brandName || c.brand?.companyName || "Richy Brand",
-            cat: c.campaignType || c.category || "General",
-            verified: c.verified || c.brand?.verified || false,
-            title: c.title,
-            budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
-            deadline: c.deadline || '5 days left',
-            applicants: c.applicants || 0,
-            tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-            about: c.description || c.about,
-            deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
-            platform: c.platform || 'Instagram',
-            type: c.campaignType || '1 Reel',
-            followers: c.followers || '10k+',
-          });
+        if (active && c && !Array.isArray(c)) {
+          setCm((prev: any) => ({
+            ...prev,
+            id: c.id ?? prev.id,
+            brand: c.brandName || c.brand?.companyName || prev.brand,
+            cat: c.campaignType || c.category || prev.cat,
+            verified: c.verified ?? c.brand?.verified ?? prev.verified,
+            title: c.title || prev.title,
+            budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || prev.budget),
+            deadline: c.deadline || prev.deadline,
+            applicants: c.applicants || prev.applicants,
+            tone: c.tone || prev.tone,
+            about: c.description || c.about || prev.about,
+            deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : prev.deliverables,
+            platform: c.platform || prev.platform,
+            type: c.campaignType || prev.type,
+            followers: c.followers || prev.followers,
+          }));
         }
-      } catch (err) {
-        console.error("Failed to load campaign detail from backend:", err);
+      } catch (err: any) {
+        const msg: string = err?.message ?? '';
+        if (!msg.includes('Forbidden') && !msg.includes('401') && !msg.includes('403')) {
+          console.error("Failed to load campaign detail from backend:", err);
+        }
+        // campaign already seeded from mock via router params — no action needed
       }
     };
     loadDetail();
@@ -55,7 +61,7 @@ export default function CollabDetail() {
 
   const handleApply = async () => {
     if (role !== 'influencer') {
-      Alert.alert('Info', 'Only influencers can apply to campaigns');
+      useUIStore.getState().showModal({ title: 'Info', message: 'Only influencers can apply to campaigns' });
       return;
     }
     if (applied) return;
@@ -63,9 +69,9 @@ export default function CollabDetail() {
     try {
       await api.influencers.apply(id);
       setApplied(true);
-      Alert.alert('Success', 'Application submitted successfully!');
+      useUIStore.getState().showModal({ title: 'Success', message: 'Application submitted successfully!' });
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to submit application');
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit application' });
     } finally {
       setLoading(false);
     }
@@ -89,7 +95,7 @@ export default function CollabDetail() {
             style={styles.heroOverlay}
           />
           {/* Top nav */}
-          <View style={[styles.heroNav, { top: 56 + insets.top }]}>
+          <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
               <Icon name="back" size={22} color={Colors.oxblood} />
             </TouchableOpacity>

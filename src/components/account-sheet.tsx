@@ -1,8 +1,14 @@
-import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  type BottomSheetBackdropProps,
+  type BottomSheetBackgroundProps,
+} from '@gorhom/bottom-sheet';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import type { Account } from '@/types';
-import { GradientView } from './ui/gradient-view';
 import { Icon } from './ui/icon';
 import { PlaceholderImage } from './ui/placeholder-image';
 
@@ -15,17 +21,70 @@ interface AccountSheetProps {
   onAddAccount?: () => void;
 }
 
-export function AccountSheet({ visible, accounts, currentId, onSelect, onClose, onAddAccount }: AccountSheetProps) {
+function CustomBackground({ style }: BottomSheetBackgroundProps) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.backdrop} />
-      </TouchableWithoutFeedback>
+    <View
+      style={[
+        style as object,
+        {
+          backgroundColor: Colors.creamLite,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+        },
+      ]}
+    />
+  );
+}
 
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+export function AccountSheet({
+  visible,
+  accounts,
+  currentId,
+  onSelect,
+  onClose,
+  onAddAccount,
+}: AccountSheetProps) {
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const snaps = useMemo(() => ['50%', '75%'], []);
+
+  useEffect(() => {
+    if (visible) {
+      sheetRef.current?.present();
+    } else {
+      sheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.45}
+        style={[props.style, { backgroundColor: 'rgba(42,2,7,0.45)' }]}
+      />
+    ),
+    []
+  );
+
+  return (
+    <BottomSheetModal
+      ref={sheetRef}
+      snapPoints={snaps}
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      backgroundComponent={CustomBackground}
+      handleStyle={styles.handleContainer}
+      handleIndicatorStyle={styles.handleBar}
+      enableDynamicSizing={false}
+    >
+      <BottomSheetScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Your accounts</Text>
-        <Text style={styles.sub}>Switch between creator & brand profiles</Text>
+        <Text style={styles.sub}>Switch between creator &amp; brand profiles</Text>
 
         <View style={styles.list}>
           {accounts.map((a) => {
@@ -43,7 +102,9 @@ export function AccountSheet({ visible, accounts, currentId, onSelect, onClose, 
                     <Text style={styles.accountName}>{a.name}</Text>
                     {a.verified && <Icon name="verified" size={14} color={Colors.rose} />}
                   </View>
-                  <Text style={styles.accountMeta}>{a.handle} · {a.followers} · {a.kind}</Text>
+                  <Text style={styles.accountMeta}>
+                    {a.handle} · {a.followers} · {a.kind}
+                  </Text>
                 </View>
                 <View style={[styles.radio, on && styles.radioActive]}>
                   {on && <Icon name="check" size={15} color={Colors.cream} />}
@@ -53,32 +114,35 @@ export function AccountSheet({ visible, accounts, currentId, onSelect, onClose, 
           })}
         </View>
 
-        <TouchableOpacity onPress={onAddAccount ?? onClose} activeOpacity={0.7} style={styles.addBtn}>
+        <TouchableOpacity
+          onPress={onAddAccount ?? onClose}
+          activeOpacity={0.7}
+          style={styles.addBtn}
+        >
           <Icon name="plus" size={18} color={Colors.oxblood} />
           <Text style={styles.addBtnText}>Add another account</Text>
         </TouchableOpacity>
-      </View>
-    </Modal>
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(42,2,7,0.45)' },
-  sheet: {
+  handleContainer: {
     backgroundColor: Colors.creamLite,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 18,
-    paddingBottom: 34,
-    ...Shadow.tab,
+    paddingTop: 10,
   },
-  handle: {
+  handleBar: {
+    backgroundColor: 'rgba(63,3,11,0.2)',
     width: 40,
     height: 5,
-    borderRadius: 99,
-    backgroundColor: 'rgba(63,3,11,0.18)',
-    alignSelf: 'center',
-    marginBottom: 16,
+  },
+  content: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    paddingTop: 8,
   },
   title: {
     fontFamily: FontFamily.serif,
