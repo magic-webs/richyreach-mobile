@@ -1,14 +1,14 @@
+import { GradientView } from '@/components/ui/gradient-view';
+import { Icon } from '@/components/ui/icon';
+import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { campaigns } from '@/data/mock';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { api } from '@/lib/api';
-import { campaigns } from '@/data/mock';
-import { useAuthStore } from '@/store/auth';
-import { GradientView } from '@/components/ui/gradient-view';
-import { Icon } from '@/components/ui/icon';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
 
 const CATS = ['All', 'Beauty', 'Fashion', 'Tech', 'Fitness', 'Luxury'];
 
@@ -24,7 +24,7 @@ export default function MarketplaceScreen() {
     const fetchCampaigns = async () => {
       try {
         let res: any[] = [];
-        if (role === 'brand') {
+        if ((role as string) === 'brand') {
           res = await api.campaigns.list() as any[];
         } else {
           res = await api.influencers.marketplace() as any[];
@@ -70,7 +70,7 @@ export default function MarketplaceScreen() {
             <Icon name="briefcase" size={23} color={Colors.cream} />
           </GradientView>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerEye}>{role === 'brand' ? 'Find your creator' : 'Discover collabs'}</Text>
+            <Text style={styles.headerEye}>{(role as string) === 'brand' ? 'Find your creator' : 'Discover collabs'}</Text>
             <Text style={styles.headerTitle}>Marketplace</Text>
           </View>
           <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>

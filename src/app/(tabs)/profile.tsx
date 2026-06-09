@@ -1,10 +1,3 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { accounts, portfolio } from '@/data/mock';
-import { useAuthStore } from '@/store/auth';
 import { AccountSheet } from '@/components/account-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
@@ -12,7 +5,13 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { RoleToggle } from '@/components/ui/role-toggle';
-import { SectionHead } from '@/components/ui/section-head';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { accounts, portfolio } from '@/data/mock';
+import { useAuthStore } from '@/store/auth';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProfileTab = 'Portfolio' | 'Reviews' | 'About';
 type SheetType = 'wallet' | 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | null;
@@ -146,9 +145,10 @@ const saveBtn = StyleSheet.create({
 });
 
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
   const role = useAuthStore((s) => s.role);
+  const router = useRouter();
+
+  const insets = useSafeAreaInsets();
   const setRole = useAuthStore((s) => s.setRole);
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
@@ -324,12 +324,12 @@ export default function ProfileScreen() {
               <Text style={styles.switchAccountText}>Switch or add account</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={async () => {
                 await logout();
                 router.replace('/(auth)');
-              }} 
-              style={[styles.switchAccountBtn, { borderColor: 'rgba(255,59,48,0.3)', marginTop: 8 }]} 
+              }}
+              style={[styles.switchAccountBtn, { borderColor: 'rgba(255,59,48,0.3)', marginTop: 8 }]}
               activeOpacity={0.8}
             >
               <Icon name="logout" size={18} color="#FF3B30" />

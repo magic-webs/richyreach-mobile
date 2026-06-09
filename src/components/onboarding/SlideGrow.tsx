@@ -116,7 +116,7 @@ export function SlideGrow({ active }: { active: boolean }) {
         >
           <Image
             source={require('@/assets/images/richyreach-logo.png')}
-            style={[styles.phoneSeal, { transform: [{ rotate: '15deg' }] }]}
+            style={[{ width: '100%', height: '100%' }, { transform: [{ rotate: '15deg' }] }]}
             contentFit="contain"
           />
         </Animated.View>

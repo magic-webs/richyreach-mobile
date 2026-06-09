@@ -8,15 +8,24 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TABS = [
+import { useAuthStore } from '@/store/auth';
+
+const CREATOR_TABS = [
   { key: 'index', icon: 'home', label: 'Home' },
   { key: 'marketplace', icon: 'grid', label: 'Market' },
   { key: 'arena', icon: 'arena', label: 'Arena' },
   { key: 'profile', icon: 'user', label: 'Profile' },
 ] as const;
 
+const BRAND_TABS = [
+  { key: 'brand/index', icon: 'home', label: 'Home' },
+  { key: 'brand/marketplace', icon: 'grid', label: 'Market' },
+  { key: 'brand/arena', icon: 'arena', label: 'Arena' },
+  { key: 'brand/profile', icon: 'user', label: 'Profile' },
+] as const;
+
 interface TabBarItemProps {
-  tab: typeof TABS[number];
+  tab: { readonly key: string; readonly icon: string; readonly label: string; };
   on: boolean;
   navigation: any;
 }
@@ -108,12 +117,16 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
 
 function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
-  const activeIdx = state.index;
+  const role = useAuthStore((s) => s.role);
+  const activeTabs = role === 'brand' ? BRAND_TABS : CREATOR_TABS;
+  
+  const activeRouteName = state.routes[state.index].name;
+  const activeIdx = activeTabs.findIndex((tab) => tab.key === activeRouteName);
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBar}>
-        {TABS.map((tab, i) => {
+        {activeTabs.map((tab, i) => {
           const on = i === activeIdx;
           return (
             <TabBarItem
@@ -147,6 +160,10 @@ export default function TabLayout() {
         <Tabs.Screen name="marketplace" />
         <Tabs.Screen name="arena" />
         <Tabs.Screen name="profile" />
+        <Tabs.Screen name="brand/index" />
+        <Tabs.Screen name="brand/marketplace" />
+        <Tabs.Screen name="brand/arena" />
+        <Tabs.Screen name="brand/profile" />
       </Tabs>
       <FloatingChatButton />
     </View>

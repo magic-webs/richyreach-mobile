@@ -1,14 +1,14 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { contests, leaderboard, winners } from '@/data/mock';
 import { Carousel } from '@/components/ui/carousel';
 import { Chip } from '@/components/ui/chip';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { contests, leaderboard, winners } from '@/data/mock';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATS = ['All', 'Reels', 'Photo', 'Challenge', 'UGC'];
 const MEDAL_COLORS = ['#f3c969', '#d8d8d8', '#cd8d63'];

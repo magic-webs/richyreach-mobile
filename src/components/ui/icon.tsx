@@ -70,6 +70,7 @@ const FEATHER_MAP: Record<string, FeatherName> = {
   pin: 'map-pin',
   mail: 'mail',
   phone: 'phone',
+  sun: 'sun',
 };
 
 export function Icon({ name, size = 24, color = 'currentColor' }: IconProps) {

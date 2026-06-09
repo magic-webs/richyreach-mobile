@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HomeHeader } from '@/components/home/home-header';
-import { HeroCarousel } from '@/components/home/hero-carousel';
 import { CategoryPills } from '@/components/home/category-pills';
-import { OfferBanner } from '@/components/home/offer-banner';
-import { LiveCampaigns } from '@/components/home/live-campaigns';
 import { HappeningNow } from '@/components/home/happening-now';
-import { TrendingAudio } from '@/components/home/trending-audio';
+import { HeroCarousel } from '@/components/home/hero-carousel';
 import { HomeFooter } from '@/components/home/home-footer';
+import { HomeHeader } from '@/components/home/home-header';
+import { LiveCampaigns } from '@/components/home/live-campaigns';
+import { OfferBanner } from '@/components/home/offer-banner';
+import { TrendingAudio } from '@/components/home/trending-audio';
 
 import { Colors } from '@/constants/brand';
 import * as mock from '@/data/mock';
@@ -23,8 +23,7 @@ export default function HomeScreen() {
   const role = useAuthStore((s) => s.role);
   const setRole = useAuthStore((s) => s.setRole);
   const session = useAuthStore((s) => s.session);
-  const isBrand = role === 'brand';
-  const userName = session?.user?.name || (isBrand ? 'Magic Webs' : 'Muskan');
+  const userName = session?.user?.name || 'Muskan';
 
   const [campaignList, setCampaignList] = useState<any[]>(mock.campaigns);
 
@@ -33,7 +32,7 @@ export default function HomeScreen() {
     const fetchCampaigns = async () => {
       try {
         let res: any[] = [];
-        if (role === 'brand') {
+        if ((role as string) === 'brand') {
           res = (await api.campaigns.list()) as any[];
         } else {
           res = (await api.influencers.marketplace()) as any[];
@@ -75,7 +74,7 @@ export default function HomeScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Sticky header */}
       <HomeHeader
-        isBrand={isBrand}
+        isBrand={false}
         userName={userName}
         onRoleChange={(r) => setRole(r === 'creator' ? 'influencer' : 'brand')}
         onSearchPress={() => router.push('/(tabs)/marketplace')}
