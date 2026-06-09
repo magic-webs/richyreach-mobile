@@ -64,6 +64,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading || onboardingSeen === null) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = inAuth && segments[1] === 'onboarding';
+    const isMagicLogin = inAuth && segments[1] === 'magic-login';
+
+    if (isMagicLogin) return;
 
     if (!session) {
       if (!onboardingSeen) {
@@ -116,6 +119,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading || onboardingSeen === null) return false;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = inAuth && segments[1] === 'onboarding';
+    const isMagicLogin = inAuth && segments[1] === 'magic-login';
+
+    if (isMagicLogin) return true;
 
     if (!session) {
       if (!onboardingSeen) {

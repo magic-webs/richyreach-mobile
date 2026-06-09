@@ -1,0 +1,395 @@
+import { Icon } from '@/components/ui/icon';
+import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
+import { useEffect, useState, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+interface CampaignCardProps {
+  title: string;
+  tone: 'rose' | 'ox';
+  creators: number;
+  reach: string;
+  spent: number;
+  total: number;
+  viewMode?: 'list' | 'grid';
+}
+
+function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list' }: CampaignCardProps) {
+  const percentage = Math.round((spent / total) * 100);
+  const isGrid = viewMode === 'grid';
+  return (
+    <View style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
+      <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
+        <PlaceholderImage tone={tone} height={isGrid ? 36 : 48} width={isGrid ? 36 : 48} borderRadius={12} />
+        <View style={styles.campaignInfo}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.campaignTitle, isGrid && styles.campaignTitleGrid]} numberOfLines={isGrid ? 2 : 1}>{title}</Text>
+            {!isGrid && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeText}>Active</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.campaignMeta, isGrid && styles.campaignMetaGrid]}>
+            <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{creators}</Text> {isGrid ? 'crs' : 'creators'} {isGrid ? '\nReach: ' : '  Reach: '}
+            <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{reach}</Text>
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.campaignProgress}>
+        <View style={styles.progressTextRow}>
+          <Text style={styles.progressBudget}>
+            ₹{spent.toLocaleString()}{!isGrid && ` of ₹${total.toLocaleString()}`}
+          </Text>
+          <Text style={styles.progressPercent}>{percentage}%</Text>
+        </View>
+        <View style={styles.progressBarBg}>
+          <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function CampaignCardSkeleton({ viewMode = 'list' }: { viewMode?: 'list' | 'grid' }) {
+  const isGrid = viewMode === 'grid';
+  return (
+    <View style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
+      <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
+        <Skeleton variant="rect" width={isGrid ? 36 : 48} height={isGrid ? 36 : 48} borderRadius={12} />
+        <View style={styles.campaignInfo}>
+          <View style={styles.titleRow}>
+            <Skeleton variant="text" width={isGrid ? "90%" : "60%"} />
+            {!isGrid && <Skeleton variant="rect" width={50} height={18} borderRadius={99} style={{ marginLeft: 8 }} />}
+          </View>
+          <Skeleton variant="text" width={isGrid ? "60%" : "40%"} style={{ marginTop: 8 }} />
+        </View>
+      </View>
+
+      <View style={styles.campaignProgress}>
+        <View style={styles.progressTextRow}>
+          <Skeleton variant="text" width="45%" />
+          <Skeleton variant="text" width="15%" />
+        </View>
+        <Skeleton variant="rect" height={8} borderRadius={4} style={{ marginTop: 8 }} />
+      </View>
+    </View>
+  );
+}
+
+const MOCK_CAMPAIGNS = [
+  {
+    id: 'mock-1',
+    title: 'Summer Glow Serum',
+    tone: 'rose' as const,
+    creatorsCount: 2,
+    expectedReach: 2400000,
+    spent: 360000,
+    budget: 48000000, // in cents
+  },
+  {
+    id: 'mock-2',
+    title: 'Heritage Chronograph',
+    tone: 'ox' as const,
+    creatorsCount: 2,
+    expectedReach: 1100000,
+    spent: 240000,
+    budget: 36000000, // in cents
+  },
+  {
+    id: 'mock-3',
+    title: 'Glass-Skin Routine',
+    tone: 'rose' as const,
+    creatorsCount: 0,
+    expectedReach: 0,
+    spent: 0,
+    budget: 33600000, // in cents
+  },
+];
+
+interface CampaignsSectionProps {
+  onNewCampaign: () => void;
+  refreshTrigger: number;
+}
+
+export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSectionProps) {
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [btnWidth, setBtnWidth] = useState(29); // fallback
+
+  const slideAnim = useRef(new Animated.Value(viewMode === 'list' ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: viewMode === 'list' ? 1 : 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 60,
+    }).start();
+  }, [viewMode, slideAnim]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        const res = await api.campaigns.list() as any[];
+        if (active) {
+          if (res && res.length > 0) {
+            setCampaigns(res);
+          } else {
+            setCampaigns(MOCK_CAMPAIGNS);
+          }
+        }
+      } catch (err) {
+        console.warn("CampaignsSection: failed to load campaigns, falling back to mock.", err);
+        if (active) {
+          setCampaigns(MOCK_CAMPAIGNS);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchCampaigns();
+    return () => { active = false; };
+  }, [refreshTrigger]);
+
+  const translateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, btnWidth]
+  });
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Campaigns</Text>
+        <View style={styles.headerControls}>
+          <View style={styles.viewToggleGroup}>
+            <Animated.View style={[styles.viewToggleSlider, { width: btnWidth, transform: [{ translateX }] }]} />
+            <TouchableOpacity 
+              onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
+              onPress={() => setViewMode('grid')} 
+              style={styles.viewToggleBtn} 
+              activeOpacity={0.8}
+            >
+              <Icon name="grid" size={13} color={viewMode === 'grid' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setViewMode('list')} style={styles.viewToggleBtn} activeOpacity={0.8}>
+              <Icon name="list" size={13} color={viewMode === 'list' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={onNewCampaign} activeOpacity={0.8} style={styles.newCampaignBtn}>
+            <Text style={styles.newCampaignText}>+ New</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.campaignList, viewMode === 'grid' && styles.campaignListGrid]}>
+        {loading ? (
+          <>
+            <CampaignCardSkeleton viewMode={viewMode} />
+            <CampaignCardSkeleton viewMode={viewMode} />
+            <CampaignCardSkeleton viewMode={viewMode} />
+          </>
+        ) : (
+          campaigns.map((c) => {
+            const total = typeof c.budget === 'number' ? c.budget / 100 : 10000;
+            const spent = typeof c.spent === 'number' ? c.spent : Math.round(total * 0.75);
+            const creators = (c.creatorsCount ?? c.applicants) || 0;
+
+            let reachStr = '0';
+            if (c.expectedReach) {
+              const n = Number(c.expectedReach);
+              if (!isNaN(n)) {
+                if (n >= 1000000) reachStr = `${(n / 1000000).toFixed(1)}M`;
+                else if (n >= 1000) reachStr = `${(n / 1000).toFixed(0)}k`;
+                else reachStr = String(n);
+              } else {
+                reachStr = String(c.expectedReach);
+              }
+            }
+
+            return (
+              <CampaignCard
+                key={c.id}
+                title={c.title}
+                tone={c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox')}
+                creators={creators}
+                reach={reachStr}
+                spent={spent}
+                total={total}
+                viewMode={viewMode}
+              />
+            );
+          })
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  section: {
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 20,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  headerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  viewToggleGroup: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
+    borderRadius: Radius.full,
+    padding: 3,
+    position: 'relative',
+  },
+  viewToggleSlider: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    bottom: 3,
+    backgroundColor: Colors.oxblood,
+    borderRadius: Radius.full,
+  },
+  viewToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    zIndex: 1,
+  },
+  newCampaignBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(63, 3, 11, 0.04)',
+    borderRadius: Radius.full,
+  },
+  newCampaignText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 12,
+    color: Colors.oxbloodDeep,
+  },
+  campaignList: {
+    gap: 14,
+  },
+  campaignListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  campaignCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: 16,
+    ...Shadow.card,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.04)',
+  },
+  campaignHeader: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  campaignInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  campaignTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16,
+    color: Colors.oxblood,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
+  activeBadge: {
+    backgroundColor: 'rgba(42, 122, 90, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activeText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 9.5,
+    color: Colors.green,
+    fontWeight: '800',
+  },
+  campaignMeta: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63, 3, 11, 0.5)',
+    marginTop: 4,
+  },
+  campaignProgress: {
+    marginTop: 14,
+  },
+  progressTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  progressBudget: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63, 3, 11, 0.5)',
+  },
+  progressPercent: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11.5,
+    color: Colors.oxblood,
+  },
+  progressBarBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(63, 3, 11, 0.06)',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.roseDeep,
+    borderRadius: 3,
+  },
+  campaignCardGrid: {
+    width: '48%',
+    padding: 12,
+  },
+  campaignHeaderGrid: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  campaignTitleGrid: {
+    fontSize: 13,
+    marginRight: 0,
+    lineHeight: 18,
+  },
+  campaignMetaGrid: {
+    fontSize: 10,
+    marginTop: 2,
+    lineHeight: 14,
+  },
+});

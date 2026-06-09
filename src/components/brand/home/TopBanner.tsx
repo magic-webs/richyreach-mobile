@@ -1,0 +1,210 @@
+import { Icon } from '@/components/ui/icon';
+import { Colors, FontFamily, Radius } from '@/constants/brand';
+import { api } from '@/lib/api';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+export function TopBanner() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const [stats, setStats] = useState({
+    totalReach: '48L+',
+    activeCampaigns: 3,
+    creatorsEngaged: 23,
+    pendingReviews: 3,
+  });
+
+  const [brandProfile, setBrandProfile] = useState({
+    name: 'Magic Webs',
+    letter: 'M'
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchDashboard = async () => {
+      try {
+        const [dashRes, profileRes] = await Promise.all([
+          api.brands.dashboard().catch(() => null),
+          api.brands.profile().catch(() => null)
+        ]) as [any, any];
+
+        if (active) {
+          if (dashRes) {
+            setStats({
+              totalReach: dashRes.totalReach ? `${(dashRes.totalReach / 100000).toFixed(1)}L+` : '48L+',
+              activeCampaigns: dashRes.activeCampaigns ?? 3,
+              creatorsEngaged: dashRes.creatorsEngaged ?? 23,
+              pendingReviews: dashRes.pendingReviews ?? 3,
+            });
+          }
+          if (profileRes) {
+            const name = profileRes.companyName || profileRes.name || 'Magic Webs';
+            setBrandProfile({
+              name,
+              letter: name.charAt(0).toUpperCase()
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('TopBanner: failed to load dashboard data, falling back to mock.', err);
+      }
+    };
+    fetchDashboard();
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <View style={[styles.topBanner, { paddingTop: insets.top + 10 }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.brandProfile}>
+          <View style={styles.brandAvatar}>
+            <Text style={styles.avatarLetter}>{brandProfile.letter}</Text>
+          </View>
+          <View style={styles.brandTitleWrap}>
+            <Text style={styles.headerSubtitle}>BRAND DASHBOARD</Text>
+            <Text style={styles.headerTitle}>{brandProfile.name}</Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)/profile')}>
+            <Icon name="chat" size={18} color={Colors.cream} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)/profile')}>
+            <Icon name="bell" size={18} color={Colors.cream} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Reach Card */}
+      <View style={styles.reachCard}>
+        <Text style={styles.reachCardSub}>TOTAL REACH THIS MONTH</Text>
+        <Text style={styles.reachCardValue}>{stats.totalReach}</Text>
+
+        <View style={styles.reachStatsRow}>
+          <View style={styles.reachStatItem}>
+            <Icon name="briefcase" size={14} color={Colors.roseSoft} />
+            <Text style={styles.reachStatText}>
+              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.activeCampaigns}</Text> Active
+            </Text>
+          </View>
+          <View style={styles.reachStatItem}>
+            <Icon name="users" size={14} color={Colors.roseSoft} />
+            <Text style={styles.reachStatText}>
+              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.creatorsEngaged}</Text> Creators
+            </Text>
+          </View>
+          <View style={styles.reachStatItem}>
+            <Icon name="clock" size={14} color={Colors.roseSoft} />
+            <Text style={styles.reachStatText}>
+              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.pendingReviews}</Text> Pending
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  topBanner: {
+    backgroundColor: Colors.oxbloodDeep,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    borderBottomLeftRadius: Radius.xxl,
+    borderBottomRightRadius: Radius.xxl,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  brandProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  brandAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(232,216,204,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.cream,
+  },
+  avatarLetter: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    color: Colors.cream,
+  },
+  brandTitleWrap: {
+    justifyContent: 'center',
+  },
+  headerSubtitle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 9.5,
+    color: Colors.roseSoft,
+    letterSpacing: 0.5,
+  },
+  headerTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 20,
+    color: Colors.cream,
+    marginTop: -2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  headerActionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  reachCard: {
+    backgroundColor: 'rgba(232, 216, 204, 0.06)',
+    borderRadius: Radius.xl,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 216, 204, 0.12)',
+  },
+  reachCardSub: {
+    fontFamily: FontFamily.sans,
+    fontSize: 10.5,
+    color: Colors.roseSoft,
+    letterSpacing: 0.8,
+  },
+  reachCardValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 38,
+    color: Colors.cream,
+    marginVertical: 4,
+  },
+  reachStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 10,
+  },
+  reachStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reachStatText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.cream,
+  },
+});

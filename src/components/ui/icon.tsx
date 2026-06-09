@@ -29,6 +29,7 @@ const MATERIAL_ICONS: Record<string, MaterialName> = {
 const FEATHER_MAP: Record<string, FeatherName> = {
   home: 'home',
   grid: 'grid',
+  list: 'list',
   user: 'user',
   chat: 'message-square',
   search: 'search',

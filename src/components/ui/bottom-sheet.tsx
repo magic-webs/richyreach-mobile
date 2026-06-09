@@ -8,7 +8,6 @@ import BottomSheetLib, {
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { GradientView } from './gradient-view';
 import { Icon } from './icon';
 
 interface BottomSheetProps {
@@ -18,6 +17,7 @@ interface BottomSheetProps {
   onClose: () => void;
   children: React.ReactNode;
   snapPoints?: (string | number)[];
+  hideHeaderBorder?: boolean;
 }
 
 const DEFAULT_SNAP_POINTS = ['55%', '90%'];
@@ -44,6 +44,7 @@ export function BottomSheet({
   onClose,
   children,
   snapPoints = DEFAULT_SNAP_POINTS,
+  hideHeaderBorder = false,
 }: BottomSheetProps) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const snaps = useMemo(() => snapPoints, [snapPoints]);
@@ -100,10 +101,10 @@ export function BottomSheet({
       enableDynamicSizing={false}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <GradientView variant="rose" style={styles.iconWrap}>
+      <View style={[styles.header, hideHeaderBorder && styles.headerNoBorder]}>
+        <View style={styles.iconWrap}>
           <Icon name={icon} size={20} color="#fff" />
-        </GradientView>
+        </View>
         <Text style={styles.title}>{title}</Text>
         <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
           <Icon name="x" size={18} color={Colors.oxblood} />
@@ -132,10 +133,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(63,3,11,0.07)',
   },
+  headerNoBorder: {
+    borderBottomWidth: 0,
+  },
   iconWrap: {
     width: 40,
     height: 40,
     borderRadius: 13,
+    backgroundColor: Colors.rose,
     alignItems: 'center',
     justifyContent: 'center',
   },

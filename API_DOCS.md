@@ -62,6 +62,28 @@ All error responses (4xx, 5xx) follow this format:
 - **Description**: Gets the current active session data.
 - **Requires Auth**: Yes
 
+### `POST /auth/whatsapp-webhook`
+- **Description**: Webhook endpoint to generate an automatic sign-in magic link for a user verifying via WhatsApp. If the user doesn't exist, it redirects them to the onboarding page.
+- **Input**:
+  ```json
+  {
+    "mobileNumber": "string",
+    "keyword": "string (must be 'signin' to trigger logic)"
+  }
+  ```
+- **Output**: Returns the URL that the user must click to authenticate automatically or to sign up.
+  ```json
+  {
+    "success": true,
+    "message": "Auto signin URL generated",
+    "data": {
+      "signinUrl": "https://richyreach.expo.app/magic-login?token=...",
+      "mobileNumber": "+1234567890",
+      "isNewUser": false
+    }
+  }
+  ```
+
 ---
 
 ## 3. Brand Routes (`/brands`)
@@ -117,7 +139,8 @@ All error responses (4xx, 5xx) follow this format:
     "allowFraction": "boolean (optional)",
     "brandAccountId": "string (optional)",
     "isArena": "boolean (optional)",
-    "maxReachCap": "integer (optional)"
+    "maxReachCap": "integer (optional)",
+    "category": "string (optional)"
   }
   ```
 
@@ -315,6 +338,34 @@ All error responses (4xx, 5xx) follow this format:
 - **`GET /admin/profile/:type/:id`**: View specific profile details.
 - **`POST /admin/verify-profile`**: Approve or reject a profile.
 - **`POST /admin/update-profile`**: Update user's profile info directly.
+- **`GET /admin/campaign-images`**: Retrieve all campaign image templates and their used count.
+- **`POST /admin/campaign-images`**: Add a new campaign image template. Supports `multipart/form-data` file upload.
+  - **Input (multipart/form-data)**:
+    - `category`: string (required)
+    - `image`: file (optional — binary upload, stored in Cloudinary under `reelio_campaigns/`)
+    - `imageUrl`: string (optional — fallback URL if no file is uploaded)
+- **`PUT /admin/campaign-images/:id`**: Edit an existing campaign image template. All fields are optional; at least one must be provided.
+  - **Input (multipart/form-data)**:
+    - `category`: string (optional)
+    - `image`: file (optional — uploads new image to Cloudinary and automatically deletes the old one)
+    - `imageUrl`: string (optional — replace URL without a file upload)
+- **`DELETE /admin/campaign-images/:id`**: Delete a campaign image template. **Automatically removes the image from Cloudinary.**
+- **`GET /admin/trending-songs`**: Retrieve all trending songs.
+- **`POST /admin/trending-songs`**: Add a new trending song. Supports `multipart/form-data` file upload.
+  - **Input (multipart/form-data)**:
+    - `title`: string (required)
+    - `artist`: string (required)
+    - `instagramAudioUrl`: string (required — Instagram Reels Audio page link)
+    - `image`: file (optional — cover image uploaded to Cloudinary under `reelio_songs/`)
+    - `imageUrl`: string (optional — fallback cover URL if no file is uploaded)
+- **`PUT /admin/trending-songs/:id`**: Edit an existing trending song. All fields are optional; at least one must be provided.
+  - **Input (multipart/form-data)**:
+    - `title`: string (optional)
+    - `artist`: string (optional)
+    - `instagramAudioUrl`: string (optional)
+    - `image`: file (optional — uploads new cover to Cloudinary and automatically deletes the old one)
+    - `imageUrl`: string (optional — replace cover URL without a file upload)
+- **`DELETE /admin/trending-songs/:id`**: Delete a trending song. **Automatically removes the cover image from Cloudinary.**
 
 ---
 
@@ -350,8 +401,59 @@ All error responses (4xx, 5xx) follow this format:
 
 ---
 
-## 12. Swagger OpenAPI Docs
+## 12. Waitlist Routes (`/waitlist`)
+
+### `POST /waitlist/join`
+- **Description**: Join the early access waitlist.
+- **Input**:
+  ```json
+  {
+    "name": "string (min 2 chars)",
+    "email": "string (valid email)",
+    "role": "creator | brand"
+  }
+  ```
+
+### `GET /waitlist/count`
+- **Description**: Get the total count of waitlist registrations.
+- **Input**: None
+- **Requires Auth**: No
+
+### `GET /waitlist`
+- **Description**: Retrieve all waitlist entries.
+- **Requires Auth & Admin Role**: Yes
+
+### `DELETE /waitlist/:id`
+- **Description**: Delete a waitlist entry.
+- **Requires Auth & Admin Role**: Yes
+
+---
+
+## 13. Swagger OpenAPI Docs
 
 A live swagger documentation interface is automatically generated and served at:
 - **`GET /api/docs`**: Swagger HTML User Interface.
 - **`GET /api/openapi.json`**: Raw OpenAPI specification file mapping exact parameters as per the OpenAPI standard.
+
+---
+
+## 14. Trending Songs Routes (`/trending-songs`)
+*Requires Auth*
+
+### `GET /trending-songs`
+- **Description**: Retrieve the list of all trending songs on Instagram.
+- **Input**: None
+- **Output**: Array of song objects:
+  ```json
+  [
+    {
+      "id": "string",
+      "title": "string",
+      "artist": "string",
+      "imageUrl": "string",
+      "instagramAudioUrl": "string",
+      "createdAt": "timestamp"
+    }
+  ]
+  ```
+

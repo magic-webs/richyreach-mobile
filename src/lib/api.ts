@@ -32,14 +32,17 @@ export const api = {
   campaigns: {
     list: () => request('/campaigns'),
     get: (id: string) => request(`/campaigns/${id}`),
+    create: (data: any) => request('/campaigns/create', { method: 'POST', body: JSON.stringify(data) }),
   },
   influencers: {
+    list: () => request('/influencers'),
     marketplace: () => request('/influencers/marketplace-campaigns'),
     dashboard: () => request('/influencers/dashboard'),
     apply: (campaignId: string, proposal: string = "Excited to collaborate on this campaign!") =>
       request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal }) }),
   },
   brands: {
+    profile: () => request('/brands/profile'),
     dashboard: () => request('/brands/dashboard'),
   },
   chat: {
