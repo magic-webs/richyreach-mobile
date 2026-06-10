@@ -2,7 +2,15 @@ import { getToken } from './storage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+/** Reads the active profile ID from SecureStore (or localStorage on web) synchronously via module-level cache. */
+let _activeProfileId: string | null = null;
+
+/** Called by the profiles store whenever the active profile changes. */
+export function setActiveProfileHeader(id: string | null) {
+  _activeProfileId = id;
+}
+
+async function request<T>(path: string, options?: RequestInit & { activeProfileId?: string | null }): Promise<T> {
   const token = await getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -10,6 +18,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  // Attach active profile header if available
+  const profileId = options?.activeProfileId !== undefined ? options.activeProfileId : _activeProfileId;
+  if (profileId) {
+    headers['x-active-profile-id'] = profileId;
   }
   const res = await fetch(`${BASE_URL}${path}`, {
     headers,
@@ -38,11 +51,16 @@ export const api = {
     list: () => request('/influencers'),
     marketplace: () => request('/influencers/marketplace-campaigns'),
     dashboard: () => request('/influencers/dashboard'),
+    profile: () => request('/influencers/profile'),
+    profiles: () => request<any[]>('/influencers/profiles'),
+    updateProfile: (data: any) => request('/influencers/profile', { method: 'POST', body: JSON.stringify(data) }),
     apply: (campaignId: string, proposal: string = "Excited to collaborate on this campaign!") =>
       request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal }) }),
   },
   brands: {
     profile: () => request('/brands/profile'),
+    profiles: () => request<any[]>('/brands/profiles'),
+    updateProfile: (data: any) => request('/brands/profile', { method: 'POST', body: JSON.stringify(data) }),
     dashboard: () => request('/brands/dashboard'),
   },
   chat: {

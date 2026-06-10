@@ -1,15 +1,21 @@
+import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
+import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Line, Pattern, Rect } from 'react-native-svg';
 
-type SheetType = 'billing' | 'team' | 'security' | 'notifications' | 'support' | 'menu' | null;
+type SheetType = 'billing' | 'team' | 'security' | 'notifications' | 'support' | 'menu' | 'edit_profile' | null;
 type TabType = 'Overview' | 'Campaigns' | 'Creators';
 
 // Stripes Background Pattern
@@ -40,6 +46,116 @@ function Stripes({
     </View>
   );
 }
+
+// Brand Profile Skeleton
+function ProfileSkeleton() {
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Cover skeleton */}
+      <Skeleton width="100%" height={120} borderRadius={0} />
+
+      {/* Avatar skeleton */}
+      <View style={skeletonStyles.avatarWrap}>
+        <Skeleton width={86} height={86} borderRadius={22} />
+      </View>
+
+      <View style={{ paddingTop: 52, paddingHorizontal: 20 }}>
+        {/* Name row */}
+        <View style={skeletonStyles.nameRow}>
+          <View style={{ flex: 1, gap: 8 }}>
+            <Skeleton width={180} height={24} borderRadius={8} />
+            <Skeleton width={120} height={13} borderRadius={6} />
+          </View>
+          <View style={{ gap: 8 }}>
+            <Skeleton width={90} height={32} borderRadius={12} />
+            <Skeleton width={90} height={32} borderRadius={12} />
+          </View>
+        </View>
+
+        {/* Bio */}
+        <View style={{ gap: 6, marginTop: 14 }}>
+          <Skeleton variant="text" width="100%" />
+          <Skeleton variant="text" width="85%" />
+          <Skeleton variant="text" width="60%" />
+        </View>
+
+        {/* Stats card */}
+        <View style={[skeletonStyles.statsCard]}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+              <Skeleton width={40} height={22} borderRadius={6} />
+              <Skeleton width={52} height={10} borderRadius={4} />
+            </View>
+          ))}
+        </View>
+
+        {/* Tabs */}
+        <View style={skeletonStyles.tabsRow}>
+          {[80, 90, 70].map((w, i) => (
+            <Skeleton key={i} width={w} height={14} borderRadius={6} />
+          ))}
+        </View>
+
+        {/* Content rows */}
+        <View style={{ gap: 12, marginTop: 16 }}>
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={skeletonStyles.rowCard}>
+              <Skeleton width={44} height={44} borderRadius={12} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton width="70%" height={14} borderRadius={6} />
+                <Skeleton width="50%" height={11} borderRadius={4} />
+              </View>
+              <Skeleton width={60} height={26} borderRadius={10} />
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  avatarWrap: {
+    position: 'absolute',
+    left: 20,
+    top: 75,
+    width: 86,
+    height: 86,
+    zIndex: 10,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  statsCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    paddingVertical: 16,
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.03)',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 26,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+  },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+  },
+});
 
 // Campaign Row Component
 function CampaignRow({
@@ -116,6 +232,91 @@ export default function BrandProfileScreen() {
   const setRole = useAuthStore((s) => s.setRole);
   const logout = useAuthStore((s) => s.logout);
   const showModal = useUIStore((s) => s.showModal);
+  const session = useAuthStore((s) => s.session);
+  const loadProfiles = useProfilesStore((s) => s.loadProfiles);
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+
+  const [profile, setProfile] = useState<any | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [campaignsList, setCampaignsList] = useState<any[]>([]);
+
+  const [stats, setStats] = useState({
+    campaigns: 12,
+    creators: 84,
+    spend: '₹48L',
+    roi: '4.2x'
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchProfileData = async () => {
+      try {
+        setLoadingProfile(true);
+        const [prof, dash] = await Promise.all([
+          api.brands.profile().catch(() => null),
+          api.brands.dashboard().catch(() => null)
+        ]) as [any, any];
+
+        if (active) {
+          if (prof) {
+            setProfile(prof);
+            if (session?.user?.id) {
+              loadProfiles(session.user.id, prof);
+            }
+          } else {
+            setProfile(null);
+          }
+
+          if (dash) {
+            const spendRupees = typeof dash.totalSpend === 'number' ? dash.totalSpend / 100 : 0;
+            let spendStr = '₹0';
+            if (spendRupees >= 100000) spendStr = `₹${(spendRupees / 100000).toFixed(1)}L`;
+            else if (spendRupees >= 1000) spendStr = `₹${(spendRupees / 1000).toFixed(0)}k`;
+            else spendStr = `₹${spendRupees}`;
+
+            setStats({
+              campaigns: dash.activeCampaigns ?? 0,
+              creators: dash.influencerStats?.totalApplicants ?? 0,
+              spend: spendStr,
+              roi: '4.2x'
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("BrandProfileScreen: error fetching profile data", err);
+      } finally {
+        if (active) {
+          setLoadingProfile(false);
+        }
+      }
+    };
+    fetchProfileData();
+    return () => { active = false; };
+  }, [refreshTrigger, session?.user?.id, activeProfileId]);
+
+  useEffect(() => {
+    let active = true;
+    api.campaigns.list()
+      .then((res: any) => {
+        if (active) {
+          if (res && res.length > 0) {
+            setCampaignsList(res);
+          } else {
+            setCampaignsList([]);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("BrandProfileScreen: failed to load campaigns list", err);
+        if (active) {
+          setCampaignsList([]);
+        }
+      });
+    return () => { active = false; };
+  }, [refreshTrigger, activeProfileId]);
 
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   const [sheet, setSheet] = useState<SheetType>(null);
@@ -168,27 +369,36 @@ export default function BrandProfileScreen() {
         <TouchableOpacity
           style={styles.headerLeft}
           activeOpacity={0.8}
-          onPress={() => setSheet('menu')}
+          onPress={() => setIsSwitcherOpen(true)}
         >
           <View style={styles.headerLogoSquircle}>
-            <Stripes id="header-logo" stripeColor="rgba(180, 106, 116, 0.25)" backgroundColor={Colors.oxbloodDeep} />
+            {profile?.logo ? (
+              <Image source={{ uri: profile.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <Stripes id="header-logo" stripeColor="rgba(180, 106, 116, 0.25)" backgroundColor={Colors.oxbloodDeep} />
+            )}
           </View>
-          <Text style={styles.headerTitle}>Magic Webs</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{profile?.companyName || 'Brand Settings'}</Text>
           <Icon name="chevDown" size={16} color={Colors.ink} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.themeToggleBtn}
           activeOpacity={0.8}
-          onPress={() => showModal({ title: 'Theme Toggle', message: 'Theme preference toggle is handled by global settings.' })}
+          onPress={() => setSheet('menu')}
         >
-          <Icon name="sun" size={16} color={Colors.ink} />
+          <Icon name="settings" size={16} color={Colors.ink} />
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+        {loadingProfile ? (
+          <View style={{ position: 'relative' }}>
+            <ProfileSkeleton />
+          </View>
+        ) : null}
         {/* Cover with Stripes */}
-        <View style={styles.coverContainer}>
+        <View style={[styles.coverContainer, loadingProfile && { opacity: 0 }]}>
           <Stripes id="cover-stripes" stripeColor="rgba(63,3,11,0.05)" backgroundColor="rgba(180, 106, 116, 0.12)" />
           {/* Floating spark stars */}
           <View style={styles.sparklesContainer}>
@@ -200,54 +410,64 @@ export default function BrandProfileScreen() {
         </View>
 
         {/* Squircle Avatar Overlapping Cover */}
-        <View style={styles.avatarShadowWrap}>
+        <View style={[styles.avatarShadowWrap, loadingProfile && { opacity: 0 }]}>
           <View style={styles.avatarContainer}>
-            <Stripes id="avatar-stripes" stripeColor="rgba(180, 106, 116, 0.2)" backgroundColor={Colors.oxbloodDeep} />
+            {profile?.logo ? (
+              <Image source={{ uri: profile.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <Stripes id="avatar-stripes" stripeColor="rgba(180, 106, 116, 0.2)" backgroundColor={Colors.oxbloodDeep} />
+            )}
           </View>
         </View>
 
-        <View style={styles.body}>
+        <View style={[styles.body, loadingProfile && { opacity: 0 }]}>
           {/* Brand details and Switch to Creator view */}
           <View style={styles.brandTitleRow}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.brandName}>Magic Webs</Text>
-                <Icon name="verified" size={18} color={Colors.rose} />
+                <Text style={styles.brandName}>{profile?.companyName || 'Setup Brand Profile'}</Text>
+                {profile?.verified && <Icon name="verified" size={18} color={Colors.rose} />}
               </View>
-              <Text style={styles.brandHandle}>Tech & Digital · Brand account</Text>
+              <Text style={styles.brandHandle}>
+                {profile?.category ? `${profile.category} · Brand account` : 'Brand account'}
+              </Text>
             </View>
-            <TouchableOpacity
-              onPress={handleCreatorViewSwitch}
-              style={styles.creatorViewBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.creatorViewText}>← Creator view</Text>
-            </TouchableOpacity>
+            <View style={{ gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => setIsEditSheetOpen(true)}
+                style={[styles.creatorViewBtn, { borderColor: Colors.rose }]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.creatorViewText, { color: Colors.roseDeep }]}>
+                  {profile ? 'Edit profile' : 'Setup profile'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.bio}>
-            Premium digital studio. We tell stories through creators who carry the aesthetic.
+            {profile?.description || 'No profile description set up. Setup your profile details to connect with creators.'}
           </Text>
 
           {/* Stats Grid */}
           <View style={styles.statsCard}>
             <View style={styles.statCol}>
-              <Text style={styles.statValue}>12</Text>
+              <Text style={styles.statValue}>{stats.campaigns}</Text>
               <Text style={styles.statLabel}>Campaigns</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
-              <Text style={styles.statValue}>84</Text>
+              <Text style={styles.statValue}>{stats.creators}</Text>
               <Text style={styles.statLabel}>Creators</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
-              <Text style={styles.statValue}>₹48L</Text>
+              <Text style={styles.statValue}>{stats.spend}</Text>
               <Text style={styles.statLabel}>Total spend</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
-              <Text style={styles.statValue}>4.2x</Text>
+              <Text style={styles.statValue}>{stats.roi}</Text>
               <Text style={styles.statLabel}>Avg. ROI</Text>
             </View>
           </View>
@@ -304,15 +524,37 @@ export default function BrandProfileScreen() {
 
           {activeTab === 'Campaigns' && (
             <View style={styles.tabContent}>
-              {campaignsData.map((c) => (
-                <CampaignRow
-                  key={c.id}
-                  id={c.id}
-                  title={c.title}
-                  subtitle={c.subtitle}
-                  status={c.status}
-                />
-              ))}
+              {campaignsList.length > 0 ? (
+                campaignsList.map((c) => {
+                  const budgetVal = typeof c.budget === 'number' ? c.budget / 100 : 0;
+                  let budgetStr = '';
+                  if (budgetVal >= 100000) budgetStr = `${(budgetVal / 100000).toFixed(1)}L`;
+                  else if (budgetVal >= 1000) budgetStr = `${(budgetVal / 1000).toFixed(0)}k`;
+                  else budgetStr = String(budgetVal);
+
+                  const crs = (c.creatorsCount ?? c.applicants) || 0;
+                  const statusLabel = c.status === 'active' ? 'Active' : c.status === 'completed' ? 'Closed' : 'In review';
+                  return (
+                    <CampaignRow
+                      key={c.id}
+                      id={c.id}
+                      title={c.title}
+                      subtitle={`${crs} creators · ₹${budgetStr}`}
+                      status={statusLabel}
+                    />
+                  );
+                })
+              ) : (
+                campaignsData.map((c) => (
+                  <CampaignRow
+                    key={c.id}
+                    id={c.id}
+                    title={c.title}
+                    subtitle={c.subtitle}
+                    status={c.status}
+                  />
+                ))
+              )}
             </View>
           )}
 
@@ -337,6 +579,7 @@ export default function BrandProfileScreen() {
         <BottomSheet visible={true} title="Brand settings" icon="settings" onClose={() => setSheet(null)}>
           <View style={{ gap: 4 }}>
             {[
+              { icon: 'edit', label: 'Edit brand profile', value: '', key: 'edit_profile' },
               { icon: 'wallet', label: 'Invoices & billing', value: '₹11.8L', key: 'billing' },
               { icon: 'users', label: 'Team management', value: '3 members', key: 'team' },
               { icon: 'bell', label: 'Notifications', value: '', key: 'notifications' },
@@ -345,7 +588,14 @@ export default function BrandProfileScreen() {
             ].map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                onPress={() => setSheet(item.key as SheetType)}
+                onPress={() => {
+                  if (item.key === 'edit_profile') {
+                    setSheet(null);
+                    setIsEditSheetOpen(true);
+                  } else {
+                    setSheet(item.key as SheetType);
+                  }
+                }}
                 activeOpacity={0.8}
                 style={styles.menuItemRow}
               >
@@ -485,6 +735,20 @@ export default function BrandProfileScreen() {
           </Text>
         </BottomSheet>
       )}
+
+      <CreateBrandProfileSheet
+        isOpen={isEditSheetOpen}
+        onClose={() => setIsEditSheetOpen(false)}
+        onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        initialData={profile}
+      />
+
+      <SwitchBrandProfileSheet
+        isOpen={isSwitcherOpen}
+        onClose={() => setIsSwitcherOpen(false)}
+        onSwitchSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        onAddNewProfile={() => setIsEditSheetOpen(true)}
+      />
     </View>
   );
 }

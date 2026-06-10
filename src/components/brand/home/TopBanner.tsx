@@ -1,31 +1,43 @@
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useProfilesStore } from '@/store/profiles';
 
-export function TopBanner() {
+interface TopBannerProps {
+  onSwitchProfile?: () => void;
+}
+
+export function TopBanner({ onSwitchProfile }: TopBannerProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+
+  const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
-    totalReach: '48L+',
-    activeCampaigns: 3,
-    creatorsEngaged: 23,
-    pendingReviews: 3,
+    totalReach: '0L+',
+    activeCampaigns: 0,
+    creatorsEngaged: 0,
+    pendingReviews: 0,
   });
 
   const [brandProfile, setBrandProfile] = useState({
-    name: 'Magic Webs',
-    letter: 'M'
+    name: '',
+    letter: '',
+    logo: ''
   });
 
   useEffect(() => {
     let active = true;
     const fetchDashboard = async () => {
       try {
+        setLoading(true);
         const [dashRes, profileRes] = await Promise.all([
           api.brands.dashboard().catch(() => null),
           api.brands.profile().catch(() => null)
@@ -34,41 +46,84 @@ export function TopBanner() {
         if (active) {
           if (dashRes) {
             setStats({
-              totalReach: dashRes.totalReach ? `${(dashRes.totalReach / 100000).toFixed(1)}L+` : '48L+',
-              activeCampaigns: dashRes.activeCampaigns ?? 3,
-              creatorsEngaged: dashRes.creatorsEngaged ?? 23,
-              pendingReviews: dashRes.pendingReviews ?? 3,
+              totalReach: dashRes.totalReach ? `${(dashRes.totalReach / 100000).toFixed(1)}L+` : '0L+',
+              activeCampaigns: dashRes.activeCampaigns ?? 0,
+              creatorsEngaged: dashRes.creatorsEngaged ?? 0,
+              pendingReviews: dashRes.pendingReviews ?? 0,
+            });
+          } else {
+            setStats({
+              totalReach: '0L+',
+              activeCampaigns: 0,
+              creatorsEngaged: 0,
+              pendingReviews: 0,
             });
           }
           if (profileRes) {
-            const name = profileRes.companyName || profileRes.name || 'Magic Webs';
+            const name = profileRes.companyName || profileRes.name || 'Brand Settings';
             setBrandProfile({
               name,
-              letter: name.charAt(0).toUpperCase()
+              letter: name.charAt(0).toUpperCase(),
+              logo: profileRes.logo || ''
+            });
+          } else {
+            setBrandProfile({
+              name: 'Brand Settings',
+              letter: 'B',
+              logo: ''
             });
           }
         }
       } catch (err) {
-        console.warn('TopBanner: failed to load dashboard data, falling back to mock.', err);
+        console.warn('TopBanner: failed to load dashboard data.', err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
     fetchDashboard();
     return () => { active = false; };
-  }, []);
+  }, [activeProfileId]);
 
   return (
     <View style={[styles.topBanner, { paddingTop: insets.top + 10 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.brandProfile}>
-          <View style={styles.brandAvatar}>
-            <Text style={styles.avatarLetter}>{brandProfile.letter}</Text>
-          </View>
+        <TouchableOpacity
+          style={styles.brandProfile}
+          activeOpacity={0.8}
+          onPress={onSwitchProfile}
+          disabled={!onSwitchProfile}
+        >
+          {loading ? (
+            <Skeleton variant="circle" width={38} height={38} dark style={{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)' }} />
+          ) : (
+            <View style={styles.brandAvatar}>
+              {brandProfile.logo ? (
+                <Image source={{ uri: brandProfile.logo }} style={{ width: '100%', height: '100%', borderRadius: 19 }} contentFit="cover" />
+              ) : (
+                <Text style={styles.avatarLetter}>{brandProfile.letter}</Text>
+              )}
+            </View>
+          )}
           <View style={styles.brandTitleWrap}>
-            <Text style={styles.headerSubtitle}>BRAND DASHBOARD</Text>
-            <Text style={styles.headerTitle}>{brandProfile.name}</Text>
+            {loading ? (
+              <View style={{ gap: 4 }}>
+                <Skeleton variant="rect" width={100} height={16} borderRadius={4} dark />
+                <Skeleton variant="rect" width={60} height={10} borderRadius={3} dark />
+              </View>
+            ) : (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.headerTitle}>{brandProfile.name}</Text>
+                  {onSwitchProfile && <Icon name="chevDown" size={14} color={Colors.roseSoft} />}
+                </View>
+                <Text style={styles.headerSubtitle}>BRAND DASHBOARD</Text>
+              </>
+            )}
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)/profile')}>
             <Icon name="chat" size={18} color={Colors.cream} />
@@ -82,27 +137,41 @@ export function TopBanner() {
       {/* Reach Card */}
       <View style={styles.reachCard}>
         <Text style={styles.reachCardSub}>TOTAL REACH THIS MONTH</Text>
-        <Text style={styles.reachCardValue}>{stats.totalReach}</Text>
+        {loading ? (
+          <Skeleton variant="rect" width={120} height={38} borderRadius={6} style={{ marginVertical: 8 }} dark />
+        ) : (
+          <Text style={styles.reachCardValue}>{stats.totalReach}</Text>
+        )}
 
         <View style={styles.reachStatsRow}>
-          <View style={styles.reachStatItem}>
-            <Icon name="briefcase" size={14} color={Colors.roseSoft} />
-            <Text style={styles.reachStatText}>
-              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.activeCampaigns}</Text> Active
-            </Text>
-          </View>
-          <View style={styles.reachStatItem}>
-            <Icon name="users" size={14} color={Colors.roseSoft} />
-            <Text style={styles.reachStatText}>
-              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.creatorsEngaged}</Text> Creators
-            </Text>
-          </View>
-          <View style={styles.reachStatItem}>
-            <Icon name="clock" size={14} color={Colors.roseSoft} />
-            <Text style={styles.reachStatText}>
-              <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.pendingReviews}</Text> Pending
-            </Text>
-          </View>
+          {loading ? (
+            <>
+              <Skeleton variant="rect" width={60} height={16} borderRadius={4} dark />
+              <Skeleton variant="rect" width={70} height={16} borderRadius={4} dark />
+              <Skeleton variant="rect" width={65} height={16} borderRadius={4} dark />
+            </>
+          ) : (
+            <>
+              <View style={styles.reachStatItem}>
+                <Icon name="briefcase" size={14} color={Colors.roseSoft} />
+                <Text style={styles.reachStatText}>
+                  <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.activeCampaigns}</Text> Active
+                </Text>
+              </View>
+              <View style={styles.reachStatItem}>
+                <Icon name="users" size={14} color={Colors.roseSoft} />
+                <Text style={styles.reachStatText}>
+                  <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.creatorsEngaged}</Text> Creators
+                </Text>
+              </View>
+              <View style={styles.reachStatItem}>
+                <Icon name="clock" size={14} color={Colors.roseSoft} />
+                <Text style={styles.reachStatText}>
+                  <Text style={{ fontWeight: '800', color: Colors.cream }}>{stats.pendingReviews}</Text> Pending
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
     </View>

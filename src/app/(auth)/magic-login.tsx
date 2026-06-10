@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuthStore } from '@/store/auth';
-import { api } from '@/lib/api';
-import { saveToken, deleteToken, setOnboardingSeen } from '@/lib/storage';
-import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { Icon } from '@/components/ui/icon';
+import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
+import { deleteToken, saveToken, setOnboardingSeen } from '@/lib/storage';
+import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function MagicLoginScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const setRole = useAuthStore((s) => s.setRole);
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -42,7 +42,7 @@ export default function MagicLoginScreen() {
           setRole(data.user.role);
 
           setStatus('success');
-          
+
           // Delay redirect slightly to show success checkmark micro-animation
           setTimeout(() => {
             if (data.user.role === 'brand') {
@@ -98,7 +98,7 @@ export default function MagicLoginScreen() {
             </View>
             <Text style={styles.title}>Login Failed</Text>
             <Text style={styles.errorText}>{errorMessage}</Text>
-            
+
             <TouchableOpacity
               onPress={() => router.replace('/(auth)')}
               style={[styles.button, Shadow.button]}
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 24,
     color: Colors.ink,
     textAlign: 'center',

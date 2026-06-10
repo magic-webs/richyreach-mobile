@@ -421,12 +421,12 @@ export default function AuthScreen() {
                   <View className="w-16 h-16 bg-white rounded-full items-center justify-center mb-6" style={Shadow.card}>
                     <Icon name={method === 'email' ? 'mail' : 'phone'} size={28} color={Colors.rose} />
                   </View>
-                  <Text style={{ fontFamily: FontFamily.serif, fontSize: 32, color: Colors.ink, textAlign: 'center', lineHeight: 38 }}>
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 32, color: Colors.ink, textAlign: 'center', lineHeight: 38 }}>
                     Verify Your Account
                   </Text>
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.rose, marginTop: 12, textAlign: 'center', lineHeight: 20, paddingHorizontal: 12 }}>
                     We've sent a 6-digit OTP code to{'\n'}
-                  <Text style={{ fontWeight: 'bold', color: Colors.oxblood }}>{getIdentifier()}</Text>
+                    <Text style={{ fontWeight: 'bold', color: Colors.oxblood }}>{getIdentifier()}</Text>
                   </Text>
                 </View>
 
@@ -450,7 +450,7 @@ export default function AuthScreen() {
                               }
                             ]}
                           >
-                            <Text style={{ fontFamily: FontFamily.serif, fontSize: 24, fontWeight: '700', color: Colors.ink }}>
+                            <Text style={{ fontFamily: FontFamily.sans, fontSize: 24, fontWeight: '700', color: Colors.ink }}>
                               {char}
                             </Text>
                           </View>

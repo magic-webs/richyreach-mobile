@@ -1,4 +1,5 @@
-import BottomSheetLib, {
+import { Colors, FontFamily } from '@/constants/brand';
+import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
@@ -7,7 +8,6 @@ import BottomSheetLib, {
 } from '@gorhom/bottom-sheet';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Icon } from './icon';
 
 interface BottomSheetProps {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 21,
     fontWeight: '700',
     color: Colors.ink,

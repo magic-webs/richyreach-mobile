@@ -5,9 +5,13 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { RoleToggle } from '@/components/ui/role-toggle';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { accounts, portfolio } from '@/data/mock';
+import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -152,18 +156,59 @@ export default function ProfileScreen() {
   const setRole = useAuthStore((s) => s.setRole);
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
+  const loadInfluencerProfiles = useProfilesStore((s) => s.loadInfluencerProfiles);
+  const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('Portfolio');
   const [sheet, setSheet] = useState<SheetType>(null);
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [currentAcctId, setCurrentAcctId] = useState('creates');
+  const [infProfile, setInfProfile] = useState<any | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const acct = accounts.find((a) => a.id === currentAcctId) ?? accounts[0];
-  const stats = [['Followers', acct.followers], ['Campaigns', '28'], ['Earned', '₹6.4L'], ['Rating', '4.9']];
+  const stats = [
+    ['Followers', infProfile?.followers ? `${(infProfile.followers / 1000).toFixed(0)}k` : acct.followers],
+    ['Campaigns', '28'],
+    ['Earned', '₹6.4L'],
+    ['Rating', '4.9'],
+  ];
+
+  // Fetch influencer profile from backend
+  useEffect(() => {
+    let active = true;
+    const fetch = async () => {
+      try {
+        setLoadingProfile(true);
+        const prof = await api.influencers.profile().catch(() => null) as any;
+        if (active && prof) {
+          setInfProfile(prof);
+          if (session?.user?.id) {
+            loadInfluencerProfiles(session.user.id, prof);
+          }
+        }
+      } catch (err) {
+        console.warn('ProfileScreen: error fetching influencer profile', err);
+      } finally {
+        if (active) setLoadingProfile(false);
+      }
+    };
+    fetch();
+    return () => { active = false; };
+  }, [refreshTrigger, session?.user?.id, activeInfluencerProfileId]);
+
+  const displayName = infProfile?.name || session?.user?.name || acct.name;
+  const displayHandle = infProfile?.instagramHandle ? `@${infProfile.instagramHandle}` : acct.handle;
+  const displayVerified = infProfile?.verified ?? acct.verified;
+  const displayBio = infProfile?.bio || 'Beauty & lifestyle creator ✨ Telling brand stories that feel real. Mumbai → everywhere.';
+  const displayNiches = infProfile?.niche ? [infProfile.niche, 'Lifestyle'] : ['Beauty', 'Skincare', 'Lifestyle', 'Travel', 'Fashion'];
+
 
   const sheetContent: Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode }> = {
     wallet: { title: 'Wallet & payouts', icon: 'wallet', content: <WalletContent /> },
-    verification: { title: 'Verification', icon: 'verified', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Verification status: {acct.verified ? 'Verified ✓' : 'Pending'}</Text> },
+    verification: { title: 'Verification', icon: 'verified', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Verification status: {displayVerified ? 'Verified ✓' : 'Pending'}</Text> },
     notifications: { title: 'Notifications', icon: 'bell', content: <NotificationsContent /> },
     privacy: { title: 'Privacy & security', icon: 'lock', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Privacy settings coming soon.</Text> },
     language: { title: 'Language', icon: 'globe', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Language: English</Text> },
@@ -174,12 +219,12 @@ export default function ProfileScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setAccountSheetOpen(true)} style={styles.handleBtn} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.handleBtn} activeOpacity={0.8}>
           <View style={{ position: 'relative' }}>
             <PlaceholderImage tone={acct.tone} height={38} width={38} borderRadius={99} />
-            {acct.verified && <View style={styles.verifiedDot}><Icon name="verified" size={11} color={Colors.cream} /></View>}
+            {displayVerified && <View style={styles.verifiedDot}><Icon name="verified" size={11} color={Colors.cream} /></View>}
           </View>
-          <Text style={styles.handleText}>{acct.handle}</Text>
+          <Text style={styles.handleText}>{displayHandle}</Text>
           <View style={styles.chevronWrap}><Icon name="chevDown" size={15} color={Colors.oxblood} /></View>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -208,15 +253,30 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.name}>{session?.user?.name || acct.name}</Text>
-                {(session?.user?.verified ?? acct.verified) && <Icon name="verified" size={18} color={Colors.rose} />}
+                {loadingProfile ? (
+                  <Skeleton width={140} height={22} borderRadius={8} />
+                ) : (
+                  <Text style={styles.name}>{displayName}</Text>
+                )}
+                {!loadingProfile && displayVerified && <Icon name="verified" size={18} color={Colors.rose} />}
               </View>
-              <Text style={styles.handle}>{acct.handle} · {acct.kind}</Text>
+              {loadingProfile ? (
+                <Skeleton width={100} height={12} borderRadius={6} style={{ marginTop: 4 }} />
+              ) : (
+                <Text style={styles.handle}>{displayHandle} · {acct.kind}</Text>
+              )}
             </View>
             <RoleToggle role={role === 'influencer' ? 'creator' : 'brand'} onChange={(r) => setRole(r === 'creator' ? 'influencer' : 'brand')} />
           </View>
 
-          <Text style={styles.bio}>Beauty &amp; lifestyle creator ✨ Telling brand stories that feel real. Mumbai → everywhere.</Text>
+          {loadingProfile ? (
+            <View style={{ gap: 6, marginTop: 12 }}>
+              <Skeleton variant="text" width="100%" />
+              <Skeleton variant="text" width="75%" />
+            </View>
+          ) : (
+            <Text style={styles.bio}>{displayBio}</Text>
+          )}
 
           {/* Stats */}
           <View style={styles.statsRow}>
@@ -289,7 +349,7 @@ export default function ProfileScreen() {
               <View>
                 <Text style={styles.aboutLabel}>Niches</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['Beauty', 'Skincare', 'Lifestyle', 'Travel', 'Fashion'].map((n) => <Chip key={n}>{n}</Chip>)}
+                  {displayNiches.map((n) => <Chip key={n}>{n}</Chip>)}
                 </View>
               </View>
               <View>
@@ -319,9 +379,9 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity onPress={() => setAccountSheetOpen(true)} style={styles.switchAccountBtn} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.switchAccountBtn} activeOpacity={0.8}>
               <Icon name="swap" size={18} color={Colors.oxblood} />
-              <Text style={styles.switchAccountText}>Switch or add account</Text>
+              <Text style={styles.switchAccountText}>Switch or add creator profile</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -357,6 +417,16 @@ export default function ProfileScreen() {
         currentId={currentAcctId}
         onSelect={(id) => { setCurrentAcctId(id); setAccountSheetOpen(false); }}
         onClose={() => setAccountSheetOpen(false)}
+      />
+
+      <SwitchInfluencerProfileSheet
+        isOpen={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onAddNewProfile={() => {
+          // TODO: Open CreateInfluencerProfileSheet when implemented
+          setSwitcherOpen(false);
+        }}
       />
     </View>
   );

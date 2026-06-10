@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface CampaignCardProps {
   title: string;
@@ -142,13 +142,13 @@ export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSec
           if (res && res.length > 0) {
             setCampaigns(res);
           } else {
-            setCampaigns(MOCK_CAMPAIGNS);
+            setCampaigns([]);
           }
         }
       } catch (err) {
-        console.warn("CampaignsSection: failed to load campaigns, falling back to mock.", err);
+        console.warn("CampaignsSection: failed to load campaigns.", err);
         if (active) {
-          setCampaigns(MOCK_CAMPAIGNS);
+          setCampaigns([]);
         }
       } finally {
         if (active) {
@@ -197,6 +197,25 @@ export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSec
             <CampaignCardSkeleton viewMode={viewMode} />
             <CampaignCardSkeleton viewMode={viewMode} />
           </>
+        ) : campaigns.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <Image
+              source={require('@/assets/images/empty_campaign.png')}
+              style={styles.emptyStateImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyStateTitle}>No campaigns created yet</Text>
+            <Text style={styles.emptyStateDescription}>
+              Launch your first campaign to start collaborating with top creators and grow your brand.
+            </Text>
+            <TouchableOpacity
+              onPress={onNewCampaign}
+              activeOpacity={0.8}
+              style={styles.emptyStateBtn}
+            >
+              <Text style={styles.emptyStateBtnText}>Create Campaign</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           campaigns.map((c) => {
             const total = typeof c.budget === 'number' ? c.budget / 100 : 10000;
@@ -391,5 +410,53 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     lineHeight: 14,
+  },
+  emptyStateContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.card,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.04)',
+    marginTop: 4,
+    width: '100%',
+  },
+  emptyStateImage: {
+    width: 160,
+    height: 160,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    color: Colors.oxblood,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateDescription: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: 'rgba(63, 3, 11, 0.6)',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  emptyStateBtn: {
+    backgroundColor: Colors.oxblood,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: Radius.full,
+    ...Shadow.button,
+  },
+  emptyStateBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    color: Colors.cream,
+    fontWeight: '700',
   },
 });
