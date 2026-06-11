@@ -1,17 +1,19 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Gradients, Shadow } from '@/constants/brand';
-import { api } from '@/lib/api';
-import { campaigns } from '@/data/mock';
-import { useAuthStore } from '@/store/auth';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { campaigns } from '@/data/mock';
+import { api } from '@/lib/api';
+import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+import { useProfilesStore } from '@/store/profiles';
+import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CollabDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,8 +23,41 @@ export default function CollabDetail() {
   const [applied, setApplied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cm, setCm] = useState<any>(campaigns.find((c) => c.id === id) ?? campaigns[0]);
+  const [createProfileOpen, setCreateProfileOpen] = useState(false);
 
-  React.useEffect(() => {
+  // Entrance animations state
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(30)).current;
+  const heroScale = useRef(new Animated.Value(1.12)).current;
+
+  // Apply button bounce scale state
+  const applyScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Run entrance stagger animations on mount
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(heroScale, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
     let active = true;
     const loadDetail = async () => {
       if (!id) return;
@@ -52,12 +87,27 @@ export default function CollabDetail() {
         if (!msg.includes('Forbidden') && !msg.includes('401') && !msg.includes('403')) {
           console.error("Failed to load campaign detail from backend:", err);
         }
-        // campaign already seeded from mock via router params — no action needed
       }
     };
     loadDetail();
     return () => { active = false; };
   }, [id]);
+
+  const triggerApplyAnimation = () => {
+    Animated.sequence([
+      Animated.timing(applyScale, {
+        toValue: 0.94,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(applyScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleApply = async () => {
     if (role !== 'influencer') {
@@ -67,8 +117,31 @@ export default function CollabDetail() {
     if (applied) return;
     setLoading(true);
     try {
+      let profiles = useProfilesStore.getState().influencerProfiles;
+      if (profiles.length === 0) {
+        try {
+          const fetched = await api.influencers.profiles();
+          if (fetched && fetched.length > 0) {
+            const userId = useAuthStore.getState().session?.user?.id;
+            if (userId) {
+              await useProfilesStore.getState().loadInfluencerProfiles(userId, fetched[0]);
+            }
+            profiles = fetched;
+          }
+        } catch (e) {
+          // Suppress errors
+        }
+      }
+
+      if (profiles.length === 0) {
+        setCreateProfileOpen(true);
+        setLoading(false);
+        return;
+      }
+
       await api.influencers.apply(id);
       setApplied(true);
+      triggerApplyAnimation();
       useUIStore.getState().showModal({ title: 'Success', message: 'Application submitted successfully!' });
     } catch (err: any) {
       useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit application' });
@@ -87,9 +160,11 @@ export default function CollabDetail() {
   return (
     <View style={styles.root}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Hero */}
+        {/* Hero with zoomed container */}
         <View style={styles.heroWrap}>
-          <PlaceholderImage tone={cm.tone} height={300} borderRadius={0} />
+          <Animated.View style={{ transform: [{ scale: heroScale }], width: '100%', height: '100%' }}>
+            <PlaceholderImage tone={cm.tone} height={300} borderRadius={0} />
+          </Animated.View>
           <LinearGradient
             colors={['rgba(42,2,7,0.45)', 'transparent', 'rgba(42,2,7,0.85)']}
             style={styles.heroOverlay}
@@ -119,10 +194,10 @@ export default function CollabDetail() {
           </View>
         </View>
 
-        {/* Body */}
-        <View style={styles.body}>
-          {/* Budget strip */}
-          <View style={styles.budgetStrip}>
+        {/* Animated Body Content */}
+        <Animated.View style={[styles.body, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
+          {/* Budget strip (Thematic background matched dynamically) */}
+          <View style={[styles.budgetStrip, { backgroundColor: cm.tone === 'rose' ? Colors.roseDeep : Colors.oxblood }]}>
             <View>
               <Text style={styles.budgetLabel}>Paid collaboration</Text>
               <Text style={styles.budgetAmount}>{cm.budget}</Text>
@@ -136,7 +211,7 @@ export default function CollabDetail() {
             </View>
           </View>
 
-          {/* Facts */}
+          {/* Facts Grid */}
           <View style={styles.factsWrap}>
             {facts.map((f) => (
               <View key={f.label} style={styles.factCard}>
@@ -147,7 +222,7 @@ export default function CollabDetail() {
             ))}
           </View>
 
-          {/* About */}
+          {/* About Brief */}
           <View style={{ marginTop: 24 }}>
             <SectionHead title="The brief" action={null} />
             <Text style={styles.aboutText}>{cm.about}</Text>
@@ -168,7 +243,7 @@ export default function CollabDetail() {
             </View>
           </View>
 
-          {/* Brand card */}
+          {/* Brand Card Info */}
           <View style={{ marginTop: 24 }}>
             <SectionHead title="About the brand" action={null} />
             <View style={styles.brandCard}>
@@ -189,10 +264,10 @@ export default function CollabDetail() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
 
-      {/* Sticky apply bar */}
+      {/* Sticky Bottom Apply Bar */}
       <LinearGradient
         colors={['rgba(244,236,228,0)', 'rgba(244,236,228,0.95)']}
         style={[styles.applyBar, { paddingBottom: insets.bottom + 14 }]}
@@ -204,24 +279,37 @@ export default function CollabDetail() {
         >
           <Icon name="chat" size={22} color={Colors.oxblood} />
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleApply}
-          activeOpacity={0.85}
-          disabled={loading || applied}
-          style={[styles.applyBtn, applied && styles.applyBtnDone, loading && { opacity: 0.6 }]}
-        >
-          <Text style={styles.applyBtnText}>
-            {loading ? 'Submitting…' : (applied ? '✓ Application sent' : `Apply now · ${cm.budget}`)}
-          </Text>
-        </TouchableOpacity>
+
+        <Animated.View style={{ flex: 1, height: 52, transform: [{ scale: applyScale }] }}>
+          <TouchableOpacity
+            onPress={handleApply}
+            activeOpacity={0.85}
+            disabled={loading || applied}
+            style={[styles.applyBtn, applied && styles.applyBtnDone, loading && { opacity: 0.6 }]}
+          >
+            <Text style={styles.applyBtnText}>
+              {loading ? 'Submitting…' : (applied ? '✓ Application sent' : `Apply now · ${cm.budget}`)}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </LinearGradient>
+
+      <CreateInfluencerProfileSheet
+        isOpen={createProfileOpen}
+        onClose={() => setCreateProfileOpen(false)}
+        onSuccess={() => {
+          // Trigger apply on successful profile creation
+          handleApply();
+        }}
+        initialData={null}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
-  heroWrap: { position: 'relative', height: 300 },
+  heroWrap: { position: 'relative', height: 300, overflow: 'hidden' },
   heroOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   heroNav: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 2 },
   navBtn: { width: 40, height: 40, borderRadius: 99, backgroundColor: 'rgba(244,236,228,0.92)', alignItems: 'center', justifyContent: 'center' },
@@ -233,7 +321,7 @@ const styles = StyleSheet.create({
 
   body: { paddingHorizontal: 18, paddingTop: 20 },
 
-  budgetStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.oxblood, borderRadius: 18, padding: 16 },
+  budgetStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 18, padding: 16 },
   budgetLabel: { fontSize: 11.5, color: Colors.roseSoft, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   budgetAmount: { fontFamily: FontFamily.serif, fontSize: 28, fontWeight: '700', color: Colors.cream, marginTop: 3 },
   deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -241,27 +329,36 @@ const styles = StyleSheet.create({
   applicantsText: { fontSize: 11.5, color: 'rgba(232,216,204,0.6)', marginTop: 3 },
 
   factsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 },
-  factCard: { flex: 1, minWidth: '40%', backgroundColor: '#fff', borderRadius: 14, padding: 12, ...Shadow.card },
-  factValue: { fontFamily: FontFamily.serif, fontSize: 15, fontWeight: '700', color: Colors.ink, marginTop: 6 },
+  factCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    ...Shadow.card,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.04)'
+  },
+  factValue: { fontFamily: FontFamily.sansMedium, fontSize: 15, fontWeight: '700', color: Colors.ink, marginTop: 6 },
   factLabel: { fontSize: 11, color: 'rgba(63,3,11,0.5)', fontWeight: '600', marginTop: 1 },
 
-  aboutText: { fontSize: 14.5, lineHeight: 24, color: 'rgba(42,2,7,0.78)' },
+  aboutText: { fontFamily: FontFamily.sansRegular, fontSize: 14.5, lineHeight: 24, color: 'rgba(42,2,7,0.78)' },
 
-  deliverablesList: { backgroundColor: '#fff', borderRadius: 18, paddingVertical: 6, paddingHorizontal: 4, ...Shadow.card },
+  deliverablesList: { backgroundColor: '#fff', borderRadius: 18, paddingVertical: 6, paddingHorizontal: 4, ...Shadow.card, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)' },
   deliverableRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
   deliverableBorder: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
   checkCircle: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  deliverableText: { fontSize: 14, color: Colors.ink, fontWeight: '500' },
+  deliverableText: { fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.ink },
 
-  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 18, padding: 16, ...Shadow.card },
-  brandCardName: { fontWeight: '700', fontSize: 15, color: Colors.ink },
+  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 18, padding: 16, ...Shadow.card, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)' },
+  brandCardName: { fontFamily: FontFamily.sansMedium, fontWeight: '700', fontSize: 15, color: Colors.ink },
   brandCardMeta: { fontSize: 12.5, color: 'rgba(63,3,11,0.55)', marginTop: 2 },
   messageBtn: { borderWidth: 1.5, borderColor: Colors.oxblood, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 8 },
-  messageBtnText: { fontWeight: '700', fontSize: 12.5, color: Colors.oxblood },
+  messageBtnText: { fontFamily: FontFamily.sansMedium, fontWeight: '700', fontSize: 12.5, color: Colors.oxblood },
 
   applyBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 14, flexDirection: 'row', gap: 12, alignItems: 'center' },
-  chatBtn: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...Shadow.card },
-  applyBtn: { flex: 1, height: 52, borderRadius: 16, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center', ...Shadow.button },
+  chatBtn: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...Shadow.card, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)' },
+  applyBtn: { width: '100%', height: '100%', borderRadius: 16, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center', ...Shadow.button },
   applyBtnDone: { backgroundColor: Colors.roseDeep },
   applyBtnText: { fontFamily: FontFamily.sans, fontWeight: '800', fontSize: 16, color: Colors.cream },
 });

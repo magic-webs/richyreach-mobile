@@ -1,63 +1,131 @@
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { campaigns } from '@/data/mock';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Image } from 'expo-image';
+import React, { useState, useEffect } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
+import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
+import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
+import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+
 const CATS = ['All', 'Beauty', 'Fashion', 'Tech', 'Fitness', 'Luxury'];
+
+function CampaignSkeletonCard() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardThumb}>
+        <Skeleton width={96} height={104} borderRadius={14} />
+      </View>
+      <View style={[styles.cardBody, { justifyContent: 'space-between' }]}>
+        <Skeleton width={100} height={16} borderRadius={4} />
+        <Skeleton width="90%" height={16} borderRadius={4} style={{ marginTop: 4 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+          <View style={{ gap: 4 }}>
+            <Skeleton width={60} height={18} borderRadius={4} />
+            <Skeleton width={40} height={12} borderRadius={4} />
+          </View>
+          <Skeleton width={60} height={14} borderRadius={4} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function MarketplaceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const role = useAuthStore((s) => s.role);
-  const [cat, setCat] = useState('All');
-  const [campaignList, setCampaignList] = useState<any[]>(campaigns);
+  const session = useAuthStore((s) => s.session);
 
-  React.useEffect(() => {
+  const [cat, setCat] = useState('All');
+  const [campaignList, setCampaignList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Switcher and creation sheets state
+  const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
+  const [isBrandSwitcherOpen, setIsBrandSwitcherOpen] = useState(false);
+  const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
+  const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const {
+    influencerProfiles,
+    activeInfluencerProfileId,
+    brandProfiles,
+    activeBrandProfileId,
+    loadBrandProfiles,
+    loadInfluencerProfiles,
+  } = useProfilesStore();
+
+  const activeInfluencer = influencerProfiles.find((p) => p.id === activeInfluencerProfileId);
+  const activeBrand = brandProfiles.find((p) => p.id === activeBrandProfileId);
+
+  const activeAvatar = role === 'brand' ? activeBrand?.logo : activeInfluencer?.avatar;
+  const activeHandle = role === 'brand' ? activeBrand?.companyName : activeInfluencer?.instagramHandle;
+
+  // Load profiles on mount/refresh
+  useEffect(() => {
+    if (session?.user?.id) {
+      if (role === 'brand') {
+        loadBrandProfiles(session.user.id).catch(() => {});
+      } else {
+        loadInfluencerProfiles(session.user.id).catch(() => {});
+      }
+    }
+  }, [session?.user?.id, role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
+
+  useEffect(() => {
     let active = true;
     const fetchCampaigns = async () => {
       try {
+        setLoading(true);
         let res: any[] = [];
         if ((role as string) === 'brand') {
           res = await api.campaigns.list() as any[];
         } else {
           res = await api.influencers.marketplace() as any[];
         }
-        if (active && res && res.length > 0) {
-          const mapped = res.map((c: any) => ({
-            id: c.id,
-            brand: c.brandName || c.brand?.companyName || "Richy Brand",
-            cat: c.campaignType || c.category || "General",
-            verified: c.verified || c.brand?.verified || false,
-            title: c.title,
-            budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
-            deadline: c.deadline || '5 days left',
-            applicants: c.applicants || 0,
-            tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-            about: c.description || c.about,
-            deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
-          }));
-          setCampaignList(mapped);
+        if (active) {
+          if (res && res.length > 0) {
+            const mapped = res.map((c: any) => ({
+              id: c.id,
+              brand: c.brandName || c.brand?.companyName || "Richy Brand",
+              cat: c.campaignType || c.category || "General",
+              verified: c.verified || c.brand?.verified || false,
+              title: c.title,
+              budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+              deadline: c.deadline || '5 days left',
+              applicants: c.applicants || 0,
+              tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+              about: c.description || c.about,
+              deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+            }));
+            setCampaignList(mapped);
+          } else {
+            setCampaignList([]);
+          }
         }
       } catch (err: any) {
-        // Silently fall back to mock data for auth/role errors — no console noise
-        const msg: string = err?.message ?? '';
-        const isPermissionError = msg.includes('Forbidden') || msg.includes('401') || msg.includes('403');
-        if (!isPermissionError) {
-          console.warn("MarketplaceScreen: could not load live campaigns, showing mock data.", err);
+        console.warn("MarketplaceScreen: could not load campaigns.", err);
+        if (active) {
+          setCampaignList([]);
         }
-        // campaignList already initialized with mock campaigns — nothing to do
+      } finally {
+        if (active) setLoading(false);
       }
     };
     fetchCampaigns();
     return () => { active = false; };
-  }, [role]);
+  }, [role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
 
   const list = campaignList.filter((c) => cat === 'All' || c.cat === cat);
 
@@ -66,13 +134,38 @@ export default function MarketplaceScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <GradientView variant="oxblood" style={styles.headerIcon}>
-            <Icon name="briefcase" size={23} color={Colors.cream} />
-          </GradientView>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerEye}>{(role as string) === 'brand' ? 'Find your creator' : 'Discover collabs'}</Text>
-            <Text style={styles.headerTitle}>Marketplace</Text>
-          </View>
+          <TouchableOpacity
+            onPress={() => {
+              if (role === 'brand') {
+                setIsBrandSwitcherOpen(true);
+              } else {
+                setIsInfluencerSwitcherOpen(true);
+              }
+            }}
+            activeOpacity={0.8}
+            style={styles.profileSwitchTrigger}
+          >
+            <View style={styles.avatarContainer}>
+              {activeAvatar ? (
+                <Image source={{ uri: activeAvatar }} style={styles.avatarImage} contentFit="cover" />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarFallbackText}>
+                    {activeHandle ? activeHandle.charAt(0).toUpperCase() : 'U'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.greetSub}>
+                {activeHandle ? `@${activeHandle}` : 'Marketplace'}
+              </Text>
+              <View style={styles.switchRow}>
+                <Text style={styles.greetTitle}>Marketplace</Text>
+                <Icon name="chevDown" size={13} color={Colors.oxblood} />
+              </View>
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>
             <Icon name="filter" size={20} color={Colors.oxblood} />
           </TouchableOpacity>
@@ -98,54 +191,122 @@ export default function MarketplaceScreen() {
       </View>
 
       {/* Campaign list */}
-      <FlatList
-        data={list}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: 130 }]}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
+      {loading ? (
+        <View style={styles.list}>
           <View style={styles.listHeader}>
-            <Text style={styles.listCount}>{list.length} campaigns</Text>
-            <TouchableOpacity style={styles.sortBtn} activeOpacity={0.8}>
-              <Text style={styles.sortText}>Top match</Text>
-              <Icon name="chevDown" size={15} color={Colors.oxblood} />
-            </TouchableOpacity>
+            <Skeleton width={80} height={16} borderRadius={4} />
           </View>
-        }
-        renderItem={({ item: cm }) => (
-          <TouchableOpacity
-            onPress={() => router.push({ pathname: '/collab/[id]', params: { id: cm.id } })}
-            activeOpacity={0.85}
-            style={styles.card}
-          >
-            <View style={styles.cardThumb}>
-              <PlaceholderImage tone={cm.tone} height={104} width={96} borderRadius={14} />
-              {cm.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Icon name="verified" size={15} color={Colors.cream} />
-                </View>
-              )}
-              <View style={styles.catPill}>
-                <Text style={styles.catPillText}>{cm.cat}</Text>
+          <View style={{ gap: 14 }}>
+            <CampaignSkeletonCard />
+            <CampaignSkeletonCard />
+            <CampaignSkeletonCard />
+          </View>
+        </View>
+      ) : (
+        <FlatList
+          data={list}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.list, { paddingBottom: 130 }]}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            list.length > 0 ? (
+              <View style={styles.listHeader}>
+                <Text style={styles.listCount}>{list.length} campaigns</Text>
+                <TouchableOpacity style={styles.sortBtn} activeOpacity={0.8}>
+                  <Text style={styles.sortText}>Top match</Text>
+                  <Icon name="chevDown" size={15} color={Colors.oxblood} />
+                </TouchableOpacity>
               </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <Image
+                source={require('@/assets/images/empty_campaign.png')}
+                style={styles.emptyStateImage}
+                contentFit="contain"
+              />
+              <Text style={styles.emptyStateText}>No campaigns found</Text>
+              <Text style={styles.emptyStateSub}>
+                There are currently no active campaigns in the marketplace. Check back later or adjust your category.
+              </Text>
             </View>
-            <View style={styles.cardBody}>
-              <Text style={styles.brandName} numberOfLines={1}>{cm.brand}</Text>
-              <Text style={styles.campaignTitle} numberOfLines={2}>{cm.title}</Text>
-              <View style={styles.cardFooter}>
-                <View>
-                  <Text style={styles.budget}>{cm.budget}</Text>
-                  <View style={styles.deadlineRow}>
-                    <Icon name="clock" size={12} color={Colors.rose} />
-                    <Text style={styles.deadline}>{cm.deadline}</Text>
+          }
+          renderItem={({ item: cm }) => (
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/collab/[id]', params: { id: cm.id } })}
+              activeOpacity={0.85}
+              style={styles.card}
+            >
+              <View style={styles.cardThumb}>
+                <PlaceholderImage tone={cm.tone} height={104} width={96} borderRadius={14} />
+                {cm.verified && (
+                  <View style={styles.verifiedBadge}>
+                    <Icon name="verified" size={15} color={Colors.cream} />
                   </View>
+                )}
+                <View style={styles.catPill}>
+                  <Text style={styles.catPillText}>{cm.cat}</Text>
                 </View>
-                <Text style={styles.applied}>{cm.applicants} applied</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+              <View style={styles.cardBody}>
+                <Text style={styles.brandName} numberOfLines={1}>{cm.brand}</Text>
+                <Text style={styles.campaignTitle} numberOfLines={2}>{cm.title}</Text>
+                <View style={styles.cardFooter}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.budget}>{cm.budget}</Text>
+                    <View style={styles.deadlineRow}>
+                      <Icon name="clock" size={12} color={Colors.rose} />
+                      <Text style={styles.deadline}>{cm.deadline}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.applied}>{cm.applicants} applied</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+        />
+      )}
+
+      <SwitchInfluencerProfileSheet
+        isOpen={isInfluencerSwitcherOpen}
+        onClose={() => setIsInfluencerSwitcherOpen(false)}
+        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onAddNewProfile={() => {
+          setIsInfluencerSwitcherOpen(false);
+          setIsCreateInfluencerOpen(true);
+        }}
+      />
+
+      <SwitchBrandProfileSheet
+        isOpen={isBrandSwitcherOpen}
+        onClose={() => setIsBrandSwitcherOpen(false)}
+        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onAddNewProfile={() => {
+          setIsBrandSwitcherOpen(false);
+          setIsCreateBrandOpen(true);
+        }}
+      />
+
+      <CreateBrandProfileSheet
+        isOpen={isCreateBrandOpen}
+        onClose={() => setIsCreateBrandOpen(false)}
+        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        initialData={activeBrand ? {
+          companyName: activeBrand.companyName,
+          website: activeBrand.website,
+          logo: activeBrand.logo || undefined,
+          category: activeBrand.category,
+          description: activeBrand.description || undefined,
+        } : null}
+      />
+
+      <CreateInfluencerProfileSheet
+        isOpen={isCreateInfluencerOpen}
+        onClose={() => setIsCreateInfluencerOpen(false)}
+        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        initialData={activeInfluencer}
       />
     </View>
   );
@@ -162,10 +323,47 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 10,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', ...Shadow.button, shadowColor: Colors.oxblood, shadowOpacity: 0.3 },
-  headerEye: { fontSize: 11, color: Colors.rose, fontWeight: '700' },
-  headerTitle: { fontFamily: FontFamily.serif, fontSize: 24, fontWeight: '700', color: Colors.ink, lineHeight: 28 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  profileSwitchTrigger: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, marginRight: 12 },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(180,106,116,0.15)',
+    borderWidth: 1.5,
+    borderColor: Colors.oxblood,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.oxbloodDeep,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarFallbackText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16,
+    color: Colors.cream,
+    fontWeight: '700',
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  greetSub: { fontSize: 11, color: Colors.rose, fontWeight: '700' },
+  greetTitle: { fontFamily: FontFamily.sansMedium, fontSize: 14.5, fontWeight: '700', color: Colors.ink },
   filterIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...Shadow.card },
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, ...Shadow.card },
   searchPlaceholder: { fontSize: 14, color: 'rgba(63,3,11,0.4)', flex: 1 },
@@ -194,4 +392,34 @@ const styles = StyleSheet.create({
   deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   deadline: { fontSize: 11, color: Colors.rose, fontWeight: '600' },
   applied: { fontSize: 11.5, color: 'rgba(63,3,11,0.5)', fontWeight: '600' },
+
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginTop: 10,
+    ...Shadow.card,
+    gap: 8,
+  },
+  emptyStateImage: {
+    width: 150,
+    height: 130,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontFamily: FontFamily.serif,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.ink,
+    textAlign: 'center',
+  },
+  emptyStateSub: {
+    fontSize: 12.5,
+    color: 'rgba(63, 3, 11, 0.5)',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
 });

@@ -180,6 +180,7 @@ export default function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: 'rgba(244,236,228,0.9)' }}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -189,7 +190,7 @@ export default function AuthScreen() {
         showsVerticalScrollIndicator={false}
       >
         <PageWrapper>
-          <View className="flex-1 justify-center px-8 py-10">
+          <View className="flex-1 justify-center px-2 py-10">
 
             {step === 'request' ? (
               <>

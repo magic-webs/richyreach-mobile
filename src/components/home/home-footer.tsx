@@ -1,7 +1,6 @@
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontFamily } from '@/constants/brand';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 export function HomeFooter() {
   return (
@@ -30,10 +29,39 @@ export function HomeFooter() {
 }
 
 const styles = StyleSheet.create({
-  taglineCard: { borderRadius: 26, padding: 34, alignItems: 'center', marginTop: 30, overflow: 'hidden' },
-  taglineSealImage: { width: 56, height: 56, borderRadius: 28, marginBottom: 16 },
-  tagline: { fontFamily: FontFamily.serif, fontSize: 30, lineHeight: 38, color: Colors.cream, fontWeight: '500', textAlign: 'center' },
-  taglineHighlight: { fontWeight: '700', color: Colors.roseSoft },
-  taglineDivider: { width: 38, height: 2, backgroundColor: 'rgba(232,216,204,0.25)', marginTop: 18, marginBottom: 12 },
-  taglineEst: { fontSize: 10.5, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(232,216,204,0.45)', fontWeight: '700' },
+  taglineCard: {
+    borderRadius: 26,
+    padding: 34,
+    alignItems: 'center',
+    marginTop: 30,
+    overflow: 'hidden'
+  },
+  taglineSealImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginBottom: 16
+  },
+  tagline: {
+    fontFamily: FontFamily.serif,
+    fontSize: 30,
+    lineHeight: 38,
+    color: Colors.cream,
+    fontWeight: '500',
+    textAlign: 'center'
+  },
+  taglineHighlight: {
+    fontWeight: '700',
+    color: Colors.roseSoft
+  },
+  taglineDivider: {
+    width: 38,
+    height: 2,
+    backgroundColor: 'rgba(232,216,204,0.25)',
+    marginTop: 18,
+    marginBottom: 12
+  },
+  taglineEst: {
+    fontSize: 10.5, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(232,216,204,0.45)', fontWeight: '700'
+  },
 });

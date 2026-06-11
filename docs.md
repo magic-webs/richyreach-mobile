@@ -8,7 +8,7 @@ This document serves as the absolute source of truth for the RichyReach REST API
 
 ### 1.1 Base URL
 All API endpoints are hosted under the `/api` prefix.
-*   **Production**: `https://richyreach.expo.app/api`
+*   **Production**: `https://backend-api.richyreach.com/api`
 *   **Local Development**: `http://localhost:8787/api`
 
 ### 1.2 Standard Success Response
@@ -968,7 +968,14 @@ Returns public campaigns available to the active influencer profile, with applic
 *   **Route**: `GET /influencers/marketplace-campaigns`
 *   **Auth Required**: Yes (`influencer` role)
 *   **Header (optional)**: `x-active-profile-id: ip_78910`
-*   **Query Parameters**: `category`, `campaignType`, `search`, `limit`, `offset`
+*   **Query Parameters**:
+    | Param | Type | Required | Description |
+    |---|---|---|---|
+    | `category` | string | No | Filter campaigns by brand's category |
+    | `campaignType` | string | No | Filter campaigns by campaign type (e.g. `reel`, `story`) |
+    | `search` | string | No | Keyword search (searches title and description) |
+    | `limit` | integer | No | Pagination limit (default: 20) |
+    | `offset` | integer | No | Pagination offset (default: 0) |
 *   **Success Response (200 OK)**:
     ```json
     {
@@ -1036,11 +1043,11 @@ All endpoints respect `x-active-profile-id`.
     | Field | Type | Required | Description |
     |---|---|---|---|
     | `name` | string | Yes | Service name |
-    | `type` | string | Yes | Service type (e.g. `"video"`, `"story"`) |
+    | `type` | string | Yes | Service type (must be strictly `"service"`) |
     | `price` | string | Yes | Price in INR (e.g. `"150.00"` → stored as `15000` paise) |
     | `deliveryTime` | string | No | e.g. `"5 days"` |
     | `exampleUrl` | string | No | External URL example |
-    | `video` | File | No | Binary upload; uploaded to Cloudinary |
+    | `video` | File | No | Binary upload; uploaded to Cloudinary (populates both `exampleUrl` and `videoUrl`) |
 
 *   **Success Response (200 OK — POST Service)**:
     ```json
@@ -1048,12 +1055,13 @@ All endpoints respect `x-active-profile-id`.
       "success": true,
       "data": {
         "id": "srv_555aa",
-        "influencerId": "ip_78910",
+        "influencerProfileId": "ip_78910",
         "name": "Dedicated Instagram Reel Review",
-        "type": "video",
+        "type": "service",
         "price": 15000,
         "deliveryTime": "5 days",
-        "exampleUrl": "https://res.cloudinary.com/.../service_video.mp4"
+        "exampleUrl": "https://res.cloudinary.com/.../service_video.mp4",
+        "videoUrl": "https://res.cloudinary.com/.../service_video.mp4"
       }
     }
     ```

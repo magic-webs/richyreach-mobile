@@ -13,9 +13,11 @@ export function setActiveProfileHeader(id: string | null) {
 async function request<T>(path: string, options?: RequestInit & { activeProfileId?: string | null }): Promise<T> {
   const token = await getToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -51,11 +53,23 @@ export const api = {
     list: () => request('/influencers'),
     marketplace: () => request('/influencers/marketplace-campaigns'),
     dashboard: () => request('/influencers/dashboard'),
+    earnings: () => request<any[]>('/influencers/earnings'),
     profile: () => request('/influencers/profile'),
     profiles: () => request<any[]>('/influencers/profiles'),
     updateProfile: (data: any) => request('/influencers/profile', { method: 'POST', body: JSON.stringify(data) }),
     apply: (campaignId: string, proposal: string = "Excited to collaborate on this campaign!") =>
       request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal }) }),
+    services: {
+      list: () => request<any[]>('/influencers/services'),
+      create: (data: FormData | any) => {
+        const isFormData = data instanceof FormData;
+        return request<any>('/influencers/services', {
+          method: 'POST',
+          body: isFormData ? data : JSON.stringify(data),
+        });
+      },
+      delete: (id: string) => request<any>(`/influencers/services/${id}`, { method: 'DELETE' }),
+    },
   },
   brands: {
     profile: () => request('/brands/profile'),

@@ -1,8 +1,60 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
+
+function ShineHighlight({ duration = 1800 }: { duration?: number }) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const startAnimation = () => {
+      animatedValue.setValue(0);
+      Animated.sequence([
+        Animated.delay(1200), // delay between sweeps
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: duration,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(() => startAnimation());
+    };
+    startAnimation();
+  }, [animatedValue, duration]);
+
+  const translateX = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-120, 150],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          transform: [{ translateX }, { skewX: '-25deg' }],
+        },
+      ]}
+      pointerEvents="none"
+    >
+      <LinearGradient
+        colors={[
+          'transparent',
+          'rgba(243, 201, 105, 0.0)',
+          'rgba(243, 201, 105, 0.45)',
+          'rgba(255, 255, 255, 0.75)',
+          'rgba(243, 201, 105, 0.45)',
+          'rgba(243, 201, 105, 0.0)',
+          'transparent'
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
+}
 
 export function OfferBanner() {
   const [timeLeft, setTimeLeft] = useState(2 * 3600 + 14 * 60 + 33);
@@ -33,6 +85,7 @@ export function OfferBanner() {
         <View style={offer.badge}>
           <Icon name="sparkle" size={12} color={Colors.gold} />
           <Text style={offer.badgeText}>Pro</Text>
+          <ShineHighlight duration={1600} />
         </View>
         <View style={offer.titleWrap}>
           <Text style={offer.title}>
@@ -42,6 +95,7 @@ export function OfferBanner() {
         <TouchableOpacity style={offer.ctaBtn} activeOpacity={0.85}>
           <Text style={offer.ctaText}>₹199</Text>
           <Icon name="arrow" size={14} color="#3f030b" />
+          <ShineHighlight duration={1800} />
         </TouchableOpacity>
       </View>
       <View style={offer.row2}>
@@ -88,6 +142,8 @@ const offer = StyleSheet.create({
     borderRadius: 99,
     borderWidth: 1,
     borderColor: 'rgba(243, 201, 105, 0.3)',
+    overflow: 'hidden',
+    position: 'relative',
   },
   badgeText: {
     fontSize: 10,
@@ -115,6 +171,8 @@ const offer = StyleSheet.create({
     flexShrink: 0,
     ...Shadow.card,
     shadowColor: Colors.gold,
+    overflow: 'hidden',
+    position: 'relative',
   },
   ctaText: { fontFamily: FontFamily.sans, fontWeight: '800', fontSize: 14, color: '#3f030b' },
   row2: {

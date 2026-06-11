@@ -1,22 +1,49 @@
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { useUIStore } from '@/store/ui';
+import { Image } from 'expo-image';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export function MarketplaceHeader() {
+interface MarketplaceHeaderProps {
+  activeBrandLogo?: string | null;
+  activeBrandName?: string | null;
+  onProfileSwitchPress?: () => void;
+}
+
+export function MarketplaceHeader({
+  activeBrandLogo,
+  activeBrandName,
+  onProfileSwitchPress,
+}: MarketplaceHeaderProps) {
   const showModal = useUIStore((s) => s.showModal);
 
   return (
     <View style={styles.header}>
-      <View style={styles.headerLeft}>
+      <TouchableOpacity
+        onPress={onProfileSwitchPress}
+        disabled={!onProfileSwitchPress}
+        activeOpacity={0.8}
+        style={styles.headerLeft}
+      >
         <View style={styles.headerIcon}>
-          <Icon name="users" size={20} color={Colors.cream} />
+          {activeBrandLogo ? (
+            <Image source={{ uri: activeBrandLogo }} style={styles.logoImage} contentFit="cover" />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>
+                {activeBrandName ? activeBrandName.charAt(0).toUpperCase() : 'B'}
+              </Text>
+            </View>
+          )}
         </View>
         <View>
-          <Text style={styles.headerSubtitle}>CREATOR DISCOVERY</Text>
-          <Text style={styles.headerTitle}>Find creators</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={styles.headerSubtitle}>CREATOR DISCOVERY</Text>
+            {onProfileSwitchPress && <Icon name="chevDown" size={10} color={Colors.roseDeep} />}
+          </View>
+          <Text style={styles.headerTitle}>{activeBrandName || 'Find creators'}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <TouchableOpacity
         style={styles.inviteListBtn}
         activeOpacity={0.8}
@@ -51,6 +78,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.card,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.oxbloodDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16,
+    color: Colors.cream,
+    fontWeight: '700',
   },
   headerSubtitle: {
     fontFamily: FontFamily.sans,

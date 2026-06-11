@@ -1,6 +1,8 @@
 import { Colors } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
+import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -13,15 +15,8 @@ import { MarketplaceCreatorList } from '@/components/brand/marketplace/Marketpla
 import { MarketplaceFilters } from '@/components/brand/marketplace/MarketplaceFilters';
 import { MarketplaceHeader } from '@/components/brand/marketplace/MarketplaceHeader';
 import { MarketplaceSearch } from '@/components/brand/marketplace/MarketplaceSearch';
-
-const ALL_CREATORS: Creator[] = [
-  { id: '1', name: 'Mira Sen', handle: '@mira.wellness', followers: '38k', engagement: '11.2%', collabs: 6, rating: '4.6', rate: '₹12,000', niche: ['Fitness', 'Wellness'], tone: 'ox' },
-  { id: '2', name: 'Léa Fontaine', handle: '@lea.fr', followers: '62k', engagement: '9.1%', collabs: 9, rating: '4.7', rate: '₹20,000', niche: ['Skincare', 'Beauty'], tone: 'rose' },
-  { id: '3', name: 'Kai Rao', handle: '@kai.shoots', followers: '96k', engagement: '7.8%', collabs: 14, rating: '4.8', rate: '₹28,000', niche: ['Tech', 'Unboxing'], tone: 'ox' },
-  { id: '4', name: 'Muskan', handle: '@muskan.creates', followers: '184k', engagement: '6.2%', collabs: 28, rating: '4.9', rate: '₹45,000', niche: ['Beauty', 'Lifestyle'], tone: 'rose' },
-  { id: '5', name: 'Noa Vey', handle: '@noa.creates', followers: '218k', engagement: '5.4%', collabs: 32, rating: '4.9', rate: '₹50,000', niche: ['Fashion', 'Editorial'], tone: 'ox' },
-  { id: '6', name: 'Ivo Marsh', handle: '@ivo.films', followers: '50k', engagement: '6.8%', collabs: 8, rating: '4.5', rate: '₹15,000', niche: ['Tech', 'UGC'], tone: 'rose' },
-];
+import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
+import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 
 export default function BrandMarketplaceScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +33,27 @@ export default function BrandMarketplaceScreen() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<Partial<Creator> | null>(null);
   const [bookmarked, setBookmarked] = useState<Record<string, boolean>>({});
+
+  // Switcher and creation sheets state
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const session = useAuthStore((s) => s.session);
+  const {
+    brandProfiles,
+    activeBrandProfileId,
+    loadBrandProfiles,
+  } = useProfilesStore();
+
+  const activeBrand = brandProfiles.find((p) => p.id === activeBrandProfileId);
+
+  // Load profiles on mount/refresh
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadBrandProfiles(session.user.id).catch(() => {});
+    }
+  }, [session?.user?.id, refreshTrigger, activeBrandProfileId]);
 
   useEffect(() => {
     let active = true;
@@ -68,19 +84,19 @@ export default function BrandMarketplaceScreen() {
             });
             setCreators(mapped);
           } else {
-            setCreators(ALL_CREATORS);
+            setCreators([]);
           }
         }
       } catch (err) {
         console.warn('Marketplace: failed to load creators', err);
-        if (active) setCreators(ALL_CREATORS);
+        if (active) setCreators([]);
       } finally {
         if (active) setLoading(false);
       }
     };
     fetchCreators();
     return () => { active = false; };
-  }, []);
+  }, [refreshTrigger, activeBrandProfileId]);
 
   useEffect(() => {
     if (params.inviteCreator) {
@@ -147,7 +163,11 @@ export default function BrandMarketplaceScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <MarketplaceHeader />
+      <MarketplaceHeader
+        activeBrandLogo={activeBrand?.logo}
+        activeBrandName={activeBrand?.companyName}
+        onProfileSwitchPress={() => setIsSwitcherOpen(true)}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -175,6 +195,29 @@ export default function BrandMarketplaceScreen() {
         creator={selectedCreator}
         onMessageFirst={handleMessageCreator}
         onSendInvite={handleSendInvite}
+      />
+
+      <CreateBrandProfileSheet
+        isOpen={isProfileSheetOpen}
+        onClose={() => setIsProfileSheetOpen(false)}
+        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        initialData={activeBrand ? {
+          companyName: activeBrand.companyName,
+          website: activeBrand.website,
+          logo: activeBrand.logo || undefined,
+          category: activeBrand.category,
+          description: activeBrand.description || undefined,
+        } : null}
+      />
+
+      <SwitchBrandProfileSheet
+        isOpen={isSwitcherOpen}
+        onClose={() => setIsSwitcherOpen(false)}
+        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onAddNewProfile={() => {
+          setIsSwitcherOpen(false);
+          setIsProfileSheetOpen(true);
+        }}
       />
     </View>
   );

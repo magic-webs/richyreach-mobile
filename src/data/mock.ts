@@ -17,25 +17,25 @@ export const contests: Contest[] = [
 ];
 
 export const leaderboard: LeaderboardEntry[] = [
-  { rank: 1, name: 'Noa Vey', handle: '@noa.creates', pts: 9840, tone: 'ox', verified: true, up: true },
-  { rank: 2, name: 'Kai Rao', handle: '@kai.shoots', pts: 9120, tone: 'rose', verified: true, up: true },
+  { rank: 1, name: 'Neha Verma', handle: '@neha.creates', pts: 9840, tone: 'ox', verified: true, up: true },
+  { rank: 2, name: 'Kabir Rao', handle: '@kabir.shoots', pts: 9120, tone: 'rose', verified: true, up: true },
   { rank: 3, name: 'Muskan', handle: '@muskan.creates', pts: 8760, tone: 'ox', verified: true, up: false, me: true },
-  { rank: 4, name: 'Léa Fontaine', handle: '@lea.fr', pts: 7400, tone: 'rose', verified: false, up: true },
-  { rank: 5, name: 'Ivo Marsh', handle: '@ivo.films', pts: 6980, tone: 'ox', verified: true, up: false },
+  { rank: 4, name: 'Lavanya Iyer', handle: '@lavanya.creates', pts: 7400, tone: 'rose', verified: false, up: true },
+  { rank: 5, name: 'Ishan Malhotra', handle: '@ishan.films', pts: 6980, tone: 'ox', verified: true, up: false },
 ];
 
 export const winners = [
-  { contest: '#GlowUp', name: 'Mira S.', prize: '₹4,00,000', tone: 'rose' },
-  { contest: '#TechDrop', name: 'Ivo Marsh', prize: '₹2,50,000', tone: 'ox' },
-  { contest: '#RunwayReel', name: 'Noa Vey', prize: '₹5,00,000', tone: 'ox' },
+  { contest: '#GlowUp', name: 'Mira Shah', prize: '₹4,00,000', tone: 'rose' },
+  { contest: '#TechDrop', name: 'Ishan Malhotra', prize: '₹2,50,000', tone: 'ox' },
+  { contest: '#RunwayReel', name: 'Neha Verma', prize: '₹5,00,000', tone: 'ox' },
 ];
 
 export const activity: ActivityItem[] = [
-  { who: 'Kai Rao', act: 'earned', detail: '₹50,000 from Atlas Watches', time: '2m', tone: 'ox', icon: 'dollar-sign' },
+  { who: 'Kabir Rao', act: 'earned', detail: '₹50,000 from Atlas Watches', time: '2m', tone: 'ox', icon: 'dollar-sign' },
   { who: 'Maison Noir', act: 'connected with', detail: 'you — wants to collaborate', time: '14m', tone: 'rose', icon: 'user-plus', verified: true },
-  { who: 'Léa Fontaine', act: 'joined', detail: 'Richy Reach as a creator', time: '38m', tone: 'rose', icon: 'star' },
+  { who: 'Lavanya Iyer', act: 'joined', detail: 'Richy Reach as a creator', time: '38m', tone: 'rose', icon: 'star' },
   { who: 'Aurora Tech', act: 'launched', detail: 'a new campaign · ₹65k budget', time: '1h', tone: 'ox', icon: 'zap', verified: true },
-  { who: 'Ivo Marsh', act: 'won', detail: '#UnboxAurora — 1st place 🏆', time: '3h', tone: 'ox', icon: 'award' },
+  { who: 'Ishan Malhotra', act: 'won', detail: '#UnboxAurora — 1st place 🏆', time: '3h', tone: 'ox', icon: 'award' },
 ];
 
 export const musics: MusicTrack[] = [
