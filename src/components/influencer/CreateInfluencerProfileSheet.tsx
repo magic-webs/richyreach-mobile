@@ -4,8 +4,9 @@ import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Platform } from 'react-native';
+import { Image } from 'expo-image';
 
 interface CreateInfluencerProfileSheetProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface CreateInfluencerProfileSheetProps {
     niche?: string;
     skills?: string[];
     country?: string;
+    avatar?: string | null;
     socialLinks?: {
       youtube?: string;
       tiktok?: string;
@@ -45,6 +47,9 @@ export function CreateInfluencerProfileSheet({
   const [country, setCountry] = useState('India');
   const [youtube, setYoutube] = useState('');
   const [tiktok, setTiktok] = useState('');
+  const [avatar, setAvatar] = useState('');
+  const [avatarFile, setAvatarFile] = useState<any>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -58,6 +63,8 @@ export function CreateInfluencerProfileSheet({
         setCountry(initialData?.country ?? 'India');
         setYoutube(initialData?.socialLinks?.youtube ?? '');
         setTiktok(initialData?.socialLinks?.tiktok ?? '');
+        setAvatar(initialData?.avatar ?? '');
+        setAvatarFile(null);
         setSubmitting(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -102,20 +109,38 @@ export function CreateInfluencerProfileSheet({
         ? skills.split(',').map((s) => s.trim()).filter(Boolean)
         : [];
 
-      const payload: any = {
-        instagramHandle: cleanHandle,
-        pricing: parsedPriceInCents,
-        niche,
-        skills: skillsArray,
-        country: country.trim() || 'India',
-        socialLinks: {
+      let payload: any;
+      if (avatarFile) {
+        payload = new FormData();
+        payload.append('instagramHandle', cleanHandle);
+        payload.append('pricing', String(parsedPriceInCents));
+        payload.append('niche', niche);
+        payload.append('skills', JSON.stringify(skillsArray));
+        payload.append('country', country.trim() || 'India');
+        payload.append('avatar', avatarFile);
+        payload.append('socialLinks', JSON.stringify({
           youtube: youtube.trim() || undefined,
           tiktok: tiktok.trim() || undefined,
-        },
-      };
-
-      if (initialData?.id) {
-        payload.id = initialData.id;
+        }));
+        if (initialData?.id) {
+          payload.append('id', initialData.id);
+        }
+      } else {
+        payload = {
+          instagramHandle: cleanHandle,
+          pricing: parsedPriceInCents,
+          niche,
+          skills: skillsArray,
+          country: country.trim() || 'India',
+          avatar: avatar.trim() || undefined,
+          socialLinks: {
+            youtube: youtube.trim() || undefined,
+            tiktok: tiktok.trim() || undefined,
+          },
+        };
+        if (initialData?.id) {
+          payload.id = initialData.id;
+        }
       }
 
       const res = await api.influencers.updateProfile(payload);
@@ -131,7 +156,7 @@ export function CreateInfluencerProfileSheet({
           pricing: parsedPriceInCents,
           followers: (res as any)?.followers ?? (initialData as any)?.followers ?? 0,
           level: (res as any)?.level ?? (initialData as any)?.level ?? 'micro',
-          avatar: (res as any)?.avatar ?? (initialData as any)?.avatar ?? null,
+          avatar: (res as any)?.avatar ?? (avatar.trim() || (initialData as any)?.avatar || null),
           bio: (res as any)?.bio ?? (initialData as any)?.bio ?? null,
           verified: (res as any)?.verified ?? (initialData as any)?.verified ?? false,
         };
@@ -157,6 +182,19 @@ export function CreateInfluencerProfileSheet({
     }
   };
 
+  const triggerAvatarPicker = () => {
+    if (Platform.OS === 'web') {
+      avatarInputRef.current?.click();
+    } else {
+      setAvatarFile({ name: 'mock_avatar.jpg', size: 1.2 * 1024 * 1024, type: 'image/jpeg' });
+      setAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300');
+      showModal({
+        title: 'Avatar Selected 📸',
+        message: 'Preselected a premium avatar image for native simulation.',
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -168,6 +206,22 @@ export function CreateInfluencerProfileSheet({
       snapPoints={['85%']}
       hideHeaderBorder
     >
+      {Platform.OS === 'web' && (
+        <input
+          type="file"
+          accept="image/*"
+          ref={avatarInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setAvatarFile(file);
+              setAvatar(URL.createObjectURL(file));
+            }
+          }}
+        />
+      )}
+
       <ScrollView contentContainerStyle={{ gap: 18, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {/* INSTAGRAM HANDLE */}
         <View style={styles.formGroup}>
@@ -184,6 +238,52 @@ export function CreateInfluencerProfileSheet({
               autoCorrect={false}
               editable={!submitting}
             />
+          </View>
+        </View>
+
+        {/* PROFILE AVATAR */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Profile Avatar</Text>
+          <View style={styles.avatarPickerContainer}>
+            <View style={styles.avatarPreviewWrap}>
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatarPreview} contentFit="cover" />
+              ) : (
+                <View style={[styles.avatarPreview, styles.avatarPreviewFallback]}>
+                  <Text style={styles.avatarPreviewText}>
+                    {instagramHandle ? instagramHandle.charAt(0).toUpperCase() : '?'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={styles.avatarUploadBtn}
+                  onPress={triggerAvatarPicker}
+                  activeOpacity={0.8}
+                  disabled={submitting}
+                >
+                  <Text style={styles.avatarUploadBtnText}>Upload Photo</Text>
+                </TouchableOpacity>
+                {(avatar || avatarFile) ? (
+                  <TouchableOpacity
+                    style={styles.avatarClearBtn}
+                    onPress={() => {
+                      setAvatar('');
+                      setAvatarFile(null);
+                    }}
+                    activeOpacity={0.8}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.avatarClearBtnText}>Reset</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <Text style={styles.helperText}>
+                {avatarFile ? `Selected: ${avatarFile.name}` : 'Upload a custom photo or leave empty for a default adventurer avatar.'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -384,5 +484,77 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 14,
     color: '#ffffff',
+  },
+  avatarPickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.06)',
+  },
+  avatarPreviewWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.cream,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPreviewFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.cream,
+  },
+  avatarPreviewText: {
+    fontFamily: FontFamily.serif,
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  helperText: {
+    fontSize: 10,
+    color: 'rgba(63,3,11,0.45)',
+    fontFamily: FontFamily.sansMedium,
+    lineHeight: 14,
+  },
+  avatarUploadBtn: {
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarUploadBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: '#ffffff',
+  },
+  avatarClearBtn: {
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.2)',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarClearBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
   },
 });

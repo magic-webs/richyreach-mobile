@@ -56,7 +56,13 @@ export const api = {
     earnings: () => request<any[]>('/influencers/earnings'),
     profile: () => request('/influencers/profile'),
     profiles: () => request<any[]>('/influencers/profiles'),
-    updateProfile: (data: any) => request('/influencers/profile', { method: 'POST', body: JSON.stringify(data) }),
+    updateProfile: (data: FormData | any) => {
+      const isFormData = data instanceof FormData;
+      return request('/influencers/profile', {
+        method: 'POST',
+        body: isFormData ? data : JSON.stringify(data),
+      });
+    },
     apply: (campaignId: string, proposal: string = "Excited to collaborate on this campaign!") =>
       request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal }) }),
     services: {
@@ -92,5 +98,8 @@ export const api = {
   },
   arena: {
     list: () => request('/arena'),
+  },
+  banners: {
+    list: (position?: string) => request<any[]>(`/banners${position ? `?position=${position}` : ''}`),
   },
 };
