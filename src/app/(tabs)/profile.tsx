@@ -1,12 +1,12 @@
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { CreateServiceSheet } from '@/components/influencer/CreateServiceSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
-import { WalletContent } from '@/components/influencer/profile/WalletContent';
+import { AboutTab } from '@/components/influencer/profile/AboutTab';
 import { NotificationsContent } from '@/components/influencer/profile/NotificationsContent';
 import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
-import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
 import { ReviewsTab } from '@/components/influencer/profile/ReviewsTab';
-import { AboutTab } from '@/components/influencer/profile/AboutTab';
+import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
+import { WalletContent } from '@/components/influencer/profile/WalletContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
@@ -56,6 +56,7 @@ export default function ProfileScreen() {
   // Sheets and services state
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
   const [isCreateServiceOpen, setIsCreateServiceOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any | null>(null);
   const [services, setServices] = useState<any[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
@@ -297,7 +298,7 @@ export default function ProfileScreen() {
 
           {/* Tabs */}
           <View style={styles.tabsRow}>
-            {(['Portfolio', 'Services', 'Reviews', 'About'] as ProfileTab[]).map((t) => (
+            {(['Services', 'Portfolio', 'Reviews', 'About'] as ProfileTab[]).map((t) => (
               <TouchableOpacity key={t} onPress={() => setActiveTab(t)} activeOpacity={0.8} style={styles.tabBtn}>
                 <Text style={[styles.tabBtnText, activeTab === t && styles.tabBtnTextActive]}>{t}</Text>
                 {activeTab === t && <View style={styles.tabIndicator} />}
@@ -313,7 +314,14 @@ export default function ProfileScreen() {
             <ServicesTab
               services={services}
               loadingServices={loadingServices}
-              onAddServicePress={() => setIsCreateServiceOpen(true)}
+              onAddServicePress={() => {
+                setEditingService(null);
+                setIsCreateServiceOpen(true);
+              }}
+              onEditService={(srv) => {
+                setEditingService(srv);
+                setIsCreateServiceOpen(true);
+              }}
               onDeleteService={handleDeleteService}
             />
           )}
@@ -402,8 +410,12 @@ export default function ProfileScreen() {
 
       <CreateServiceSheet
         isOpen={isCreateServiceOpen}
-        onClose={() => setIsCreateServiceOpen(false)}
+        onClose={() => {
+          setIsCreateServiceOpen(false);
+          setEditingService(null);
+        }}
         onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        service={editingService}
       />
     </View>
   );

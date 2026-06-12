@@ -68,6 +68,13 @@ export const api = {
           body: isFormData ? data : JSON.stringify(data),
         });
       },
+      update: (id: string, data: FormData | any) => {
+        const isFormData = data instanceof FormData;
+        return request<any>(`/influencers/services/${id}`, {
+          method: 'PUT',
+          body: isFormData ? data : JSON.stringify(data),
+        });
+      },
       delete: (id: string) => request<any>(`/influencers/services/${id}`, { method: 'DELETE' }),
     },
   },
