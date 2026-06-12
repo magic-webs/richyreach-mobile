@@ -8,9 +8,10 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
@@ -46,16 +47,14 @@ export default function MarketplaceScreen() {
   const role = useAuthStore((s) => s.role);
   const session = useAuthStore((s) => s.session);
 
+  const queryClient = useQueryClient();
   const [cat, setCat] = useState('All');
-  const [campaignList, setCampaignList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
   const [isBrandSwitcherOpen, setIsBrandSwitcherOpen] = useState(false);
   const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
   const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const {
     influencerProfiles,
@@ -81,53 +80,41 @@ export default function MarketplaceScreen() {
         loadInfluencerProfiles(session.user.id).catch(() => {});
       }
     }
-  }, [session?.user?.id, role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
+  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId]);
 
-  useEffect(() => {
-    let active = true;
-    const fetchCampaigns = async () => {
-      try {
-        setLoading(true);
-        let res: any[] = [];
-        if ((role as string) === 'brand') {
-          res = await api.campaigns.list() as any[];
-        } else {
-          res = await api.influencers.marketplace() as any[];
-        }
-        if (active) {
-          if (res && res.length > 0) {
-            const mapped = res.map((c: any) => ({
-              id: c.id,
-              brand: c.brandName || c.brand?.companyName || "Richy Brand",
-              cat: c.campaignType || c.category || "General",
-              verified: c.verified || c.brand?.verified || false,
-              title: c.title,
-              budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
-              deadline: c.deadline || '5 days left',
-              applicants: c.applicants || 0,
-              tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-              about: c.description || c.about,
-              deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
-            }));
-            setCampaignList(mapped);
-          } else {
-            setCampaignList([]);
-          }
-        }
-      } catch (err: any) {
-        console.warn("MarketplaceScreen: could not load campaigns.", err);
-        if (active) {
-          setCampaignList([]);
-        }
-      } finally {
-        if (active) setLoading(false);
+  const { data: rawCampaignListData, isLoading: loading } = useQuery<any>({
+    queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
+    queryFn: () => {
+      if ((role as string) === 'brand') {
+        return api.campaigns.list().catch(() => []);
+      } else {
+        return api.influencers.marketplace().catch(() => []);
       }
-    };
-    fetchCampaigns();
-    return () => { active = false; };
-  }, [role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
+    },
+  });
 
-  const list = campaignList.filter((c) => cat === 'All' || c.cat === cat);
+  const rawCampaignList = (rawCampaignListData ?? []) as any[];
+
+  const campaignList = React.useMemo(() => {
+    if (!rawCampaignList || rawCampaignList.length === 0) {
+      return [];
+    }
+    return rawCampaignList.map((c: any) => ({
+      id: c.id,
+      brand: c.brandName || c.brand?.companyName || "Richy Brand",
+      cat: c.campaignType || c.category || "General",
+      verified: c.verified || c.brand?.verified || false,
+      title: c.title,
+      budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+      deadline: c.deadline || '5 days left',
+      applicants: c.applicants || 0,
+      tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+      about: c.description || c.about,
+      deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+    }));
+  }, [rawCampaignList]);
+
+  const list = campaignList.filter((c: any) => cat === 'All' || c.cat === cat);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -272,7 +259,9 @@ export default function MarketplaceScreen() {
       <SwitchInfluencerProfileSheet
         isOpen={isInfluencerSwitcherOpen}
         onClose={() => setIsInfluencerSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         onAddNewProfile={() => {
           setIsInfluencerSwitcherOpen(false);
           setIsCreateInfluencerOpen(true);
@@ -282,7 +271,9 @@ export default function MarketplaceScreen() {
       <SwitchBrandProfileSheet
         isOpen={isBrandSwitcherOpen}
         onClose={() => setIsBrandSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         onAddNewProfile={() => {
           setIsBrandSwitcherOpen(false);
           setIsCreateBrandOpen(true);
@@ -292,7 +283,10 @@ export default function MarketplaceScreen() {
       <CreateBrandProfileSheet
         isOpen={isCreateBrandOpen}
         onClose={() => setIsCreateBrandOpen(false)}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         initialData={activeBrand ? {
           companyName: activeBrand.companyName,
           website: activeBrand.website,
@@ -305,7 +299,10 @@ export default function MarketplaceScreen() {
       <CreateInfluencerProfileSheet
         isOpen={isCreateInfluencerOpen}
         onClose={() => setIsCreateInfluencerOpen(false)}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         initialData={activeInfluencer}
       />
     </View>

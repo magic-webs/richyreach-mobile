@@ -13,6 +13,7 @@ import { PendingReviewsSection } from '@/components/brand/home/PendingReviewsSec
 import { SuggestedCreatorsSection } from '@/components/brand/home/SuggestedCreatorsSection';
 import { TopBanner } from '@/components/brand/home/TopBanner';
 import { api } from '@/lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function BrandHomeScreen() {
   const session = useAuthStore((s) => s.session);
@@ -21,33 +22,21 @@ export default function BrandHomeScreen() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
-  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const queryClient = useQueryClient();
+
+  const { data: brandProfile } = useQuery({
+    queryKey: ['brandProfile'],
+    queryFn: () => api.brands.profile().catch(() => null),
+  });
+
+  const hasProfile = !!(brandProfile && (brandProfile as any).id);
 
   useEffect(() => {
-    let active = true;
-    const checkProfile = async () => {
-      try {
-        const res = await api.brands.profile();
-        if (active) {
-          setHasProfile(res && (res as any).id ? true : false);
-          
-          // Seed the local profiles store with the active backend profile
-          const userId = session?.user?.id;
-          if (userId && res) {
-            await loadProfiles(userId, res);
-          }
-        }
-      } catch (err) {
-        console.warn("BrandHomeScreen: failed to check profile status", err);
-        if (active) {
-          setHasProfile(false);
-        }
-      }
-    };
-    checkProfile();
-    return () => { active = false; };
-  }, [refreshTrigger, session?.user?.id, activeProfileId]);
+    const userId = session?.user?.id;
+    if (userId && brandProfile) {
+      loadProfiles(userId, brandProfile);
+    }
+  }, [brandProfile, session?.user?.id, loadProfiles]);
 
   const handleNewCampaign = () => {
     if (hasProfile === false) {
@@ -58,12 +47,12 @@ export default function BrandHomeScreen() {
   };
 
   const handleCampaignSuccess = () => {
-    setRefreshTrigger(prev => prev + 1);
+    queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
   };
 
   const handleProfileSuccess = () => {
-    setHasProfile(true);
-    setRefreshTrigger(prev => prev + 1);
+    queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
     // Auto open campaign creation after profile setup
     setTimeout(() => {
       setIsCreateSheetOpen(true);
@@ -78,11 +67,11 @@ export default function BrandHomeScreen() {
         contentContainerStyle={{ paddingBottom: 130 }}
         bounces={false}
       >
-        <TopBanner key={refreshTrigger} onSwitchProfile={() => setIsSwitcherOpen(true)} />
+        <TopBanner onSwitchProfile={() => setIsSwitcherOpen(true)} />
 
         <View style={styles.body}>
           <ActionGrid onNewCampaign={handleNewCampaign} />
-          <CampaignsSection onNewCampaign={handleNewCampaign} refreshTrigger={refreshTrigger} />
+          <CampaignsSection onNewCampaign={handleNewCampaign} />
           <PendingReviewsSection />
           <SuggestedCreatorsSection />
         </View>
@@ -104,7 +93,11 @@ export default function BrandHomeScreen() {
       <SwitchBrandProfileSheet
         isOpen={isSwitcherOpen}
         onClose={() => setIsSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger(prev => prev + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
+          queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
+        }}
         onAddNewProfile={() => setIsProfileSheetOpen(true)}
       />
     </>

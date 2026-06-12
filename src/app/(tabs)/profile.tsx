@@ -19,6 +19,7 @@ import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ const SETTINGS: [string, string, string, SheetType][] = [
 export default function ProfileScreen() {
   const role = useAuthStore((s) => s.role);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const insets = useSafeAreaInsets();
   const setRole = useAuthStore((s) => s.setRole);
@@ -46,27 +48,57 @@ export default function ProfileScreen() {
   const loadInfluencerProfiles = useProfilesStore((s) => s.loadInfluencerProfiles);
   const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('Portfolio');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('Services');
   const [sheet, setSheet] = useState<SheetType>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [infProfile, setInfProfile] = useState<any | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Sheets and services state
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
   const [isCreateServiceOpen, setIsCreateServiceOpen] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
-  const [services, setServices] = useState<any[]>([]);
-  const [loadingServices, setLoadingServices] = useState(false);
-
-  // Dashboard & earnings state
-  const [dashboardData, setDashboardData] = useState<any | null>(null);
-  const [loadingDashboard, setLoadingDashboard] = useState(true);
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [loadingEarnings, setLoadingEarnings] = useState(true);
 
   const showModal = useUIStore((s) => s.showModal);
+
+  // Fetch influencer profile from backend via TanStack Query
+  const { data: infProfileData, isLoading: loadingProfile } = useQuery<any>({
+    queryKey: ['influencerProfile'],
+    queryFn: async () => {
+      const res = await api.influencers.profile().catch(() => null);
+      return res;
+    },
+  });
+  const infProfile = infProfileData as any;
+
+  // Synchronize influencer profile to Zustand store
+  useEffect(() => {
+    if (infProfile && session?.user?.id) {
+      loadInfluencerProfiles(session.user.id, infProfile);
+    }
+  }, [infProfile, session?.user?.id, loadInfluencerProfiles]);
+
+  // Fetch dashboard from backend via TanStack Query
+  const { data: dashboardDataData, isLoading: loadingDashboard } = useQuery<any>({
+    queryKey: ['influencerDashboard', activeInfluencerProfileId],
+    queryFn: () => api.influencers.dashboard().catch(() => null),
+    enabled: !!activeInfluencerProfileId,
+  });
+  const dashboardData = dashboardDataData as any;
+
+  // Fetch earnings from backend via TanStack Query
+  const { data: earningsData = [], isLoading: loadingEarnings } = useQuery<any[]>({
+    queryKey: ['influencerEarnings', activeInfluencerProfileId],
+    queryFn: () => api.influencers.earnings().catch(() => []),
+    enabled: !!activeInfluencerProfileId,
+  });
+  const earnings = earningsData as any[];
+
+  // Fetch creator services from backend via TanStack Query
+  const { data: servicesData = [], isLoading: loadingServices } = useQuery<any[]>({
+    queryKey: ['influencerServices', activeInfluencerProfileId],
+    queryFn: () => api.influencers.services.list().catch(() => []),
+    enabled: !!activeInfluencerProfileId,
+  });
+  const services = servicesData as any[];
 
   const stats = [
     ['Followers', infProfile?.followers ? `${(infProfile.followers / 1000).toFixed(0)}k` : '0'],
@@ -75,96 +107,47 @@ export default function ProfileScreen() {
     ['Rating', '4.8'],
   ];
 
-  // Fetch influencer profile from backend
-  useEffect(() => {
-    let active = true;
-    const fetch = async () => {
-      try {
-        setLoadingProfile(true);
-        const prof = await api.influencers.profile().catch(() => null) as any;
-        if (active && prof) {
-          setInfProfile(prof);
-          if (session?.user?.id) {
-            loadInfluencerProfiles(session.user.id, prof);
-          }
-        } else if (active) {
-          setInfProfile(null);
-        }
-      } catch (err) {
-        console.warn('ProfileScreen: error fetching influencer profile', err);
-      } finally {
-        if (active) setLoadingProfile(false);
-      }
-    };
-    fetch();
-    return () => { active = false; };
-  }, [refreshTrigger, session?.user?.id, activeInfluencerProfileId, loadInfluencerProfiles]);
+  // Delete Service mutation with Optimistic Update
+  const deleteServiceMutation = useMutation({
+    mutationFn: (serviceId: string) => api.influencers.services.delete(serviceId),
+    onMutate: async (serviceId) => {
+      await queryClient.cancelQueries({ queryKey: ['influencerServices', activeInfluencerProfileId] });
+      const previousServices = queryClient.getQueryData<any[]>(['influencerServices', activeInfluencerProfileId]);
 
-  // Fetch dashboard & earnings from backend
-  useEffect(() => {
-    let active = true;
-    const fetchStats = async () => {
-      if (!activeInfluencerProfileId) return;
-      try {
-        setLoadingDashboard(true);
-        setLoadingEarnings(true);
-        const [dash, earn] = await Promise.all([
-          api.influencers.dashboard().catch(() => null),
-          api.influencers.earnings().catch(() => []),
-        ]);
-        if (active) {
-          setDashboardData(dash);
-          setEarnings(earn);
-        }
-      } catch (err) {
-        console.warn('ProfileScreen: error fetching stats', err);
-      } finally {
-        if (active) {
-          setLoadingDashboard(false);
-          setLoadingEarnings(false);
-        }
+      if (previousServices) {
+        queryClient.setQueryData(
+          ['influencerServices', activeInfluencerProfileId],
+          previousServices.filter((s) => s.id !== serviceId)
+        );
       }
-    };
-    fetchStats();
-    return () => { active = false; };
-  }, [refreshTrigger, activeInfluencerProfileId]);
-
-  // Fetch creator services from backend
-  useEffect(() => {
-    let active = true;
-    const fetchServices = async () => {
-      if (!activeInfluencerProfileId) return;
-      try {
-        setLoadingServices(true);
-        const res = await api.influencers.services.list().catch(() => []);
-        if (active && res) {
-          setServices(res);
-        }
-      } catch (err) {
-        console.warn('ProfileScreen: error fetching services', err);
-      } finally {
-        if (active) setLoadingServices(false);
+      return { previousServices };
+    },
+    onError: (err, serviceId, context) => {
+      if (context?.previousServices) {
+        queryClient.setQueryData(
+          ['influencerServices', activeInfluencerProfileId],
+          context.previousServices
+        );
       }
-    };
-    fetchServices();
-    return () => { active = false; };
-  }, [refreshTrigger, activeInfluencerProfileId]);
-
-  const handleDeleteService = async (serviceId: string) => {
-    try {
-      await api.influencers.services.delete(serviceId);
+      showModal({
+        title: 'Operation Failed',
+        message: (err as any)?.message || 'Failed to delete service. Please try again.',
+      });
+    },
+    onSuccess: () => {
       showModal({
         title: 'Service Deleted 🗑️',
         message: 'The service was successfully removed.',
       });
-      setRefreshTrigger((t) => t + 1);
-    } catch (err: any) {
-      console.error('Failed to delete service:', err);
-      showModal({
-        title: 'Operation Failed',
-        message: err?.message || 'Failed to delete service. Please try again.',
-      });
-    }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['influencerServices', activeInfluencerProfileId] });
+      queryClient.invalidateQueries({ queryKey: ['influencerDashboard', activeInfluencerProfileId] });
+    },
+  });
+
+  const handleDeleteService = (serviceId: string) => {
+    deleteServiceMutation.mutate(serviceId);
   };
 
   const displayName = infProfile?.name || session?.user?.name || 'Creator';
@@ -394,7 +377,12 @@ export default function ProfileScreen() {
       <SwitchInfluencerProfileSheet
         isOpen={switcherOpen}
         onClose={() => setSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['influencerDashboard', activeInfluencerProfileId] });
+          queryClient.invalidateQueries({ queryKey: ['influencerEarnings', activeInfluencerProfileId] });
+          queryClient.invalidateQueries({ queryKey: ['influencerServices', activeInfluencerProfileId] });
+        }}
         onAddNewProfile={() => {
           setSwitcherOpen(false);
           setIsCreateProfileOpen(true);
@@ -404,7 +392,9 @@ export default function ProfileScreen() {
       <CreateInfluencerProfileSheet
         isOpen={isCreateProfileOpen}
         onClose={() => setIsCreateProfileOpen(false)}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+        }}
         initialData={infProfile}
       />
 
@@ -414,7 +404,10 @@ export default function ProfileScreen() {
           setIsCreateServiceOpen(false);
           setEditingService(null);
         }}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerServices', activeInfluencerProfileId] });
+          queryClient.invalidateQueries({ queryKey: ['influencerDashboard', activeInfluencerProfileId] });
+        }}
         service={editingService}
       />
     </View>

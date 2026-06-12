@@ -2,22 +2,22 @@ import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
-import { Image } from 'expo-image';
-import { createVideoPlayer } from 'expo-video';
+import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Step1Details } from './wizard/Step1Details';
+import { Step2Media } from './wizard/Step2Media';
+import { Step3Review } from './wizard/Step3Review';
 
 interface CreateServiceSheetProps {
   isOpen: boolean;
@@ -27,13 +27,13 @@ interface CreateServiceSheetProps {
 }
 
 // Preset categories and subcategories matching the platform
-const CATEGORIES = [
+export const CATEGORIES = [
   { label: 'Instagram', value: 'Instagram', icon: 'camera' },
   { label: 'YouTube', value: 'YouTube', icon: 'play' },
   { label: 'TikTok', value: 'TikTok', icon: 'music' },
 ];
 
-const SUB_CATEGORIES = [
+export const SUB_CATEGORIES = [
   'UGC / Product Review',
   'Unboxing',
   'Dedicated Brand Reel',
@@ -41,7 +41,7 @@ const SUB_CATEGORIES = [
   'Tutorial / Walkthrough',
 ];
 
-const DELIVERY_TIMES = [
+export const DELIVERY_TIMES = [
   '1 Day',
   '3 Days',
   '5 Days',
@@ -193,7 +193,7 @@ export function CreateServiceSheet({
   // Extract live video frames when videoUrl changes (supporting web and native)
   useEffect(() => {
     let active = true;
-    
+
     const extractFrames = async () => {
       if (!videoUrl) {
         setLocalExtractedFrames([]);
@@ -275,8 +275,9 @@ export function CreateServiceSheet({
         // Native Platforms (iOS/Android) using expo-video
         let player: any = null;
         try {
+          const { createVideoPlayer } = require('expo-video');
           player = createVideoPlayer(videoUrl);
-          
+
           // Poll for duration/readiness
           const start = Date.now();
           const waitForReady = () => new Promise<void>((resolveReady) => {
@@ -303,9 +304,9 @@ export function CreateServiceSheet({
             return;
           }
 
-          const duration = player.duration || 10; // Fallback to 10 seconds if metadata load timed out
-          const times = [duration * 0.05, duration * 0.25, duration * 0.50, duration * 0.75];
-          
+          const durationMs = (player.duration || 10) * 1000;
+          const times = [durationMs * 0.05, durationMs * 0.25, durationMs * 0.50, durationMs * 0.75];
+
           const thumbnails = await player.generateThumbnailsAsync(times, {
             maxWidth: 200,
             maxHeight: 200,
@@ -437,6 +438,41 @@ export function CreateServiceSheet({
     });
   };
 
+  const submitMutation = useMutation({
+    mutationFn: async (payload: FormData) => {
+      if (service?.id) {
+        return api.influencers.services.update(service.id, payload);
+      } else {
+        return api.influencers.services.create(payload);
+      }
+    },
+    onSuccess: () => {
+      if (service?.id) {
+        showModal({
+          title: 'Service Updated! 🎉',
+          message: `"${name}" has been successfully updated.`,
+        });
+      } else {
+        showModal({
+          title: 'Service Published! 🚀',
+          message: `"${name}" is now live and visible to brands.`,
+        });
+      }
+      onSuccess(null);
+      onClose();
+    },
+    onError: (err: any) => {
+      console.error('Failed to submit service:', err);
+      showModal({
+        title: 'Operation Failed',
+        message: err?.message || 'An error occurred. Please try again.',
+      });
+    },
+    onSettled: () => {
+      setSubmitting(false);
+    }
+  });
+
   const handleSubmit = async () => {
     if (step !== 3) return;
 
@@ -449,71 +485,44 @@ export function CreateServiceSheet({
     }
 
     setSubmitting(true);
-    try {
-      const formattedPrice = Number(price.trim()).toFixed(2);
-      const payload = new FormData();
-      payload.append('name', name.trim());
-      payload.append('type', 'service');
-      payload.append('price', formattedPrice);
-      payload.append('deliveryTime', deliveryTime);
-      payload.append('category', category);
-      payload.append('subCategory', subCategory);
-      payload.append('description', detailedDesc.trim() || shortDesc.trim());
-      payload.append('tags', JSON.stringify(tags));
-      payload.append('deliverables', JSON.stringify(deliverables));
-      payload.append('selectedFrameIdx', String(selectedFrameIdx));
+    const formattedPrice = Number(price.trim()).toFixed(2);
+    const payload = new FormData();
+    payload.append('name', name.trim());
+    payload.append('type', 'service');
+    payload.append('price', formattedPrice);
+    payload.append('deliveryTime', deliveryTime);
+    payload.append('category', category);
+    payload.append('subCategory', subCategory);
+    payload.append('description', detailedDesc.trim() || shortDesc.trim());
+    payload.append('tags', JSON.stringify(tags));
+    payload.append('deliverables', JSON.stringify(deliverables));
+    payload.append('selectedFrameIdx', String(selectedFrameIdx));
 
-      // Append Video
-      if (videoFile) {
-        payload.append('video', videoFile);
-      } else if (videoUrl) {
-        payload.append('exampleUrl', videoUrl);
-      }
-
-      // Append Thumbnail
-      if (thumbnailFile) {
-        payload.append('thumbnail', thumbnailFile);
-      } else if (thumbnailUrl && isRemoteUrl(thumbnailUrl)) {
-        payload.append('thumbnailUrl', thumbnailUrl);
-      } else {
-        // Fallback to selected frame index
-        const frames = getFrames();
-        const frame = frames[selectedFrameIdx >= 0 ? selectedFrameIdx : 0];
-        if (isRemoteUrl(frame)) {
-          payload.append('thumbnailUrl', frame as string);
-        } else {
-          // Local/base64/native frame, let the backend generate the transformed thumbnail from the video using selectedFrameIdx
-          payload.append('thumbnailUrl', '');
-        }
-      }
-
-      if (service?.id) {
-        // Edit Mode -> Update
-        await api.influencers.services.update(service.id, payload);
-        showModal({
-          title: 'Service Updated! 🎉',
-          message: `"${name}" has been successfully updated.`,
-        });
-      } else {
-        // Create Mode -> Add new
-        await api.influencers.services.create(payload);
-        showModal({
-          title: 'Service Published! 🚀',
-          message: `"${name}" is now live and visible to brands.`,
-        });
-      }
-
-      onSuccess(null);
-      onClose();
-    } catch (err: any) {
-      console.error('Failed to submit service:', err);
-      showModal({
-        title: 'Operation Failed',
-        message: err?.message || 'An error occurred. Please try again.',
-      });
-    } finally {
-      setSubmitting(false);
+    // Append Video
+    if (videoFile) {
+      payload.append('video', videoFile);
+    } else if (videoUrl) {
+      payload.append('exampleUrl', videoUrl);
     }
+
+    // Append Thumbnail
+    if (thumbnailFile) {
+      payload.append('thumbnail', thumbnailFile);
+    } else if (thumbnailUrl && isRemoteUrl(thumbnailUrl)) {
+      payload.append('thumbnailUrl', thumbnailUrl);
+    } else {
+      // Fallback to selected frame index
+      const frames = getFrames();
+      const frame = frames[selectedFrameIdx >= 0 ? selectedFrameIdx : 0];
+      if (isRemoteUrl(frame)) {
+        payload.append('thumbnailUrl', frame as string);
+      } else {
+        // Local/base64/native frame, let the backend generate the transformed thumbnail from the video using selectedFrameIdx
+        payload.append('thumbnailUrl', '');
+      }
+    }
+
+    submitMutation.mutate(payload);
   };
 
   if (!isOpen) return null;
@@ -613,648 +622,84 @@ export function CreateServiceSheet({
 
             {/* ================= STEP 1 DETAILS ================= */}
             {step === 1 && (
-              <View style={styles.stepWrapper}>
-                {/* Basic Info Card */}
-                <View style={styles.formCard}>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardIconBox}><Icon name="briefcase" size={16} color={Colors.white} /></View>
-                    <View>
-                      <Text style={styles.cardTitle}>Basic information</Text>
-                      <Text style={styles.cardSub}>Tell brands about your service</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.inputsStack}>
-                    {/* Service Title */}
-                    <View style={styles.inputWrap}>
-                      <View style={styles.labelRow}>
-                        <Text style={styles.inputLabel}>Service Title <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                        <Text style={styles.counterText}>{name.length}/60</Text>
-                      </View>
-                      <TextInput
-                        maxLength={60}
-                        style={styles.textInput}
-                        placeholder="Make Dedicated Brand Reel"
-                        placeholderTextColor="rgba(63, 3, 11, 0.35)"
-                        value={name}
-                        onChangeText={setName}
-                      />
-                    </View>
-
-                    {/* Category & Sub Category Row */}
-                    <View style={styles.rowInputs}>
-                      <View style={[styles.inputWrap, { flex: 1 }]}>
-                        <Text style={styles.inputLabel}>Category <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                        <View style={styles.dropdownPicker}>
-                          <Icon name={category.toLowerCase() === 'youtube' ? 'play' : category.toLowerCase() === 'tiktok' ? 'music' : 'camera'} size={14} color={Colors.roseDeep} />
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', gap: 8 }}>
-                              {CATEGORIES.map((cat) => (
-                                <TouchableOpacity
-                                  key={cat.value}
-                                  onPress={() => setCategory(cat.value)}
-                                  style={[styles.pickerItem, category === cat.value && styles.pickerItemActive]}
-                                >
-                                  <Text style={[styles.pickerItemText, category === cat.value && styles.pickerItemTextActive]}>{cat.label}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </ScrollView>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={styles.rowInputs}>
-                      <View style={[styles.inputWrap, { flex: 1 }]}>
-                        <Text style={styles.inputLabel}>Sub Category <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                        <View style={styles.dropdownPicker}>
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', gap: 8 }}>
-                              {SUB_CATEGORIES.map((sc) => (
-                                <TouchableOpacity
-                                  key={sc}
-                                  onPress={() => setSubCategory(sc)}
-                                  style={[styles.pickerItem, subCategory === sc && styles.pickerItemActive]}
-                                >
-                                  <Text style={[styles.pickerItemText, subCategory === sc && styles.pickerItemTextActive]}>{sc}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </ScrollView>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Price & Delivery Time */}
-                    <View style={styles.rowFields}>
-                      <View style={[styles.inputWrap, { flex: 1 }]}>
-                        <Text style={styles.inputLabel}>Price (₹) <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                        <TextInput
-                          keyboardType="numeric"
-                          style={styles.textInput}
-                          placeholder="1500"
-                          placeholderTextColor="rgba(63, 3, 11, 0.35)"
-                          value={price}
-                          onChangeText={setPrice}
-                        />
-                      </View>
-
-                      <View style={[styles.inputWrap, { flex: 1.2 }]}>
-                        <Text style={styles.inputLabel}>Delivery Time <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                        <View style={styles.dropdownPicker}>
-                          <Icon name="clock" size={14} color="rgba(63, 3, 11, 0.45)" />
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', gap: 6 }}>
-                              {DELIVERY_TIMES.map((dt) => (
-                                <TouchableOpacity
-                                  key={dt}
-                                  onPress={() => setDeliveryTime(dt)}
-                                  style={[styles.pickerItem, deliveryTime === dt && styles.pickerItemActive]}
-                                >
-                                  <Text style={[styles.pickerItemText, deliveryTime === dt && styles.pickerItemTextActive]}>{dt}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </ScrollView>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Tip box */}
-                    <View style={styles.tipBox}>
-                      <Icon name="sparkle" size={14} color={Colors.gold} />
-                      <Text style={styles.tipText}>Tip: Be clear, specific & catchy to get more orders</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Sample Video Preview Card */}
-                <View style={styles.formCard}>
-                  <View style={styles.cardHeader}>
-                    <View style={[styles.cardIconBox, { backgroundColor: Colors.roseDeep }]}><Icon name="play" size={15} color={Colors.white} /></View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>Sample Video Preview</Text>
-                      <Text style={styles.cardSub}>Upload a video so brands know what to expect</Text>
-                    </View>
-                    <View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>Optional</Text></View>
-                  </View>
-
-                  {/* Video Selector body */}
-                  {videoUrl ? (
-                    <View style={styles.videoSelectedContainer}>
-                      <View style={styles.videoPreviewMedia}>
-                        <Image 
-                          source={typeof getFrames()[0] === 'string' ? { uri: getFrames()[0] as string } : getFrames()[0]} 
-                          style={styles.videoPreviewImage} 
-                          contentFit="cover" 
-                        />
-                        <View style={styles.videoPreviewOverlay} />
-                        <View style={styles.videoPreviewPlayCircle}>
-                          <Icon name="play" size={20} color={Colors.white} />
-                        </View>
-                        <Text style={styles.videoDurationLabel}>00:34</Text>
-                        <TouchableOpacity onPress={triggerVideoPicker} style={styles.replaceVideoBtn}>
-                          <Icon name="swap" size={12} color={Colors.oxblood} />
-                          <Text style={styles.replaceVideoText}>Replace</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.videoFootnote}>Max 100MB • MP4, MOV • 9:16 recommended</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity onPress={triggerVideoPicker} style={styles.dashedUploadBox} activeOpacity={0.75}>
-                      <Icon name="plus" size={24} color="rgba(63, 3, 11, 0.3)" />
-                      <Text style={styles.uploadBoxTitle}>Select Video File</Text>
-                      <Text style={styles.uploadBoxSub}>Max 100MB • MP4, MOV • 9:16 recommended</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Short Description */}
-                <View style={styles.formCard}>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardIconBox}><Icon name="edit" size={15} color={Colors.white} /></View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>Short Description</Text>
-                      <Text style={styles.cardSub}>What brands will get</Text>
-                    </View>
-                    <Text style={styles.counterText}>{shortDesc.length}/1000</Text>
-                  </View>
-
-                  <TextInput
-                    multiline
-                    maxLength={1000}
-                    numberOfLines={4}
-                    style={styles.textAreaInput}
-                    placeholder="I will create high-quality, engaging brand reel that showcases your product in the best way possible."
-                    placeholderTextColor="rgba(63, 3, 11, 0.35)"
-                    value={shortDesc}
-                    onChangeText={(val) => {
-                      setShortDesc(val);
-                      setDetailedDesc(val); // Sync
-                    }}
-                  />
-                </View>
-
-                {/* Add Tags */}
-                <View style={styles.formCard}>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardIconBox}><Icon name="grid" size={14} color={Colors.white} /></View>
-                    <Text style={styles.cardTitle}>Add Tags</Text>
-                  </View>
-
-                  <View style={styles.tagsContainer}>
-                    {tags.map((tag, idx) => (
-                      <View key={idx} style={styles.tagPill}>
-                        <Text style={styles.tagPillText}>{tag}</Text>
-                        <TouchableOpacity onPress={() => removeTag(idx)} style={styles.tagPillClose}>
-                          <Icon name="x" size={10} color={Colors.roseDeep} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-
-                    {showTagInput ? (
-                      <View style={styles.tagInputWrapper}>
-                        <TextInput
-                          autoFocus
-                          style={styles.tagInputInline}
-                          value={tagInput}
-                          onChangeText={setTagInput}
-                          onSubmitEditing={addTag}
-                          onBlur={addTag}
-                          placeholder="Tag name"
-                        />
-                      </View>
-                    ) : (
-                      <TouchableOpacity onPress={() => setShowTagInput(true)} style={styles.tagAddBtn}>
-                        <Icon name="plus" size={12} color={Colors.oxblood} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {/* Next Button */}
-                <TouchableOpacity onPress={handleNextStep} style={styles.continueBtn} activeOpacity={0.85}>
-                  <Text style={styles.continueBtnText}>Save & Continue</Text>
-                  <Icon name="arrow" size={15} color={Colors.white} />
-                </TouchableOpacity>
-              </View>
+              <Step1Details
+                name={name}
+                setName={setName}
+                category={category}
+                setCategory={setCategory}
+                subCategory={subCategory}
+                setSubCategory={setSubCategory}
+                price={price}
+                setPrice={setPrice}
+                deliveryTime={deliveryTime}
+                setDeliveryTime={setDeliveryTime}
+                videoUrl={videoUrl}
+                triggerVideoPicker={triggerVideoPicker}
+                getFrames={getFrames}
+                shortDesc={shortDesc}
+                setShortDesc={setShortDesc}
+                setDetailedDesc={setDetailedDesc}
+                tags={tags}
+                removeTag={removeTag}
+                showTagInput={showTagInput}
+                setShowTagInput={setShowTagInput}
+                tagInput={tagInput}
+                setTagInput={setTagInput}
+                addTag={addTag}
+                handleNextStep={handleNextStep}
+              />
             )}
 
-            {/* ================= STEP 2 MEDIA & PREVIEW ================= */}
             {step === 2 && (
-              <View style={styles.stepWrapper}>
-
-                {/* Upload Preview Video details */}
-                <View style={styles.formCard}>
-                  <Text style={styles.sectionFormLabel}>Upload Preview Video <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                  <Text style={styles.sectionFormSub}>Upload a sample of your work. Max size 200MB</Text>
-
-                  <View style={styles.mediaDetailsRow}>
-                    <View style={styles.mediaDetailsLeft}>
-                      <Image 
-                        source={typeof getFrames()[0] === 'string' ? { uri: getFrames()[0] as string } : getFrames()[0]} 
-                        style={styles.mediaThumbImage} 
-                        contentFit="cover" 
-                      />
-                      <View style={styles.mediaThumbOverlay} />
-                      <View style={styles.mediaThumbPlayCircle}><Icon name="play" size={16} color={Colors.white} /></View>
-                      <Text style={styles.mediaThumbDuration}>00:34</Text>
-                    </View>
-                    <View style={styles.mediaDetailsRight}>
-                      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                        <Icon name="play" size={18} color={Colors.roseDeep} />
-                        <Text numberOfLines={1} style={styles.mediaFilename}>
-                          {videoFile ? videoFile.name : 'brand_reel_sample.mp4'}
-                        </Text>
-                      </View>
-                      <Text style={styles.mediaFilesize}>
-                        {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(1)} MB` : '82.4 MB'}
-                      </Text>
-                      <TouchableOpacity onPress={triggerVideoPicker} style={styles.replaceVideoTextBtn}>
-                        <Icon name="edit" size={12} color={Colors.roseDeep} />
-                        <Text style={styles.replaceVideoTextBtnLabel}>Replace Video</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Cover Thumbnail */}
-                <View style={styles.formCard}>
-                  <Text style={styles.sectionFormLabel}>Cover Thumbnail <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                  <Text style={styles.sectionFormSub}>Choose a thumbnail that represents your service</Text>
-
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.framesScroll}>
-                    {extractingFrames ? (
-                      <View style={{ flexDirection: 'row', gap: 10 }}>
-                        {[0, 1, 2, 3].map((i) => (
-                          <View key={i} style={[styles.frameCard, styles.skeletonFrameCard]}>
-                            <ActivityIndicator size="small" color={Colors.roseDeep} />
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <>
-                        {getFrames().map((url, idx) => {
-                          const frameSource = typeof url === 'string' ? { uri: url } : url;
-                          return (
-                            <TouchableOpacity
-                              key={idx}
-                              onPress={() => {
-                                setSelectedFrameIdx(idx);
-                                setThumbnailFile(null);
-                                setThumbnailUrl(''); // reset custom
-                              }}
-                              style={[styles.frameCard, selectedFrameIdx === idx && !thumbnailUrl && styles.frameCardActive]}
-                              activeOpacity={0.8}
-                            >
-                              <Image source={frameSource} style={styles.frameImage} contentFit="cover" />
-                              {selectedFrameIdx === idx && !thumbnailUrl && (
-                                <View style={styles.frameChecked}>
-                                  <Icon name="check" size={11} color={Colors.white} />
-                                </View>
-                              )}
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </>
-                    )}
-                    
-                    {/* Custom Thumbnail display if uploaded */}
-                    {thumbnailUrl && (
-                      <TouchableOpacity
-                        onPress={() => setSelectedFrameIdx(-1)}
-                        style={[styles.frameCard, styles.frameCardActive]}
-                      >
-                        <Image source={{ uri: thumbnailUrl }} style={styles.frameImage} contentFit="cover" />
-                        <View style={styles.frameChecked}>
-                          <Icon name="check" size={11} color={Colors.white} />
-                        </View>
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Upload Custom Thumbnail Button */}
-                    <TouchableOpacity onPress={triggerThumbnailPicker} style={styles.dashedFrameUpload} activeOpacity={0.8}>
-                      <Icon name="plus" size={16} color={Colors.roseDeep} />
-                      <Text style={styles.frameUploadText}>Custom Cover</Text>
-                    </TouchableOpacity>
-                  </ScrollView>
-                </View>
-
-                {/* Service Description Card */}
-                <View style={styles.formCard}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={styles.sectionFormLabel}>Service Description <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-                    <TouchableOpacity onPress={handleSuggestedPoints} style={styles.suggestedPointsBtn} activeOpacity={0.7}>
-                      <Icon name="sparkle" size={12} color={Colors.roseDeep} />
-                      <Text style={styles.suggestedText}>Suggested points</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.sectionFormSub}>Explain what brands will get from this service</Text>
-
-                  <TextInput
-                    multiline
-                    maxLength={1000}
-                    numberOfLines={8}
-                    style={[styles.textAreaInput, { height: 160 }]}
-                    placeholder="Describe your service in detail..."
-                    placeholderTextColor="rgba(63, 3, 11, 0.35)"
-                    value={detailedDesc}
-                    onChangeText={setDetailedDesc}
-                  />
-                  <Text style={[styles.counterText, { alignSelf: 'flex-end', marginTop: 4 }]}>
-                    {detailedDesc.length}/1000
-                  </Text>
-                </View>
-
-                {/* What's Included */}
-                <View style={styles.formCard}>
-                  <Text style={styles.sectionFormLabel}>What's Included</Text>
-                  <Text style={styles.sectionFormSub}>Add key deliverables for brands</Text>
-
-                  <View style={styles.deliverablesContainer}>
-                    {deliverables.map((deliv, idx) => (
-                      <View key={idx} style={styles.delivPill}>
-                        <Icon name="check" size={10} color={Colors.green} />
-                        <Text style={styles.delivPillText}>{deliv}</Text>
-                        <TouchableOpacity onPress={() => removeDeliverable(idx)} style={styles.delivPillClose}>
-                          <Icon name="x" size={10} color={Colors.roseDeep} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-
-                    {showDelivInput ? (
-                      <View style={styles.tagInputWrapper}>
-                        <TextInput
-                          autoFocus
-                          style={styles.tagInputInline}
-                          value={delivInput}
-                          onChangeText={setDelivInput}
-                          onSubmitEditing={addDeliverable}
-                          onBlur={addDeliverable}
-                          placeholder="Add deliverable"
-                        />
-                      </View>
-                    ) : (
-                      <TouchableOpacity onPress={() => setShowDelivInput(true)} style={styles.delivAddBtn}>
-                        <Icon name="plus" size={12} color={Colors.oxblood} />
-                        <Text style={styles.delivAddText}>Add another</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {/* Actions bottom */}
-                <View style={styles.wizardFooterRow}>
-                  <TouchableOpacity onPress={handleBackStep} style={styles.wizardBackBtn} activeOpacity={0.8}>
-                    <Icon name="back" size={14} color={Colors.oxblood} />
-                    <Text style={styles.wizardBackText}>Back</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleNextStep} style={styles.wizardContinueBtn} activeOpacity={0.85}>
-                    <Text style={styles.wizardContinueText}>Continue</Text>
-                    <Icon name="arrow" size={14} color={Colors.white} />
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <Step2Media
+                videoFile={videoFile}
+                videoUrl={videoUrl}
+                thumbnailUrl={thumbnailUrl}
+                selectedFrameIdx={selectedFrameIdx}
+                setSelectedFrameIdx={setSelectedFrameIdx}
+                setThumbnailFile={setThumbnailFile}
+                setThumbnailUrl={setThumbnailUrl}
+                extractingFrames={extractingFrames}
+                getFrames={getFrames}
+                triggerVideoPicker={triggerVideoPicker}
+                triggerThumbnailPicker={triggerThumbnailPicker}
+                detailedDesc={detailedDesc}
+                setDetailedDesc={setDetailedDesc}
+                handleSuggestedPoints={handleSuggestedPoints}
+                deliverables={deliverables}
+                removeDeliverable={removeDeliverable}
+                showDelivInput={showDelivInput}
+                setShowDelivInput={setShowDelivInput}
+                delivInput={delivInput}
+                setDelivInput={setDelivInput}
+                addDeliverable={addDeliverable}
+                handleBackStep={handleBackStep}
+                handleNextStep={handleNextStep}
+              />
             )}
 
-            {/* ================= STEP 3 REVIEW & PUBLISH ================= */}
             {step === 3 && (
-              <View style={styles.stepWrapper}>
-                {/* Sparkle banner notification */}
-                <View style={styles.sparkleBanner}>
-                  <View style={styles.sparkleIconWrap}>
-                    <Icon name="sparkle" size={16} color={Colors.roseDeep} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.sparkleTitle}>Almost there!</Text>
-                    <Text style={styles.sparkleMessage}>Review your service details before publishing.</Text>
-                  </View>
-                </View>
-
-                {/* Two column summary details (Structured like mockup 3) */}
-                <View style={styles.reviewLayout}>
-                  {/* Left Column / Card details */}
-                  <View style={styles.reviewMain}>
-
-                    {/* Live Preview card */}
-                    <Text style={styles.reviewSecTitle}>Service Preview</Text>
-                    <View style={styles.reviewPreviewCard}>
-                      <View style={styles.reviewThumbContainer}>
-                        <Image 
-                          source={
-                            thumbnailUrl
-                              ? { uri: thumbnailUrl }
-                              : (typeof getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] === 'string'
-                                  ? { uri: getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] as string }
-                                  : getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0])
-                          } 
-                          style={styles.reviewThumb} 
-                          contentFit="cover" 
-                        />
-                        <View style={styles.reviewThumbOverlay} />
-                        <View style={styles.reviewThumbPlay}><Icon name="play" size={20} color={Colors.white} /></View>
-                        <Text style={styles.reviewThumbDur}>00:34</Text>
-                      </View>
-                      <View style={styles.reviewCardBody}>
-                        <Text style={styles.reviewCardTitle}>{name}</Text>
-
-                        <View style={styles.tagsRow}>
-                          <View style={styles.platformBadge}>
-                            <Icon name={category.toLowerCase() === 'youtube' ? 'play' : 'camera'} size={11} color={Colors.roseDeep} />
-                            <Text style={styles.platformText}>{category}</Text>
-                          </View>
-                          <View style={styles.categoryBadge}>
-                            <Text style={styles.categoryText}>{subCategory}</Text>
-                          </View>
-                        </View>
-
-                        <View style={styles.ratingRow}>
-                          <Icon name="star" size={12} color={Colors.gold} />
-                          <Text style={styles.ratingText}><Text style={{ fontWeight: '700' }}>4.9</Text> (26 reviews)</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Service Details info */}
-                    <View style={styles.reviewDataCard}>
-                      <View style={styles.reviewCardHeader}>
-                        <Text style={styles.reviewDataTitle}>Service Details</Text>
-                        <TouchableOpacity onPress={() => setStep(1)} style={styles.editLinkBtn}>
-                          <Icon name="edit" size={12} color={Colors.roseDeep} />
-                          <Text style={styles.editLinkLabel}>Edit</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.reviewDataGrid}>
-                        <View style={styles.reviewGridRow}>
-                          <Text style={styles.gridLabel}>Category</Text>
-                          <Text style={styles.gridValue}>{category}</Text>
-                        </View>
-                        <View style={styles.reviewGridRow}>
-                          <Text style={styles.gridLabel}>Sub Category</Text>
-                          <Text style={styles.gridValue}>{subCategory}</Text>
-                        </View>
-                        <View style={styles.reviewGridRow}>
-                          <Text style={styles.gridLabel}>Price</Text>
-                          <Text style={styles.gridValue}>₹{Number(price).toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.reviewGridRow}>
-                          <Text style={styles.gridLabel}>Delivery Time</Text>
-                          <Text style={styles.gridValue}>{deliveryTime}</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Description review */}
-                    <View style={styles.reviewDataCard}>
-                      <View style={styles.reviewCardHeader}>
-                        <Text style={styles.reviewDataTitle}>Description</Text>
-                        <TouchableOpacity onPress={() => setStep(2)} style={styles.editLinkBtn}>
-                          <Icon name="edit" size={12} color={Colors.roseDeep} />
-                          <Text style={styles.editLinkLabel}>Edit</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.reviewDescText}>{detailedDesc || shortDesc}</Text>
-                    </View>
-
-                    {/* Deliverables summary */}
-                    <View style={styles.reviewDataCard}>
-                      <View style={styles.reviewCardHeader}>
-                        <Text style={styles.reviewDataTitle}>What's Included</Text>
-                        <TouchableOpacity onPress={() => setStep(2)} style={styles.editLinkBtn}>
-                          <Icon name="edit" size={12} color={Colors.roseDeep} />
-                          <Text style={styles.editLinkLabel}>Edit</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.deliverablesList}>
-                        {deliverables.map((del, i) => (
-                          <View key={i} style={styles.deliverableItem}>
-                            <View style={styles.greenCheck}><Icon name="check" size={10} color={Colors.white} /></View>
-                            <Text style={styles.delLabelText}>{del}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-
-                    {/* Tags review */}
-                    <View style={styles.reviewDataCard}>
-                      <View style={styles.reviewCardHeader}>
-                        <Text style={styles.reviewDataTitle}>Tags</Text>
-                        <TouchableOpacity onPress={() => setStep(1)} style={styles.editLinkBtn}>
-                          <Icon name="edit" size={12} color={Colors.roseDeep} />
-                          <Text style={styles.editLinkLabel}>Edit</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.tagsContainer}>
-                        {tags.map((tag, i) => (
-                          <View key={i} style={[styles.tagPill, { paddingRight: 10 }]}>
-                            <Text style={styles.tagPillText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-
-                  </View>
-
-                  {/* Right Column / Pricing summaries & Tips */}
-                  <View style={styles.reviewAside}>
-                    {/* Pricing Summary */}
-                    <View style={styles.asideCard}>
-                      <Text style={styles.asideTitle}>Pricing Summary</Text>
-                      <View style={styles.asideDivider} />
-                      <View style={styles.asideRow}>
-                        <Text style={styles.asideLabel}>Package</Text>
-                        <Text style={[styles.asideVal, { color: Colors.roseDeep }]}>Basic</Text>
-                      </View>
-                      <View style={styles.asideRow}>
-                        <Text style={styles.asideLabel}>Price</Text>
-                        <Text style={[styles.asideVal, { fontWeight: '700' }]}>₹{Number(price).toLocaleString()}</Text>
-                      </View>
-                      <View style={styles.asideRow}>
-                        <Text style={styles.asideLabel}>Delivery Time</Text>
-                        <Text style={styles.asideVal}>{deliveryTime}</Text>
-                      </View>
-                    </View>
-
-                    {/* Service Highlights */}
-                    <View style={styles.asideCard}>
-                      <Text style={styles.asideTitle}>Service Highlights</Text>
-                      <View style={styles.asideDivider} />
-                      <View style={styles.highlightRow}>
-                        <Icon name="edit" size={12} color={Colors.roseDeep} />
-                        <Text style={styles.highlightText}>High quality content</Text>
-                      </View>
-                      <View style={styles.highlightRow}>
-                        <Icon name="sparkle" size={12} color={Colors.roseDeep} />
-                        <Text style={styles.highlightText}>Engaging & authentic</Text>
-                      </View>
-                      <View style={styles.highlightRow}>
-                        <Icon name="clock" size={12} color={Colors.roseDeep} />
-                        <Text style={styles.highlightText}>On-time delivery</Text>
-                      </View>
-                      <View style={styles.highlightRow}>
-                        <Icon name="star" size={12} color={Colors.roseDeep} />
-                        <Text style={styles.highlightText}>100% satisfaction</Text>
-                      </View>
-                    </View>
-
-                    {/* Tips to get orders */}
-                    <View style={styles.asideCard}>
-                      <Text style={styles.asideTitle}>Tips to get more orders</Text>
-                      <View style={styles.asideDivider} />
-                      <Text style={styles.tipCheck}><Icon name="check" size={10} color={Colors.green} /> Use a catchy title</Text>
-                      <Text style={styles.tipCheck}><Icon name="check" size={10} color={Colors.green} /> Upload a clear sample video</Text>
-                      <Text style={styles.tipCheck}><Icon name="check" size={10} color={Colors.green} /> Describe the benefits clearly</Text>
-                      <Text style={styles.tipCheck}><Icon name="check" size={10} color={Colors.green} /> Set realistic delivery time</Text>
-                      <Text style={styles.tipCheck}><Icon name="check" size={10} color={Colors.green} /> Add relevant tags</Text>
-                    </View>
-
-                    {/* You're in control card */}
-                    <View style={[styles.asideCard, { backgroundColor: 'rgba(180, 106, 116, 0.08)', borderColor: 'rgba(180, 106, 116, 0.2)' }]}>
-                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                        <Icon name="settings" size={14} color={Colors.roseDeep} />
-                        <Text style={[styles.asideTitle, { marginBottom: 0 }]}>You're in control</Text>
-                      </View>
-                      <Text style={styles.controlSubText}>You can edit all details anytime after publishing.</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Confirmation Checkbox */}
-                <TouchableOpacity
-                  onPress={() => setConfirmed(!confirmed)}
-                  style={styles.confirmCheckboxRow}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
-                    {confirmed && <Icon name="check" size={10} color={Colors.white} />}
-                  </View>
-                  <Text style={styles.confirmLabel}>
-                    I confirm that all the information provided is accurate and I have the necessary rights to the content.
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Actions Bottom */}
-                <View style={styles.wizardFooterRow}>
-                  <TouchableOpacity onPress={handleBackStep} style={styles.wizardBackBtn} activeOpacity={0.8} disabled={submitting}>
-                    <Icon name="back" size={14} color={Colors.oxblood} />
-                    <Text style={styles.wizardBackText}>Back</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleSubmit}
-                    style={[styles.wizardContinueBtn, submitting && { opacity: 0.7 }]}
-                    activeOpacity={0.85}
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <ActivityIndicator size="small" color={Colors.white} />
-                    ) : (
-                      <>
-                        <Text style={styles.wizardContinueText}>{service ? 'Save Changes' : 'Publish Service 🚀'}</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <Step3Review
+                thumbnailUrl={thumbnailUrl}
+                getFrames={getFrames}
+                selectedFrameIdx={selectedFrameIdx}
+                name={name}
+                category={category}
+                subCategory={subCategory}
+                price={price}
+                deliveryTime={deliveryTime}
+                detailedDesc={detailedDesc}
+                shortDesc={shortDesc}
+                deliverables={deliverables}
+                tags={tags}
+                confirmed={confirmed}
+                setConfirmed={setConfirmed}
+                submitting={submitting}
+                handleBackStep={handleBackStep}
+                handleSubmit={handleSubmit}
+                setStep={setStep}
+                service={service}
+              />
             )}
 
           </ScrollView>
@@ -1264,7 +709,7 @@ export function CreateServiceSheet({
   );
 }
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   safeRoot: {
     flex: 1,
     backgroundColor: Colors.creamLite,

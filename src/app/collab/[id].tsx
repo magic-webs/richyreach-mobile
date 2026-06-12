@@ -11,9 +11,10 @@ import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function CollabDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,9 +22,8 @@ export default function CollabDetail() {
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
   const [applied, setApplied] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [cm, setCm] = useState<any>(campaigns.find((c) => c.id === id) ?? campaigns[0]);
   const [createProfileOpen, setCreateProfileOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Entrance animations state
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -57,41 +57,34 @@ export default function CollabDetail() {
     ]).start();
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    const loadDetail = async () => {
-      if (!id) return;
-      try {
-        const c = await api.campaigns.get(id) as any;
-        if (active && c && !Array.isArray(c)) {
-          setCm((prev: any) => ({
-            ...prev,
-            id: c.id ?? prev.id,
-            brand: c.brandName || c.brand?.companyName || prev.brand,
-            cat: c.campaignType || c.category || prev.cat,
-            verified: c.verified ?? c.brand?.verified ?? prev.verified,
-            title: c.title || prev.title,
-            budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || prev.budget),
-            deadline: c.deadline || prev.deadline,
-            applicants: c.applicants || prev.applicants,
-            tone: c.tone || prev.tone,
-            about: c.description || c.about || prev.about,
-            deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : prev.deliverables,
-            platform: c.platform || prev.platform,
-            type: c.campaignType || prev.type,
-            followers: c.followers || prev.followers,
-          }));
-        }
-      } catch (err: any) {
-        const msg: string = err?.message ?? '';
-        if (!msg.includes('Forbidden') && !msg.includes('401') && !msg.includes('403')) {
-          console.error("Failed to load campaign detail from backend:", err);
-        }
-      }
+  const { data: collabData } = useQuery<any>({
+    queryKey: ['collab', id],
+    queryFn: () => api.campaigns.get(id),
+    enabled: !!id,
+  });
+
+  const cm = React.useMemo(() => {
+    const c = collabData;
+    if (!c || Array.isArray(c)) {
+      return campaigns.find((item) => item.id === id) ?? campaigns[0];
+    }
+    return {
+      id: c.id,
+      brand: c.brandName || c.brand?.companyName || 'Richy Brand',
+      cat: c.campaignType || c.category || 'General',
+      verified: c.verified ?? c.brand?.verified ?? false,
+      title: c.title,
+      budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+      deadline: c.deadline || '5 days left',
+      applicants: c.applicants || 0,
+      tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+      about: c.description || c.about,
+      deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : ['1 Reel'],
+      platform: c.platform || 'Instagram',
+      type: c.campaignType || 'Reel',
+      followers: c.followers || '10k+',
     };
-    loadDetail();
-    return () => { active = false; };
-  }, [id]);
+  }, [collabData, id]);
 
   const triggerApplyAnimation = () => {
     Animated.sequence([
@@ -109,45 +102,69 @@ export default function CollabDetail() {
     ]).start();
   };
 
+  const applyMutation = useMutation({
+    mutationFn: () => api.influencers.apply(id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['collab', id] });
+      const previousCollab = queryClient.getQueryData<any>(['collab', id]);
+
+      if (previousCollab) {
+        queryClient.setQueryData(['collab', id], {
+          ...previousCollab,
+          applicants: (previousCollab.applicants ?? 0) + 1,
+        });
+      }
+      setApplied(true);
+      return { previousCollab };
+    },
+    onError: (err: any, _, context) => {
+      if (context?.previousCollab) {
+        queryClient.setQueryData(['collab', id], context.previousCollab);
+      }
+      setApplied(false);
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit application' });
+    },
+    onSuccess: () => {
+      triggerApplyAnimation();
+      useUIStore.getState().showModal({ title: 'Success', message: 'Application submitted successfully!' });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+    }
+  });
+
+  const loading = applyMutation.isPending;
+
   const handleApply = async () => {
     if (role !== 'influencer') {
       useUIStore.getState().showModal({ title: 'Info', message: 'Only influencers can apply to campaigns' });
       return;
     }
     if (applied) return;
-    setLoading(true);
-    try {
-      let profiles = useProfilesStore.getState().influencerProfiles;
-      if (profiles.length === 0) {
-        try {
-          const fetched = await api.influencers.profiles();
-          if (fetched && fetched.length > 0) {
-            const userId = useAuthStore.getState().session?.user?.id;
-            if (userId) {
-              await useProfilesStore.getState().loadInfluencerProfiles(userId, fetched[0]);
-            }
-            profiles = fetched;
+
+    let profiles = useProfilesStore.getState().influencerProfiles;
+    if (profiles.length === 0) {
+      try {
+        const fetched = await api.influencers.profiles();
+        if (fetched && fetched.length > 0) {
+          const userId = useAuthStore.getState().session?.user?.id;
+          if (userId) {
+            await useProfilesStore.getState().loadInfluencerProfiles(userId, fetched[0]);
           }
-        } catch (e) {
-          // Suppress errors
+          profiles = fetched;
         }
+      } catch (e) {
+        // Suppress errors
       }
-
-      if (profiles.length === 0) {
-        setCreateProfileOpen(true);
-        setLoading(false);
-        return;
-      }
-
-      await api.influencers.apply(id);
-      setApplied(true);
-      triggerApplyAnimation();
-      useUIStore.getState().showModal({ title: 'Success', message: 'Application submitted successfully!' });
-    } catch (err: any) {
-      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit application' });
-    } finally {
-      setLoading(false);
     }
+
+    if (profiles.length === 0) {
+      setCreateProfileOpen(true);
+      return;
+    }
+
+    applyMutation.mutate();
   };
 
   const facts = [

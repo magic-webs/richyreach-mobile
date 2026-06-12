@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 
 const MOCK_CREATORS = [
   { id: 'mira', name: 'Muskan', tone: 'rose' as const, followers: '184k', engagement: '6.2%', niche: 'Beauty' },
@@ -13,50 +14,34 @@ const MOCK_CREATORS = [
 
 export function SuggestedCreatorsSection() {
   const router = useRouter();
-  const [creators, setCreators] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    const fetchCreators = async () => {
-      try {
-        setLoading(true);
-        const res = await api.influencers.list() as any[];
-        if (active) {
-          if (res && res.length > 0) {
-            // Map the API response to the format needed by the UI
-            const mapped = res.slice(0, 5).map(c => {
-              let fCount = c.followers ? Number(c.followers) : 0;
-              let fStr = `${fCount}`;
-              if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
-              else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
+  const { data: rawCreatorsData, isLoading: loading } = useQuery<any>({
+    queryKey: ['influencersList'],
+    queryFn: () => api.influencers.list().catch(() => []),
+  });
 
-              return {
-                id: c.id || c._id,
-                name: c.name || c.instagramHandle || 'Creator',
-                tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
-                followers: fStr,
-                engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
-                niche: c.niche || 'Lifestyle'
-              };
-            });
-            setCreators(mapped);
-          } else {
-            setCreators(MOCK_CREATORS);
-          }
-        }
-      } catch (err) {
-        console.warn('SuggestedCreatorsSection: failed to fetch influencers, falling back to mock.', err);
-        if (active) {
-          setCreators(MOCK_CREATORS);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    fetchCreators();
-    return () => { active = false; };
-  }, []);
+  const rawCreators = (rawCreatorsData ?? []) as any[];
+
+  const creators = React.useMemo(() => {
+    if (!rawCreators || rawCreators.length === 0) {
+      return MOCK_CREATORS;
+    }
+    return rawCreators.slice(0, 5).map((c: any) => {
+      let fCount = c.followers ? Number(c.followers) : 0;
+      let fStr = `${fCount}`;
+      if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
+      else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
+
+      return {
+        id: c.id || c._id,
+        name: c.name || c.instagramHandle || 'Creator',
+        tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
+        followers: fStr,
+        engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
+        niche: c.niche || 'Lifestyle'
+      };
+    });
+  }, [rawCreators]);
 
   return (
     <View style={styles.section}>
@@ -82,7 +67,7 @@ export function SuggestedCreatorsSection() {
              </View>
            ))
         ) : (
-          creators.map((creator) => (
+          creators.map((creator: any) => (
             <View key={creator.id} style={styles.creatorCard}>
               <View style={styles.creatorAvatarWrap}>
                 <PlaceholderImage tone={creator.tone} height={60} width={60} borderRadius={30} />

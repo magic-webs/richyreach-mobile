@@ -4,10 +4,12 @@ import { api } from '@/lib/api';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProfilesStore } from '@/store/profiles';
+import { useQuery } from '@tanstack/react-query';
 
 interface TopBannerProps {
   onSwitchProfile?: () => void;
@@ -18,73 +20,51 @@ export function TopBanner({ onSwitchProfile }: TopBannerProps) {
   const router = useRouter();
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
 
-  const [loading, setLoading] = useState(true);
-
-  const [stats, setStats] = useState({
-    totalReach: '0L+',
-    activeCampaigns: 0,
-    creatorsEngaged: 0,
-    pendingReviews: 0,
+  const { data: brandProfileData, isLoading: loadingProfile } = useQuery<any>({
+    queryKey: ['brandProfile'],
+    queryFn: () => api.brands.profile().catch(() => null),
   });
 
-  const [brandProfile, setBrandProfile] = useState({
-    name: '',
-    letter: '',
-    logo: ''
+  const { data: dashRes, isLoading: loadingDashboard } = useQuery<any>({
+    queryKey: ['brandDashboard', activeProfileId],
+    queryFn: () => api.brands.dashboard().catch(() => null),
+    enabled: !!activeProfileId,
   });
 
-  useEffect(() => {
-    let active = true;
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        const [dashRes, profileRes] = await Promise.all([
-          api.brands.dashboard().catch(() => null),
-          api.brands.profile().catch(() => null)
-        ]) as [any, any];
+  const loading = loadingProfile || loadingDashboard;
 
-        if (active) {
-          if (dashRes) {
-            setStats({
-              totalReach: dashRes.totalReach ? `${(dashRes.totalReach / 100000).toFixed(1)}L+` : '0L+',
-              activeCampaigns: dashRes.activeCampaigns ?? 0,
-              creatorsEngaged: dashRes.creatorsEngaged ?? 0,
-              pendingReviews: dashRes.pendingReviews ?? 0,
-            });
-          } else {
-            setStats({
-              totalReach: '0L+',
-              activeCampaigns: 0,
-              creatorsEngaged: 0,
-              pendingReviews: 0,
-            });
-          }
-          if (profileRes) {
-            const name = profileRes.companyName || profileRes.name || 'Brand Settings';
-            setBrandProfile({
-              name,
-              letter: name.charAt(0).toUpperCase(),
-              logo: profileRes.logo || ''
-            });
-          } else {
-            setBrandProfile({
-              name: 'Brand Settings',
-              letter: 'B',
-              logo: ''
-            });
-          }
-        }
-      } catch (err) {
-        console.warn('TopBanner: failed to load dashboard data.', err);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
+  const stats = React.useMemo(() => {
+    if (!dashRes) {
+      return {
+        totalReach: '0L+',
+        activeCampaigns: 0,
+        creatorsEngaged: 0,
+        pendingReviews: 0,
+      };
+    }
+    return {
+      totalReach: dashRes.totalReach ? `${(dashRes.totalReach / 100000).toFixed(1)}L+` : '0L+',
+      activeCampaigns: dashRes.activeCampaigns ?? 0,
+      creatorsEngaged: dashRes.creatorsEngaged ?? 0,
+      pendingReviews: dashRes.pendingReviews ?? 0,
     };
-    fetchDashboard();
-    return () => { active = false; };
-  }, [activeProfileId]);
+  }, [dashRes]);
+
+  const brandProfile = React.useMemo(() => {
+    if (!brandProfileData) {
+      return {
+        name: 'Brand Settings',
+        letter: 'B',
+        logo: ''
+      };
+    }
+    const name = brandProfileData.companyName || brandProfileData.name || 'Brand Settings';
+    return {
+      name,
+      letter: name.charAt(0).toUpperCase(),
+      logo: brandProfileData.logo || ''
+    };
+  }, [brandProfileData]);
 
   return (
     <View style={[styles.topBanner, { paddingTop: insets.top + 10 }]}>

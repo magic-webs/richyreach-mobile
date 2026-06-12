@@ -4,7 +4,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { useProfilesStore } from '@/store/profiles';
 
 interface CampaignCardProps {
   title: string;
@@ -112,12 +115,20 @@ const MOCK_CAMPAIGNS = [
 
 interface CampaignsSectionProps {
   onNewCampaign: () => void;
-  refreshTrigger: number;
+  refreshTrigger?: number;
 }
 
-export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSectionProps) {
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+
+  const { data: campaignsData, isLoading: loading } = useQuery<any>({
+    queryKey: ['brandCampaigns', activeProfileId],
+    queryFn: () => api.campaigns.list().catch(() => []),
+    enabled: !!activeProfileId,
+  });
+
+  const campaigns = (campaignsData ?? []) as any[];
+
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [btnWidth, setBtnWidth] = useState(29); // fallback
 
@@ -131,34 +142,6 @@ export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSec
       tension: 60,
     }).start();
   }, [viewMode, slideAnim]);
-
-  useEffect(() => {
-    let active = true;
-    const fetchCampaigns = async () => {
-      try {
-        setLoading(true);
-        const res = await api.campaigns.list() as any[];
-        if (active) {
-          if (res && res.length > 0) {
-            setCampaigns(res);
-          } else {
-            setCampaigns([]);
-          }
-        }
-      } catch (err) {
-        console.warn("CampaignsSection: failed to load campaigns.", err);
-        if (active) {
-          setCampaigns([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchCampaigns();
-    return () => { active = false; };
-  }, [refreshTrigger]);
 
   const translateX = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -217,7 +200,7 @@ export function CampaignsSection({ onNewCampaign, refreshTrigger }: CampaignsSec
             </TouchableOpacity>
           </View>
         ) : (
-          campaigns.map((c) => {
+          campaigns.map((c: any) => {
             const total = typeof c.budget === 'number' ? c.budget / 100 : 10000;
             const spent = typeof c.spent === 'number' ? c.spent : Math.round(total * 0.75);
             const creators = (c.creatorsCount ?? c.applicants) || 0;

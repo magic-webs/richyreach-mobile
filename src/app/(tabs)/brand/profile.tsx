@@ -11,8 +11,10 @@ import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Pattern, Rect } from 'react-native-svg';
 
 type SheetType = 'billing' | 'team' | 'security' | 'notifications' | 'support' | 'menu' | 'edit_profile' | null;
@@ -235,88 +237,64 @@ export default function BrandProfileScreen() {
   const session = useAuthStore((s) => s.session);
   const loadProfiles = useProfilesStore((s) => s.loadProfiles);
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+  const queryClient = useQueryClient();
 
-  const [profile, setProfile] = useState<any | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [campaignsList, setCampaignsList] = useState<any[]>([]);
 
-  const [stats, setStats] = useState({
-    campaigns: 12,
-    creators: 84,
-    spend: '₹48L',
-    roi: '4.2x'
+  // Fetch brand profile from backend via TanStack Query
+  const { data: profileData, isLoading: loadingProfile } = useQuery<any>({
+    queryKey: ['brandProfile'],
+    queryFn: () => api.brands.profile().catch(() => null),
   });
+  const profile = profileData as any;
 
+  // Synchronize brand profile to Zustand store
   useEffect(() => {
-    let active = true;
-    const fetchProfileData = async () => {
-      try {
-        setLoadingProfile(true);
-        const [prof, dash] = await Promise.all([
-          api.brands.profile().catch(() => null),
-          api.brands.dashboard().catch(() => null)
-        ]) as [any, any];
+    if (profile && session?.user?.id) {
+      loadProfiles(session.user.id, profile);
+    }
+  }, [profile, session?.user?.id, loadProfiles]);
 
-        if (active) {
-          if (prof) {
-            setProfile(prof);
-            if (session?.user?.id) {
-              loadProfiles(session.user.id, prof);
-            }
-          } else {
-            setProfile(null);
-          }
+  // Fetch brand dashboard from backend via TanStack Query
+  const { data: brandDashboardData } = useQuery<any>({
+    queryKey: ['brandDashboard', activeProfileId],
+    queryFn: () => api.brands.dashboard().catch(() => null),
+    enabled: !!activeProfileId,
+  });
+  const brandDashboard = brandDashboardData as any;
 
-          if (dash) {
-            const spendRupees = typeof dash.totalSpend === 'number' ? dash.totalSpend / 100 : 0;
-            let spendStr = '₹0';
-            if (spendRupees >= 100000) spendStr = `₹${(spendRupees / 100000).toFixed(1)}L`;
-            else if (spendRupees >= 1000) spendStr = `₹${(spendRupees / 1000).toFixed(0)}k`;
-            else spendStr = `₹${spendRupees}`;
+  // Fetch campaigns from backend via TanStack Query
+  const { data: campaignsListData } = useQuery<any>({
+    queryKey: ['brandCampaigns', activeProfileId],
+    queryFn: () => api.campaigns.list().catch(() => []),
+    enabled: !!activeProfileId,
+  });
+  const campaignsList = (campaignsListData ?? []) as any[];
 
-            setStats({
-              campaigns: dash.activeCampaigns ?? 0,
-              creators: dash.influencerStats?.totalApplicants ?? 0,
-              spend: spendStr,
-              roi: '4.2x'
-            });
-          }
-        }
-      } catch (err) {
-        console.warn("BrandProfileScreen: error fetching profile data", err);
-      } finally {
-        if (active) {
-          setLoadingProfile(false);
-        }
-      }
+  const stats = React.useMemo(() => {
+    const dash = brandDashboard;
+    if (!dash) {
+      return {
+        campaigns: 0,
+        creators: 0,
+        spend: '₹0',
+        roi: '4.2x'
+      };
+    }
+    const spendRupees = typeof dash.totalSpend === 'number' ? dash.totalSpend / 100 : 0;
+    let spendStr = '₹0';
+    if (spendRupees >= 100000) spendStr = `₹${(spendRupees / 100000).toFixed(1)}L`;
+    else if (spendRupees >= 1000) spendStr = `₹${(spendRupees / 1000).toFixed(0)}k`;
+    else spendStr = `₹${spendRupees}`;
+
+    return {
+      campaigns: dash.activeCampaigns ?? 0,
+      creators: dash.influencerStats?.totalApplicants ?? 0,
+      spend: spendStr,
+      roi: '4.2x'
     };
-    fetchProfileData();
-    return () => { active = false; };
-  }, [refreshTrigger, session?.user?.id, activeProfileId]);
-
-  useEffect(() => {
-    let active = true;
-    api.campaigns.list()
-      .then((res: any) => {
-        if (active) {
-          if (res && res.length > 0) {
-            setCampaignsList(res);
-          } else {
-            setCampaignsList([]);
-          }
-        }
-      })
-      .catch((err) => {
-        console.warn("BrandProfileScreen: failed to load campaigns list", err);
-        if (active) {
-          setCampaignsList([]);
-        }
-      });
-    return () => { active = false; };
-  }, [refreshTrigger, activeProfileId]);
+  }, [brandDashboard]);
 
   const [activeTab, setActiveTab] = useState<TabType>('Overview');
   const [sheet, setSheet] = useState<SheetType>(null);
@@ -525,7 +503,7 @@ export default function BrandProfileScreen() {
           {activeTab === 'Campaigns' && (
             <View style={styles.tabContent}>
               {campaignsList.length > 0 ? (
-                campaignsList.map((c) => {
+                campaignsList.map((c: any) => {
                   const budgetVal = typeof c.budget === 'number' ? c.budget / 100 : 0;
                   let budgetStr = '';
                   if (budgetVal >= 100000) budgetStr = `${(budgetVal / 100000).toFixed(1)}L`;
@@ -739,14 +717,20 @@ export default function BrandProfileScreen() {
       <CreateBrandProfileSheet
         isOpen={isEditSheetOpen}
         onClose={() => setIsEditSheetOpen(false)}
-        onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+        }}
         initialData={profile}
       />
 
       <SwitchBrandProfileSheet
         isOpen={isSwitcherOpen}
         onClose={() => setIsSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
+          queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
+        }}
         onAddNewProfile={() => setIsEditSheetOpen(true)}
       />
     </View>

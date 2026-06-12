@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfl
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -28,16 +29,13 @@ export default function HomeScreen() {
   const setRole = useAuthStore((s) => s.setRole);
   const session = useAuthStore((s) => s.session);
   const userName = session?.user?.name || 'Muskan';
-
-  const [campaignList, setCampaignList] = useState<any[]>([]);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const queryClient = useQueryClient();
 
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
   const [isBrandSwitcherOpen, setIsBrandSwitcherOpen] = useState(false);
   const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
   const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const {
     influencerProfiles,
@@ -63,62 +61,42 @@ export default function HomeScreen() {
         loadInfluencerProfiles(session.user.id).catch(() => {});
       }
     }
-  }, [session?.user?.id, role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
+  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId]);
 
-  useEffect(() => {
-    let active = true;
-    const fetchCampaigns = async () => {
-      if (active) setLoadingCampaigns(true);
-      try {
-        let res: any[] = [];
-        if ((role as string) === 'brand') {
-          res = (await api.campaigns.list()) as any[];
-        } else {
-          res = (await api.influencers.marketplace()) as any[];
-        }
-        if (active) {
-          if (res && res.length > 0) {
-            const mapped = res.map((c: any) => ({
-              id: c.id,
-              brand: c.brandName || c.brand?.companyName || 'Richy Brand',
-              cat: c.campaignType || c.category || 'General',
-              verified: c.verified || c.brand?.verified || false,
-              title: c.title,
-              budget:
-                typeof c.budget === 'number'
-                  ? `₹${(c.budget / 100).toLocaleString()}`
-                  : c.budget || '₹10,000',
-              deadline: c.deadline || '5 days left',
-              applicants: c.applicants || 0,
-              tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-              about: c.description || c.about,
-              deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
-            }));
-            setCampaignList(mapped);
-          } else {
-            setCampaignList([]);
-          }
-        }
-      } catch (err: any) {
-        if (active) {
-          setCampaignList([]);
-        }
-        // Silently fall back to empty list on auth/role mismatch — no console spam
-        const msg: string = err?.message ?? '';
-        if (!msg.includes('Forbidden') && !msg.includes('401') && !msg.includes('403')) {
-          console.error('Failed to load campaigns on HomeScreen:', err);
-        }
-      } finally {
-        if (active) {
-          setLoadingCampaigns(false);
-        }
+  const { data: rawCampaignListData, isLoading: loadingCampaigns } = useQuery<any>({
+    queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
+    queryFn: () => {
+      if ((role as string) === 'brand') {
+        return api.campaigns.list().catch(() => []);
+      } else {
+        return api.influencers.marketplace().catch(() => []);
       }
-    };
-    fetchCampaigns();
-    return () => {
-      active = false;
-    };
-  }, [role, refreshTrigger, activeBrandProfileId, activeInfluencerProfileId]);
+    },
+  });
+
+  const rawCampaignList = (rawCampaignListData ?? []) as any[];
+
+  const campaignList = React.useMemo(() => {
+    if (!rawCampaignList || rawCampaignList.length === 0) {
+      return [];
+    }
+    return rawCampaignList.map((c: any) => ({
+      id: c.id,
+      brand: c.brandName || c.brand?.companyName || 'Richy Brand',
+      cat: c.campaignType || c.category || 'General',
+      verified: c.verified || c.brand?.verified || false,
+      title: c.title,
+      budget:
+        typeof c.budget === 'number'
+          ? `₹${(c.budget / 100).toLocaleString()}`
+          : c.budget || '₹10,000',
+      deadline: c.deadline || '5 days left',
+      applicants: c.applicants || 0,
+      tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+      about: c.description || c.about,
+      deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+    }));
+  }, [rawCampaignList]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -178,7 +156,9 @@ export default function HomeScreen() {
       <SwitchInfluencerProfileSheet
         isOpen={isInfluencerSwitcherOpen}
         onClose={() => setIsInfluencerSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         onAddNewProfile={() => {
           setIsInfluencerSwitcherOpen(false);
           setIsCreateInfluencerOpen(true);
@@ -188,7 +168,9 @@ export default function HomeScreen() {
       <SwitchBrandProfileSheet
         isOpen={isBrandSwitcherOpen}
         onClose={() => setIsBrandSwitcherOpen(false)}
-        onSwitchSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         onAddNewProfile={() => {
           setIsBrandSwitcherOpen(false);
           setIsCreateBrandOpen(true);
@@ -198,14 +180,20 @@ export default function HomeScreen() {
       <CreateBrandProfileSheet
         isOpen={isCreateBrandOpen}
         onClose={() => setIsCreateBrandOpen(false)}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         initialData={null}
       />
 
       <CreateInfluencerProfileSheet
         isOpen={isCreateInfluencerOpen}
         onClose={() => setIsCreateInfluencerOpen(false)}
-        onSuccess={() => setRefreshTrigger((t) => t + 1)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+          queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+        }}
         initialData={null}
       />
     </View>
