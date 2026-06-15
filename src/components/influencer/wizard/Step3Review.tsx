@@ -8,7 +8,7 @@ import {
 import { Image } from 'expo-image';
 import { Icon } from '@/components/ui/icon';
 import { Colors } from '@/constants/brand';
-import { styles } from '../CreateServiceSheet';
+import { styles } from '../CreateServiceSheet.styles';
 import { TactileButton } from '@/components/ui/tactile-button';
 
 interface Step3ReviewProps {

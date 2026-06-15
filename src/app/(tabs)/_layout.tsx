@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUIStore } from '@/store/ui';
 
 import { useAuthStore } from '@/store/auth';
 
@@ -123,8 +124,24 @@ function CustomTabBar({ state, navigation }: any) {
   const activeRouteName = state.routes[state.index].name;
   const activeIdx = activeTabs.findIndex((tab) => tab.key === activeRouteName);
 
+  const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withTiming(tabBarVisible ? 0 : 120, {
+      duration: 300,
+      easing: Easing.bezier(0.25, 1, 0.5, 1),
+    });
+  }, [tabBarVisible]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
   return (
-    <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 8 }]}>
+    <Animated.View style={[styles.tabBarContainer, animatedStyle, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBar}>
         {activeTabs.map((tab, i) => {
           const on = i === activeIdx;
@@ -138,7 +155,7 @@ function CustomTabBar({ state, navigation }: any) {
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

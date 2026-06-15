@@ -14,8 +14,8 @@ import {
   CATEGORIES,
   DELIVERY_TIMES,
   SUB_CATEGORIES,
-  styles,
 } from '../CreateServiceSheet';
+import { styles } from '../CreateServiceSheet.styles';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 
