@@ -38,6 +38,7 @@ const FEATHER_MAP: Record<string, FeatherName> = {
   star: 'star',
   bolt: 'zap',
   arrow: 'arrow-right',
+  arrowLeft: 'arrow-left',
   plus: 'plus',
   play: 'play',
   dollar: 'dollar-sign',

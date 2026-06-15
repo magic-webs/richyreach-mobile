@@ -23,24 +23,40 @@ export function SuggestedCreatorsSection() {
   const rawCreators = (rawCreatorsData ?? []) as any[];
 
   const creators = React.useMemo(() => {
-    if (!rawCreators || rawCreators.length === 0) {
+    if (!Array.isArray(rawCreators) || rawCreators.length === 0) {
       return MOCK_CREATORS;
     }
-    return rawCreators.slice(0, 5).map((c: any) => {
-      let fCount = c.followers ? Number(c.followers) : 0;
-      let fStr = `${fCount}`;
-      if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
-      else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
 
-      return {
-        id: c.id || c._id,
-        name: c.name || c.instagramHandle || 'Creator',
-        tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
-        followers: fStr,
-        engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
-        niche: c.niche || 'Lifestyle'
-      };
-    });
+    const mapped = rawCreators
+      .map((c: any, idx: number) => {
+        if (!c || typeof c !== 'object') return null;
+
+        let fCount = c.followers ? Number(c.followers) : 0;
+        let fStr = `${fCount}`;
+        if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
+        else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
+
+        // Prefer influencer profile id (ip_…), fall back to userId, then index
+        const rawId = c.id || c._id || c.userId || `creator-${idx}`;
+
+        return {
+          id: rawId,
+          name: c.name || c.instagramHandle || 'Creator',
+          tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
+          followers: fStr,
+          engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
+          niche: c.niche || 'Lifestyle',
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => !!item);
+
+    // Deduplicate: keep first occurrence of each id
+    const seen = new Set<string>();
+    return mapped.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    }).slice(0, 5);
   }, [rawCreators]);
 
   return (
@@ -58,8 +74,8 @@ export function SuggestedCreatorsSection() {
         contentContainerStyle={styles.suggestedScrollContent}
       >
         {loading && creators.length === 0 ? (
-           MOCK_CREATORS.map(creator => (
-             <View key={creator.id} style={[styles.creatorCard, { opacity: 0.5 }]}>
+           MOCK_CREATORS.map((creator, idx) => (
+             <View key={`mock-${creator.id}-${idx}`} style={[styles.creatorCard, { opacity: 0.5 }]}>
                <View style={styles.creatorAvatarWrap}>
                  <PlaceholderImage tone={creator.tone} height={60} width={60} borderRadius={30} />
                </View>
@@ -67,8 +83,8 @@ export function SuggestedCreatorsSection() {
              </View>
            ))
         ) : (
-          creators.map((creator: any) => (
-            <View key={creator.id} style={styles.creatorCard}>
+          creators.map((creator: any, idx: number) => (
+            <View key={`${creator.id}-${idx}`} style={styles.creatorCard}>
               <View style={styles.creatorAvatarWrap}>
                 <PlaceholderImage tone={creator.tone} height={60} width={60} borderRadius={30} />
               </View>

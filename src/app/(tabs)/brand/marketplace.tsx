@@ -62,28 +62,32 @@ export default function BrandMarketplaceScreen() {
   const rawCreators = (rawCreatorsData ?? []) as any[];
 
   const creators = React.useMemo(() => {
-    if (!rawCreators || rawCreators.length === 0) {
+    if (!Array.isArray(rawCreators) || rawCreators.length === 0) {
       return [];
     }
-    return rawCreators.map((c: any) => {
-      let fCount = c.followers ? Number(c.followers) : 0;
-      let fStr = `${fCount}`;
-      if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
-      else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
+    return rawCreators
+      .map((c: any) => {
+        if (!c || typeof c !== 'object') return null;
 
-      return {
-        id: c.id || c._id,
-        name: c.name || c.instagramHandle || 'Creator',
-        handle: `@${c.instagramHandle || 'creator'}`,
-        followers: fStr,
-        engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
-        collabs: c.collabs || Math.floor(Math.random() * 20) + 1,
-        rating: c.rating ? Number(c.rating).toFixed(1) : '4.8',
-        rate: c.pricing ? `₹${(c.pricing / 100).toLocaleString()}` : '₹15,000',
-        niche: Array.isArray(c.niche) ? c.niche : c.niche ? [c.niche] : ['Lifestyle'],
-        tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
-      };
-    });
+        let fCount = c.followers ? Number(c.followers) : 0;
+        let fStr = `${fCount}`;
+        if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
+        else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
+
+        return {
+          id: c.id || c._id || Math.random().toString(),
+          name: c.name || c.instagramHandle || 'Creator',
+          handle: `@${c.instagramHandle || 'creator'}`,
+          followers: fStr,
+          engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
+          collabs: c.collabs || Math.floor(Math.random() * 20) + 1,
+          rating: c.rating ? Number(c.rating).toFixed(1) : '4.8',
+          rate: c.pricing ? `₹${(c.pricing / 100).toLocaleString()}` : '₹15,000',
+          niche: Array.isArray(c.niche) ? c.niche : c.niche ? [c.niche] : ['Lifestyle'],
+          tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => !!item);
   }, [rawCreators]);
 
   useEffect(() => {

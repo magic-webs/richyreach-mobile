@@ -1,6 +1,7 @@
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { CreateServiceSheet } from '@/components/influencer/CreateServiceSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
+import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { AboutTab } from '@/components/influencer/profile/AboutTab';
 import { NotificationsContent } from '@/components/influencer/profile/NotificationsContent';
 import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
@@ -277,6 +278,11 @@ export default function ProfileScreen() {
               <Icon name="chart" size={16} color={Colors.oxblood} />
               <Text style={styles.insightsBtnText}>Insights</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Profile Banner */}
+          <View style={{ marginTop: 20 }}>
+            <PromoBannerCarousel position="profile_top" />
           </View>
 
           {/* Tabs */}

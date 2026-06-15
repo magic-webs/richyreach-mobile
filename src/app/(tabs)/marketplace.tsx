@@ -17,6 +17,7 @@ import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfl
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 
 const CATS = ['All', 'Beauty', 'Fashion', 'Tech', 'Fitness', 'Luxury'];
 
@@ -196,15 +197,18 @@ export default function MarketplaceScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: 130 }]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            list.length > 0 ? (
-              <View style={styles.listHeader}>
-                <Text style={styles.listCount}>{list.length} campaigns</Text>
-                <TouchableOpacity style={styles.sortBtn} activeOpacity={0.8}>
-                  <Text style={styles.sortText}>Top match</Text>
-                  <Icon name="chevDown" size={15} color={Colors.oxblood} />
-                </TouchableOpacity>
-              </View>
-            ) : null
+            <View style={{ marginBottom: 14 }}>
+              <PromoBannerCarousel position="marketplace_top" />
+              {list.length > 0 && (
+                <View style={[styles.listHeader, { marginTop: 14, marginBottom: 0 }]}>
+                  <Text style={styles.listCount}>{list.length} campaigns</Text>
+                  <TouchableOpacity style={styles.sortBtn} activeOpacity={0.8}>
+                    <Text style={styles.sortText}>Top match</Text>
+                    <Icon name="chevDown" size={15} color={Colors.oxblood} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyCard}>

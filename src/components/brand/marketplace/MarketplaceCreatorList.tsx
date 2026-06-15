@@ -1,7 +1,6 @@
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { StyleSheet, Text, View } from 'react-native';
 import { Creator, MarketplaceCreatorCard, MarketplaceSkeletonCard } from './MarketplaceCreatorCard';
 
 interface MarketplaceCreatorListProps {

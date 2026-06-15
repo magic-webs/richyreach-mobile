@@ -1,9 +1,27 @@
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { useCampaignWizardStore } from '@/store/campaignWizard';
 import { useUIStore } from '@/store/ui';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Step Subcomponents
+import { StepBasics } from './campaign-wizard/StepBasics';
+import { StepDeliverables } from './campaign-wizard/StepDeliverables';
+import { StepGuidelines } from './campaign-wizard/StepGuidelines';
+import { StepMediaReview } from './campaign-wizard/StepMediaReview';
+import { StepTargeting } from './campaign-wizard/StepTargeting';
 
 interface CreateCampaignSheetProps {
   isOpen: boolean;
@@ -12,40 +30,99 @@ interface CreateCampaignSheetProps {
 }
 
 export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampaignSheetProps) {
+  const insets = useSafeAreaInsets();
   const showModal = useUIStore((s) => s.showModal);
-  
-  const [createStep, setCreateStep] = useState<1 | 2>(1);
-  const [campName, setCampName] = useState('');
-  const [campType, setCampType] = useState<'Reel' | 'Post' | 'Story' | 'UGC'>('Reel');
-  const [campPlatform, setCampPlatform] = useState<'Instagram' | 'YouTube' | 'Both'>('Instagram');
-  const [campBudget, setCampBudget] = useState('');
-  const [campDuration, setCampDuration] = useState<'1 week' | '2 weeks' | '1 month'>('1 week');
+  const {
+    createStep,
+    campName,
+    brandName,
+    campObjective,
+    campDescription,
+    campLocationType,
+    campLocationValue,
+    campNiche,
+    campPriority,
+    reelCount,
+    storyCount,
+    postCount,
+    carouselCount,
+    ytShortCount,
+    ytVideoCount,
+    liveCount,
+    paymentType,
+    costPerCreator,
+    numCreators,
+    paymentMethod,
+    paymentTimeline,
+    prodName,
+    prodValue,
+    prodDescription,
+    prodSku,
+    prodUrl,
+    prodShipping,
+    selectedPlatforms,
+    minFollowers,
+    minEngagementRate,
+    targetGender,
+    targetAgeRange,
+    creatorSize,
+    targetLanguage,
+    audienceGenderPct,
+    audienceAgePct,
+    mustMention,
+    cta,
+    hashtags,
+    brandKeywords,
+    brandTone,
+    dos,
+    donts,
+    campaignBanner, // legacy URL
+    brandLogo, // legacy URL
+    sampleCreative, // legacy URL
+    audioInstructionUri,
+    campaignBannerUri,
+    brandLogoUri,
+    sampleCreativeUri,
+    referenceLinks,
+    startDate,
+    endDate,
+    applicationDeadline,
+    contentUsageRights,
+    whitelistingPermission,
+    paidAdsPermission,
+    exclusivityMonths,
+    ndaRequired,
+    contractRequired,
+    autoApprove,
+    revisionCount,
+    couponCode,
+    trackingLink,
+    affiliateCommType,
+    affiliateCommValue,
+    appQuestions,
+    resetStore,
+  } = useCampaignWizardStore();
+
+  // ==========================================
+  // Calculations
+  // ==========================================
+  const cost = parseInt(costPerCreator) || 0;
+  const creators = parseInt(numCreators) || 0;
+  const totalBudget = cost * creators;
 
   useEffect(() => {
     if (isOpen) {
-      setCreateStep(1);
-      setCampName('');
-      setCampType('Reel');
-      setCampPlatform('Instagram');
-      setCampBudget('');
-      setCampDuration('1 week');
+      resetStore();
     }
-  }, [isOpen]);
+  }, [isOpen, resetStore]);
 
   const handleLaunchCampaign = async () => {
-    if (!campName.trim()) {
-      showModal({
-        title: 'Validation Error',
-        message: 'Please provide a valid campaign name.',
-      });
+    if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
+      showModal({ title: 'Validation Error', message: 'Name, Brand, and Description are required.' });
       return;
     }
-    const budgetVal = parseInt(campBudget);
-    if (isNaN(budgetVal) || budgetVal <= 0) {
-      showModal({
-        title: 'Validation Error',
-        message: 'Please provide a valid budget amount.',
-      });
+    if (paymentType !== 'Barter' && totalBudget <= 0) {
+      showModal({ title: 'Validation Error', message: 'Total budget must be greater than 0.' });
       return;
     }
 
@@ -56,337 +133,379 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         message: 'Submitting campaign parameters to backend API...',
       });
 
-      const durationDays = campDuration === '1 week' ? 7 : campDuration === '2 weeks' ? 14 : 30;
+      // Format deliverables description
+      const selectedDeliverables: string[] = [];
+      if (reelCount > 0) selectedDeliverables.push(`${reelCount} Reel(s)`);
+      if (storyCount > 0) selectedDeliverables.push(`${storyCount} Story(ies)`);
+      if (postCount > 0) selectedDeliverables.push(`${postCount} Post(s)`);
+      if (carouselCount > 0) selectedDeliverables.push(`${carouselCount} Carousel(s)`);
+      if (ytShortCount > 0) selectedDeliverables.push(`${ytShortCount} YouTube Short(s)`);
+      if (ytVideoCount > 0) selectedDeliverables.push(`${ytVideoCount} YouTube Video(s)`);
+      if (liveCount > 0) selectedDeliverables.push(`${liveCount} Live Session(s)`);
 
-      const payload = {
-        title: campName,
-        description: `Campaign for ${campName} requesting ${campType} deliverables on ${campPlatform}. Duration: ${campDuration}.`,
-        budget: budgetVal * 100, // in cents
-        campaignType: campType.toLowerCase(),
-        requirements: `1. Content format: ${campType}\n2. Social platforms: ${campPlatform}\n3. Complete within ${durationDays} days.`,
-        expectedReach: 1500000,
-        category: campPlatform,
+      const deliverablesDesc = selectedDeliverables.join(', ') || 'General Deliverables';
+
+      // Fix: check K/M suffix BEFORE stripping non-numeric chars
+      const followerStr = minFollowers.trim();
+      const followerMultiplier = followerStr.toUpperCase().includes('M')
+        ? 1_000_000
+        : followerStr.toUpperCase().includes('K')
+          ? 1_000
+          : 1;
+      const followerNumber =
+        (parseInt(followerStr.replace(/[^0-9]/g, ''), 10) || 1) * followerMultiplier;
+
+      // Fix: use global regex so ALL spaces/slashes are replaced, not just the first
+      const objectiveSlug = campObjective
+        .toLowerCase()
+        .replace(/[\/\s]+/g, '_');
+
+      const briefDetailsObj = {
+        brandName,
+        objective: objectiveSlug,
+        priority: campPriority.toLowerCase(),
+        location: campLocationValue || campLocationType,
+        gender: targetGender.toLowerCase(),
+        ageRange: targetAgeRange,
+        creatorSize,
+        paymentType: paymentType.toLowerCase(),
+        minFollowers: followerNumber,
+        tags: [campNiche.toLowerCase()],
+        targetLocationType: campLocationType,
+        targetLocationValue: campLocationValue,
+        minEngagementRate: parseFloat(minEngagementRate) || 0,
+        languages: [targetLanguage],
+        targetAudienceGenderPct: audienceGenderPct,
+        targetAudienceAgePct: audienceAgePct,
+        platforms: selectedPlatforms.map((p) => ({
+          name: p.toLowerCase(),
+          minFollowers: followerNumber,
+          minEngagement: parseFloat(minEngagementRate) || 0,
+        })),
+        deliverables: [
+          { type: 'reel', quantity: reelCount },
+          { type: 'story', quantity: storyCount },
+          { type: 'post', quantity: postCount },
+          { type: 'carousel', quantity: carouselCount },
+          { type: 'youtube_short', quantity: ytShortCount },
+          { type: 'youtube_video', quantity: ytVideoCount },
+          { type: 'live', quantity: liveCount },
+        ].filter((d) => d.quantity > 0),
+        paymentMethod,
+        paymentTimeline,
+        costPerCreator: parseInt(costPerCreator) || 0,
+        numCreators: parseInt(numCreators) || 0,
+        productInfo:
+          paymentType !== 'Paid'
+            ? {
+              name: prodName,
+              value: parseInt(prodValue) || 0,
+              description: prodDescription,
+              sku: prodSku,
+              url: prodUrl,
+              shippingDetails: prodShipping,
+            }
+            : null,
+        guidelines: {
+          mustMention: mustMention
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          cta,
+          hashtags: hashtags
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          brandKeywords: brandKeywords
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          brandTone,
+        },
+        dos,
+        donts,
+        timeline: {
+          startDate,
+          endDate,
+          applicationDeadline,
+        },
+        mediaUploads: {
+          bannerUrl: campaignBannerUri || campaignBanner,
+          brandLogoUrl: brandLogoUri || brandLogo,
+          sampleCreativeUrls: (sampleCreativeUri || sampleCreative) ? [sampleCreativeUri || sampleCreative] : [],
+          referenceLinks: referenceLinks ? [referenceLinks] : [],
+          audioInstructionUrl: audioInstructionUri || null,
+        },
+        legalRights: {
+          contentUsageRights,
+          whitelistingPermission,
+          paidAdsPermission,
+          exclusivityDurationMonths: parseInt(exclusivityMonths) || 0,
+          ndaRequired,
+          contractRequired,
+        },
+        approvalWorkflow: {
+          autoApprove,
+          manualReview: !autoApprove,
+          revisionCount: parseInt(revisionCount) || 2,
+          finalApprovalRequired: true,
+        },
+        advancedFeatures: {
+          couponCode,
+          trackingLink,
+          affiliateCommissionType: affiliateCommType.toLowerCase(),
+          affiliateCommissionValue: parseFloat(affiliateCommValue) || 0,
+          creatorApplicationQuestions: appQuestions,
+        },
       };
 
-      await api.campaigns.create(payload);
+      // Determine if we need to send FormData (if there are local files)
+      const hasFiles = audioInstructionUri || campaignBannerUri || brandLogoUri || sampleCreativeUri;
+      
+      let finalPayload: any;
+
+      if (hasFiles) {
+        const formData = new FormData();
+        formData.append('title', campName);
+        formData.append('description', campDescription || `Campaign for ${campName} requesting deliverables: ${deliverablesDesc}.`);
+        formData.append('budget', paymentType === 'Barter' ? '0' : (totalBudget * 100).toString());
+        formData.append('campaignType', selectedPlatforms.length > 0 ? selectedPlatforms[0].toLowerCase() : 'post');
+        formData.append('targetAudience', `${targetGender}, ${targetAgeRange}, ${creatorSize}`);
+        formData.append('requirements', `1. Content format: ${deliverablesDesc}\n2. Social platforms: ${selectedPlatforms.join(', ')}\n3. Timeline: ${startDate} to ${endDate}`);
+        formData.append('expectedReach', '250000');
+        formData.append('allowFraction', 'false');
+        formData.append('isArena', 'false');
+        formData.append('category', campNiche);
+        formData.append('briefDetails', JSON.stringify(briefDetailsObj));
+
+        const appendFile = (key: string, uri: string | null, defaultType: string) => {
+          if (!uri) return;
+          if (uri.startsWith('http')) return; // skip already uploaded URLs
+          const filename = uri.split('/').pop() || 'file';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `${defaultType.split('/')[0]}/${match[1]}` : defaultType;
+          
+          formData.append(key, {
+            uri,
+            name: filename,
+            type,
+          } as any);
+        };
+
+        appendFile('audioInstruction', audioInstructionUri, 'audio/m4a');
+        appendFile('campaignBanner', campaignBannerUri, 'image/jpeg');
+        appendFile('brandLogo', brandLogoUri, 'image/jpeg');
+        appendFile('sampleCreative', sampleCreativeUri, 'image/jpeg');
+        
+        finalPayload = formData;
+      } else {
+        finalPayload = {
+          title: campName,
+          description: campDescription || `Campaign for ${campName} requesting deliverables: ${deliverablesDesc}.`,
+          budget: paymentType === 'Barter' ? 0 : totalBudget * 100, // API expects cents
+          campaignType: selectedPlatforms.length > 0 ? selectedPlatforms[0].toLowerCase() : 'post',
+          targetAudience: `${targetGender}, ${targetAgeRange}, ${creatorSize}`,
+          requirements: `1. Content format: ${deliverablesDesc}\n2. Social platforms: ${selectedPlatforms.join(', ')}\n3. Timeline: ${startDate} to ${endDate}`,
+          expectedReach: 250000,
+          allowFraction: false,
+          isArena: false,
+          category: campNiche,
+          briefDetails: JSON.stringify(briefDetailsObj),
+        };
+      }
+
+      await api.campaigns.create(finalPayload);
 
       showModal({
         title: 'Campaign Launched! 🚀',
-        message: `Your campaign "${campName}" is live on Reelio.`,
+        message: `Your campaign "${campName}" is now active on RichyReach.`,
       });
 
       onSuccess();
     } catch (err: any) {
-      console.error("Failed to launch campaign via API:", err);
+      console.error('Failed to launch campaign:', err);
       showModal({
-        title: 'Campaign Created (Offline) 🚀',
-        message: `Successfully created campaign "${campName}" offline.`,
+        title: 'Campaign Creation Failed',
+        message: err.message || 'An error occurred while launching your campaign.',
       });
-      onSuccess();
     }
   };
 
-  if (!isOpen) return null;
+  const stepTitles = [
+    'Step 1: Campaign Basics',
+    'Step 2: Deliverables & Budget',
+    'Step 3: Creator Targeting',
+    "Step 4: Guidelines & Do's/Don'ts",
+    'Step 5: Media & Final Review',
+  ];
 
   return (
-    <BottomSheet
+    <Modal
       visible={isOpen}
-      title="New campaign"
-      icon="briefcase"
-      onClose={onClose}
-      snapPoints={['72%']}
-      hideHeaderBorder
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
-      {createStep === 1 ? (
-        <View style={{ gap: 18 }}>
-          {/* CAMPAIGN NAME */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Campaign Name</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Summer Glow Launch"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={campName}
-              onChangeText={setCampName}
-            />
-          </View>
-
-          {/* CONTENT TYPE */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Content Type</Text>
-            <View style={styles.toggleRow}>
-              {(['Reel', 'Post', 'Story', 'UGC'] as const).map((type) => {
-                const active = campType === type;
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                    activeOpacity={0.8}
-                    onPress={() => setCampType(type)}
-                  >
-                    <Text style={[styles.toggleText, active && styles.toggleTextActive]}>
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={[styles.root, { paddingTop: insets.top || 16 }]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.iconWrap}>
+                <Icon name="briefcase" size={18} color="#fff" />
+              </View>
+              <Text style={styles.headerTitle}>Create Campaign Brief</Text>
             </View>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+              <Icon name="x" size={18} color={Colors.oxblood} />
+            </TouchableOpacity>
           </View>
 
-          {/* PLATFORM */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Platform</Text>
-            <View style={styles.toggleRow}>
-              {(['Instagram', 'YouTube', 'Both'] as const).map((platform) => {
-                const active = campPlatform === platform;
-                return (
-                  <TouchableOpacity
-                    key={platform}
-                    style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                    activeOpacity={0.8}
-                    onPress={() => setCampPlatform(platform)}
-                  >
-                    <Text style={[styles.toggleText, active && styles.toggleTextActive]}>
-                      {platform}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          {/* Step indicator */}
+          <View style={styles.indicatorContainer}>
+            {([1, 2, 3, 4, 5] as const).map((step) => {
+              const active = createStep === step;
+              const completed = createStep > step;
+              return (
+                <React.Fragment key={step}>
+                  <View style={[styles.stepDot, active && styles.stepDotActive, completed && styles.stepDotCompleted]}>
+                    {completed ? (
+                      <Icon name="check" size={10} color="#ffffff" />
+                    ) : (
+                      <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{step}</Text>
+                    )}
+                  </View>
+                  {step < 5 && (
+                    <View style={[styles.stepLine, completed && styles.stepLineCompleted]} />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </View>
 
-          {/* NEXT BUTTON */}
-          <TouchableOpacity
-            style={styles.nextBtn}
-            activeOpacity={0.85}
-            onPress={() => {
-              if (!campName.trim()) {
-                showModal({
-                  title: 'Validation Error',
-                  message: 'Please provide a valid campaign name.',
-                });
-                return;
-              }
-              setCreateStep(2);
-            }}
+          <Text style={styles.stepTitle}>{stepTitles[createStep - 1]}</Text>
+
+          {/* Scrollable step content */}
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.nextBtnText}>Next →</Text>
-          </TouchableOpacity>
+            {createStep === 1 && <StepBasics />}
+            {createStep === 2 && <StepDeliverables />}
+            {createStep === 3 && <StepTargeting />}
+            {createStep === 4 && <StepGuidelines />}
+            {createStep === 5 && <StepMediaReview onPublish={handleLaunchCampaign} />}
+          </ScrollView>
         </View>
-      ) : (
-        <View style={{ gap: 18 }}>
-          {/* BUDGET */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Budget (₹)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. 50000"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              keyboardType="numeric"
-              value={campBudget}
-              onChangeText={(text) => {
-                const cleaned = text.replace(/[^0-9]/g, '');
-                setCampBudget(cleaned);
-              }}
-            />
-          </View>
-
-          {/* CAMPAIGN DURATION */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Campaign Duration</Text>
-            <View style={styles.toggleRow}>
-              {(['1 week', '2 weeks', '1 month'] as const).map((dur) => {
-                const active = campDuration === dur;
-                return (
-                  <TouchableOpacity
-                    key={dur}
-                    style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                    activeOpacity={0.8}
-                    onPress={() => setCampDuration(dur)}
-                  >
-                    <Text style={[styles.toggleText, active && styles.toggleTextActive]}>
-                      {dur}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* SUMMARY CARD */}
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Campaign</Text>
-              <Text style={styles.summaryValue} numberOfLines={1}>
-                {campName || '—'}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Type</Text>
-              <Text style={styles.summaryValue}>
-                {campType} · {campPlatform}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Budget</Text>
-              <Text style={styles.summaryValue}>
-                {campBudget ? `₹${parseInt(campBudget).toLocaleString('en-IN')}` : '—'}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Duration</Text>
-              <Text style={styles.summaryValue}>
-                {campDuration === '1 week' ? '7 days' : campDuration === '2 weeks' ? '14 days' : '30 days'}
-              </Text>
-            </View>
-          </View>
-
-          {/* ACTION BUTTONS */}
-          <View style={styles.bottomRow}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              activeOpacity={0.8}
-              onPress={() => setCreateStep(1)}
-            >
-              <Text style={styles.backBtnText}>← Back</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.launchBtn}
-              activeOpacity={0.85}
-              onPress={handleLaunchCampaign}
-            >
-              <Text style={styles.launchBtnText}>Launch campaign 🚀</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </BottomSheet>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  formGroup: {
-    gap: 8,
-  },
-  formLabel: {
-    fontFamily: FontFamily.sans,
-    fontSize: 10.5,
-    color: Colors.roseDeep,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  formInput: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    height: 48,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(63,3,11,0.08)',
-    fontSize: 14,
-    color: Colors.ink,
-    fontFamily: FontFamily.sansMedium,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  toggleBtn: {
+  flex: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  toggleBtnActive: {
-    backgroundColor: Colors.oxblood,
+  root: {
+    flex: 1,
+    backgroundColor: Colors.creamLite,
   },
-  toggleText: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 12.5,
-    color: Colors.oxblood,
-  },
-  toggleTextActive: {
-    fontFamily: FontFamily.sans,
-    color: '#ffffff',
-  },
-  nextBtn: {
-    backgroundColor: Colors.oxblood,
-    borderRadius: 14,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  nextBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 14,
-    color: '#ffffff',
-  },
-  summaryCard: {
-    backgroundColor: 'rgba(63,3,11,0.04)',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 4,
-  },
-  summaryTitle: {
-    fontFamily: FontFamily.serif,
-    fontSize: 18,
-    color: Colors.ink,
-    marginBottom: 12,
-  },
-  summaryRow: {
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.08)',
+    backgroundColor: Colors.creamLite,
   },
-  summaryLabel: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 13,
-    color: 'rgba(63,3,11,0.55)',
-  },
-  summaryValue: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13,
-    color: Colors.oxblood,
-    textAlign: 'right',
-    flex: 1,
-    marginLeft: 16,
-  },
-  bottomRow: {
+  headerLeft: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
+    alignItems: 'center',
+    gap: 10,
   },
-  backBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: Colors.creamDk,
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.rose,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 99,
+    backgroundColor: 'rgba(63,3,11,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 4,
+  },
+  stepDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(63,3,11,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
-  backBtnText: {
+  stepDotActive: {
+    borderColor: Colors.oxblood,
+    backgroundColor: Colors.creamLite,
+  },
+  stepDotCompleted: {
+    borderColor: Colors.green,
+    backgroundColor: Colors.green,
+  },
+  stepDotText: {
     fontFamily: FontFamily.sans,
-    fontSize: 13.5,
+    fontSize: 10,
+    color: 'rgba(63,3,11,0.4)',
+  },
+  stepDotTextActive: {
     color: Colors.oxblood,
+    fontWeight: '700',
   },
-  launchBtn: {
-    flex: 2,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: Colors.oxblood,
-    alignItems: 'center',
-    justifyContent: 'center',
+  stepLine: {
+    height: 2,
+    flex: 1,
+    maxWidth: 40,
+    backgroundColor: 'rgba(63,3,11,0.1)',
   },
-  launchBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13.5,
-    color: '#ffffff',
+  stepLineCompleted: {
+    backgroundColor: Colors.green,
+  },
+  stepTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 19,
+    color: Colors.oxblood,
+    marginBottom: 4,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
 });

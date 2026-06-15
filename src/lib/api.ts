@@ -47,7 +47,13 @@ export const api = {
   campaigns: {
     list: () => request('/campaigns'),
     get: (id: string) => request(`/campaigns/${id}`),
-    create: (data: any) => request('/campaigns/create', { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: FormData | any) => {
+      const isFormData = data instanceof FormData;
+      return request('/campaigns/create', {
+        method: 'POST',
+        body: isFormData ? data : JSON.stringify(data),
+      });
+    },
   },
   influencers: {
     list: () => request('/influencers'),

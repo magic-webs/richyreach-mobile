@@ -3,9 +3,9 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Tabs } from 'expo-router';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/store/auth';
@@ -119,7 +119,7 @@ function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
   const activeTabs = role === 'brand' ? BRAND_TABS : CREATOR_TABS;
-  
+
   const activeRouteName = state.routes[state.index].name;
   const activeIdx = activeTabs.findIndex((tab) => tab.key === activeRouteName);
 

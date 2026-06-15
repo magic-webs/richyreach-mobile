@@ -1,9 +1,24 @@
+import React, { useRef } from 'react';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { useUIStore } from '@/store/ui';
 import { Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export function ActionModal() {
   const { visible, title, message, actions, hideModal } = useUIStore();
+
+  const prevTitle = useRef(title);
+  const prevMessage = useRef(message);
+  const prevActions = useRef(actions);
+
+  if (visible) {
+    prevTitle.current = title;
+    prevMessage.current = message;
+    prevActions.current = actions;
+  }
+
+  const displayTitle = visible ? title : prevTitle.current;
+  const displayMessage = visible ? message : prevMessage.current;
+  const displayActions = visible ? actions : prevActions.current;
 
   const handleAction = (onPress?: () => void) => {
     hideModal();
@@ -12,7 +27,7 @@ export function ActionModal() {
     }
   };
 
-  const buttons = actions && actions.length > 0 ? actions : [{ text: 'OK', style: 'default' as const }];
+  const buttons = displayActions && displayActions.length > 0 ? displayActions : [{ text: 'OK', style: 'default' as const }];
 
   return (
     <Modal
@@ -25,8 +40,8 @@ export function ActionModal() {
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.container}>
-              {!!title && <Text style={[styles.title, !message && { marginBottom: 24 }]}>{title}</Text>}
-              {!!message && <Text style={[styles.message, !title && { marginTop: 24 }]}>{message}</Text>}
+              {!!displayTitle && <Text style={[styles.title, !displayMessage && { marginBottom: 24 }]}>{displayTitle}</Text>}
+              {!!displayMessage && <Text style={[styles.message, !displayTitle && { marginTop: 24 }]}>{displayMessage}</Text>}
 
               <View style={[styles.buttonContainer, buttons.length > 2 ? { flexDirection: 'column' } : { flexDirection: 'row' }]}>
                 {buttons.map((action, index) => {
