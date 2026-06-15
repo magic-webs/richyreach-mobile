@@ -3,9 +3,14 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GradientView } from './ui/gradient-view';
 import { Icon } from './ui/icon';
+import { useUIStore } from '@/store/ui';
 
 export function FloatingChatButton() {
   const router = useRouter();
+  const visible = useUIStore((s) => s.floatingChatVisible);
+
+  if (!visible) return null;
+
   return (
     <TouchableOpacity
       onPress={() => router.push('/chat')}

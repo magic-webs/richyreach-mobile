@@ -254,9 +254,16 @@ export default function BrandMarketplaceScreen() {
     if (!Array.isArray(rawCreators) || rawCreators.length === 0) {
       return [];
     }
+    const seen = new Set<string>();
     return rawCreators
       .map((c: any) => {
         if (!c || typeof c !== 'object') return null;
+
+        const id = c.id || c._id || Math.random().toString();
+        if (seen.has(id)) {
+          return null;
+        }
+        seen.add(id);
 
         let fCount = c.followers ? Number(c.followers) : 0;
         let fStr = `${fCount}`;
@@ -264,7 +271,7 @@ export default function BrandMarketplaceScreen() {
         else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
 
         return {
-          id: c.id || c._id || Math.random().toString(),
+          id,
           name: c.name || c.instagramHandle || 'Creator',
           handle: `@${c.instagramHandle || 'creator'}`,
           followers: fStr,
@@ -282,9 +289,16 @@ export default function BrandMarketplaceScreen() {
   const services = React.useMemo(() => {
     const apiServices = Array.isArray(rawServicesData) ? rawServicesData : [];
     const generatedServices: any[] = [];
+    const seen = new Set<string>();
 
     // Process API services if any
     apiServices.forEach((s: any) => {
+      const id = s.id || Math.random().toString();
+      if (seen.has(id)) {
+        return;
+      }
+      seen.add(id);
+
       let creator = null;
       if (s.influencer) {
         let fCount = s.influencer.followers ? Number(s.influencer.followers) : 0;
@@ -321,7 +335,7 @@ export default function BrandMarketplaceScreen() {
       }
 
       generatedServices.push({
-        id: s.id || Math.random().toString(),
+        id,
         name: s.name || 'Premium Reel Promotion',
         price: typeof s.price === 'number' ? s.price / 100 : 12000,
         deliveryTime: s.deliveryTime || '5 days',
@@ -370,17 +384,22 @@ export default function BrandMarketplaceScreen() {
     lastOffsetY.current = currentOffset;
   };
 
-  // Reset tab bar visible state on mount/unmount and mode change
+  // Reset tab bar and floating chat visible state on mount/unmount and mode change
   useEffect(() => {
     const setTabBarVisible = useUIStore.getState().setTabBarVisible;
+    const setFloatingChatVisible = useUIStore.getState().setFloatingChatVisible;
     if (mode === 'creators') {
       setTabBarVisible(true);
+      setFloatingChatVisible(true);
+    } else if (mode === 'services') {
+      setFloatingChatVisible(false);
     }
   }, [mode]);
 
   useEffect(() => {
     return () => {
       useUIStore.getState().setTabBarVisible(true);
+      useUIStore.getState().setFloatingChatVisible(true);
     };
   }, []);
 
