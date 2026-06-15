@@ -108,4 +108,11 @@ export const api = {
   banners: {
     list: (position?: string) => request<any[]>(`/banners${position ? `?position=${position}` : ''}`),
   },
+  songs: {
+    list: () => request<any[]>('/trending-songs'),
+  },
+  notifications: {
+    list: () => request<any[]>('/notifications'),
+    read: (id?: string) => request<any>(`/notifications/read${id ? `?id=${id}` : ''}`, { method: 'PUT' }),
+  },
 };

@@ -11,16 +11,36 @@ import { LiveCampaigns } from '@/components/home/live-campaigns';
 import { OfferBanner } from '@/components/home/offer-banner';
 import { TrendingAudio } from '@/components/home/trending-audio';
 
+import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
+import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
+import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { Colors } from '@/constants/brand';
 import * as mock from '@/data/mock';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
-import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
-import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
-import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
-import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+function getRelativeTime(dateStr: string) {
+  if (!dateStr) return 'now';
+  try {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    if (isNaN(diffMs) || diffMs < 0) return 'now';
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return `${diffSec}s`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay}d`;
+  } catch {
+    return 'now';
+  }
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -56,9 +76,9 @@ export default function HomeScreen() {
   useEffect(() => {
     if (session?.user?.id) {
       if (role === 'brand') {
-        loadBrandProfiles(session.user.id).catch(() => {});
+        loadBrandProfiles(session.user.id).catch(() => { });
       } else {
-        loadInfluencerProfiles(session.user.id).catch(() => {});
+        loadInfluencerProfiles(session.user.id).catch(() => { });
       }
     }
   }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId]);
@@ -72,6 +92,18 @@ export default function HomeScreen() {
         return api.influencers.marketplace().catch(() => []);
       }
     },
+  });
+
+  const { data: songsData } = useQuery<any[]>({
+    queryKey: ['trendingSongs'],
+    queryFn: () => api.songs.list().catch(() => []),
+    enabled: !!session?.user?.id,
+  });
+
+  const { data: notificationsData } = useQuery<any[]>({
+    queryKey: ['notifications'],
+    queryFn: () => api.notifications.list().catch(() => []),
+    enabled: !!session?.user?.id,
   });
 
   const rawCampaignList = (rawCampaignListData ?? []) as any[];
@@ -97,6 +129,57 @@ export default function HomeScreen() {
       deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
     }));
   }, [rawCampaignList]);
+
+  const musicsList = React.useMemo(() => {
+    if (!songsData || songsData.length === 0) {
+      return mock.musics.map((m, idx) => ({
+        ...m,
+        instagramAudioUrl: idx % 2 === 0
+          ? 'https://www.instagram.com/reels/audio/360707759600124/'
+          : 'https://www.instagram.com/reels/audio/824355552391032/',
+      }));
+    }
+    return songsData.map((song: any) => ({
+      title: song.title,
+      artist: song.artist,
+      imageUrl: song.imageUrl,
+      reels: song.reels || '1.5M',
+      dur: song.dur || '0:20',
+      tone: song.tone || 'ox',
+      instagramAudioUrl: song.instagramAudioUrl,
+    }));
+  }, [songsData]);
+
+  const activityList = React.useMemo(() => {
+    if (!notificationsData || notificationsData.length === 0) {
+      return mock.activity;
+    }
+    return notificationsData.map((n: any, idx: number) => {
+      let icon = 'bell';
+      const msg = (n.message || '').toLowerCase();
+      const title = (n.title || '').toLowerCase();
+
+      if (msg.includes('invite') || title.includes('invite') || msg.includes('campaign') || title.includes('campaign')) {
+        icon = 'zap';
+      } else if (msg.includes('message') || title.includes('message') || msg.includes('chat') || title.includes('chat')) {
+        icon = 'chat';
+      } else if (msg.includes('pay') || msg.includes('earn') || msg.includes('released') || msg.includes('wallet')) {
+        icon = 'dollar-sign';
+      } else if (msg.includes('win') || title.includes('win') || title.includes('contest')) {
+        icon = 'award';
+      }
+
+      return {
+        who: n.title || 'Notification',
+        act: '',
+        detail: n.message || '',
+        time: getRelativeTime(n.createdAt),
+        tone: idx % 2 === 0 ? 'rose' : 'ox',
+        icon,
+        verified: false,
+      };
+    });
+  }, [notificationsData]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -127,9 +210,6 @@ export default function HomeScreen() {
           onStartPress={() => router.push('/(tabs)/marketplace')}
         />
 
-        {/* Category pills */}
-        {/* <CategoryPills onCatPress={() => router.push('/(tabs)/marketplace')} /> */}
-
         {/* Subscription offer */}
         <View style={styles.section}>
           <OfferBanner />
@@ -144,10 +224,10 @@ export default function HomeScreen() {
         />
 
         {/* Happening now */}
-        <HappeningNow activity={mock.activity} />
+        <HappeningNow activity={activityList} />
 
         {/* Trending audio */}
-        <TrendingAudio musics={mock.musics} />
+        <TrendingAudio musics={musicsList} />
 
         {/* Tagline footer */}
         <HomeFooter />
@@ -158,6 +238,8 @@ export default function HomeScreen() {
         onClose={() => setIsInfluencerSwitcherOpen(false)}
         onSwitchSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
         }}
         onAddNewProfile={() => {
           setIsInfluencerSwitcherOpen(false);
@@ -170,6 +252,8 @@ export default function HomeScreen() {
         onClose={() => setIsBrandSwitcherOpen(false)}
         onSwitchSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
         }}
         onAddNewProfile={() => {
           setIsBrandSwitcherOpen(false);
@@ -183,6 +267,8 @@ export default function HomeScreen() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
         }}
         initialData={null}
       />
@@ -193,6 +279,8 @@ export default function HomeScreen() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
         }}
         initialData={null}
       />
@@ -202,6 +290,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
-  bodyContainer: { padding: 18, paddingBottom: 130 },
+  bodyContainer: { padding: 4, paddingBottom: 130 },
   section: { marginTop: 22 },
 });

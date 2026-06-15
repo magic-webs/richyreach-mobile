@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244,236,228,0.9)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(63,3,11,0.07)',
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 12,
   },

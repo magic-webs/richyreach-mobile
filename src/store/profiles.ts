@@ -79,10 +79,11 @@ export const useProfilesStore = create<ProfilesState>((set, get) => ({
 
     try {
       const listRaw = await readStorage(listKey);
-      const activeRaw = await readStorage(activeKey);
+      // Read persisted active ID before touching anything else
+      const persistedActiveId = await readStorage(activeKey);
 
       let savedProfiles: BrandProfile[] = listRaw ? JSON.parse(listRaw) : [];
-      let activeId = activeRaw || null;
+      let activeId = persistedActiveId || null;
 
       if (savedProfiles.length === 0 && currentBackendProfile && currentBackendProfile.id) {
         const seedProfile: BrandProfile = {
@@ -94,18 +95,21 @@ export const useProfilesStore = create<ProfilesState>((set, get) => ({
           description: currentBackendProfile.description || null,
         };
         savedProfiles = [seedProfile];
-        activeId = seedProfile.id;
+        if (!activeId) activeId = seedProfile.id;
       }
 
-      // Fetch fresh profiles list from the backend to get all profiles associated with the user
+      // Fetch fresh profiles list from the backend
       try {
         const backendProfiles = await api.brands.profiles();
         if (backendProfiles && backendProfiles.length > 0) {
           savedProfiles = backendProfiles;
+          // Only reset to first profile if there is no persisted choice or the persisted
+          // profile no longer exists in the backend list.
           if (!activeId || !backendProfiles.some((p) => p.id === activeId)) {
             activeId = backendProfiles[0].id;
           }
           await writeStorage(listKey, JSON.stringify(savedProfiles));
+          // Always persist the resolved active ID so refreshes remember it
           if (activeId) {
             await writeStorage(activeKey, activeId);
           }
@@ -172,10 +176,11 @@ export const useProfilesStore = create<ProfilesState>((set, get) => ({
 
     try {
       const listRaw = await readStorage(listKey);
-      const activeRaw = await readStorage(activeKey);
+      // Read persisted active ID before touching anything else
+      const persistedActiveId = await readStorage(activeKey);
 
       let savedProfiles: InfluencerProfile[] = listRaw ? JSON.parse(listRaw) : [];
-      let activeId = activeRaw || null;
+      let activeId = persistedActiveId || null;
 
       if (savedProfiles.length === 0 && currentBackendProfile && currentBackendProfile.id) {
         const seedProfile: InfluencerProfile = {
@@ -190,18 +195,21 @@ export const useProfilesStore = create<ProfilesState>((set, get) => ({
           verified: currentBackendProfile.verified || false,
         };
         savedProfiles = [seedProfile];
-        activeId = seedProfile.id;
+        if (!activeId) activeId = seedProfile.id;
       }
 
-      // Fetch fresh profiles list from the backend to get all profiles associated with the user
+      // Fetch fresh profiles list from the backend
       try {
         const backendProfiles = await api.influencers.profiles();
         if (backendProfiles && backendProfiles.length > 0) {
           savedProfiles = backendProfiles;
+          // Only reset to first profile if there is no persisted choice or the persisted
+          // profile no longer exists in the backend list.
           if (!activeId || !backendProfiles.some((p) => p.id === activeId)) {
             activeId = backendProfiles[0].id;
           }
           await writeStorage(listKey, JSON.stringify(savedProfiles));
+          // Always persist the resolved active ID so refreshes remember it
           if (activeId) {
             await writeStorage(activeKey, activeId);
           }

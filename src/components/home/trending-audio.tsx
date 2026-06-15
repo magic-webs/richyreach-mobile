@@ -1,9 +1,9 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily } from '@/constants/brand';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 
 interface TrendingAudioProps {
   musics: any[];
@@ -35,9 +35,27 @@ export function TrendingAudio({ musics }: TrendingAudioProps) {
         contentContainerStyle={{ gap: 13, paddingRight: 18 }}
       >
         {musics.map((m, k) => (
-          <View key={k} style={styles.musicCard}>
+          <TouchableOpacity
+            key={k}
+            style={styles.musicCard}
+            onPress={() => {
+              if (m.instagramAudioUrl) {
+                Linking.openURL(m.instagramAudioUrl).catch((err) =>
+                  console.warn('Failed to open audio link:', err)
+                );
+              }
+            }}
+          >
             <View style={styles.musicThumb}>
-              <PlaceholderImage tone={m.tone} height={132} width={132} borderRadius={18} />
+              {m.imageUrl ? (
+                <Image
+                  source={{ uri: m.imageUrl }}
+                  style={{ height: 132, width: 132, borderRadius: 18 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <PlaceholderImage tone={m.tone} height={132} width={132} borderRadius={18} />
+              )}
               <View style={styles.musicOverlay} />
               <View style={styles.musicRank}>
                 <Text style={styles.musicRankText}>#{k + 1}</Text>
@@ -56,7 +74,7 @@ export function TrendingAudio({ musics }: TrendingAudioProps) {
               <Icon name="reel" size={12} color={Colors.rose} />
               <Text style={styles.musicReelsText}>{m.reels} reels</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>

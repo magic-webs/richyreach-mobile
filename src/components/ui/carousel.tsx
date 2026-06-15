@@ -65,7 +65,7 @@ function AnimatedDot({
     const backgroundColor = interpolateColor(
       diff,
       [0, 1],
-      [dotColor, 'rgba(63,3,11,0.35)']
+      [dotColor, 'rgba(63,3,11,0.50)']
     );
 
     return {
@@ -93,7 +93,7 @@ export function Carousel({
 }: CarouselProps) {
   const carouselRef = useRef<any>(null);
   const progress = useSharedValue<number>(0);
-  const slideWidth = SCREEN_W - 36;
+  const slideWidth = SCREEN_W - 8;
 
   const onPressPagination = (index: number) => {
     carouselRef.current?.scrollTo({
@@ -118,7 +118,7 @@ export function Carousel({
             progress.value = absoluteProgress;
           }}
           renderItem={({ item }) => (
-            <View style={{ width: slideWidth, height, paddingHorizontal: 4 }}>{item}</View>
+            <View style={{ width: slideWidth, height, paddingHorizontal: 1 }}>{item}</View>
           )}
         />
       </View>

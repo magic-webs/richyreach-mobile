@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 7,
     borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
     ...Shadow.tab,
     borderWidth: 0.8,
     borderColor: 'rgba(255,255,255,0.65)',

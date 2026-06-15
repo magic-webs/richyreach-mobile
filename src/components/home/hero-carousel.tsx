@@ -283,7 +283,7 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    marginBottom: 2,
   },
 });
 

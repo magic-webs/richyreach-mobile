@@ -13,6 +13,7 @@ export function StepBasics() {
   const {
     campName,
     brandName,
+    selectedBrandProfileId,
     campObjective,
     campDescription,
     campLocationType,
@@ -20,16 +21,26 @@ export function StepBasics() {
     campNiche,
     campPriority,
     updateField,
+    updateState,
   } = useCampaignWizardStore();
 
+  // Always sync the active brand profile into the wizard state when the wizard opens
+  // or when the active profile changes (e.g. user switched profiles mid-session).
   useEffect(() => {
-    if (!brandName && profiles.length > 0) {
-      const activeProfile = profiles.find((p) => p.id === activeBrandProfileId) || profiles[0];
-      if (activeProfile) {
-        updateField('brandName', activeProfile.companyName);
-      }
+    if (profiles.length === 0) return;
+
+    // Determine which profile should be active
+    const resolvedId = selectedBrandProfileId || activeBrandProfileId || profiles[0]?.id;
+    const activeProfile = profiles.find((p) => p.id === resolvedId) || profiles[0];
+
+    if (activeProfile && (activeProfile.id !== selectedBrandProfileId || !brandName)) {
+      updateState({
+        brandName: activeProfile.companyName,
+        selectedBrandProfileId: activeProfile.id,
+      });
     }
-  }, [brandName, profiles, activeBrandProfileId, updateField]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profiles, activeBrandProfileId]);
 
   const handleNext = () => {
     if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
@@ -56,12 +67,14 @@ export function StepBasics() {
         <Text style={styles.formLabel}>Brand Profile *</Text>
         <View style={styles.gridRow}>
           {profiles.map((p) => {
-            const active = brandName === p.companyName;
+            const active = selectedBrandProfileId
+              ? selectedBrandProfileId === p.id
+              : activeBrandProfileId === p.id || brandName === p.companyName;
             return (
               <TouchableOpacity
                 key={p.id}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('brandName', p.companyName)}
+                onPress={() => updateState({ brandName: p.companyName, selectedBrandProfileId: p.id })}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{p.companyName}</Text>
@@ -223,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#000',
+    shadowColor: 'rgba(63,3,11,0.12)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -258,7 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#000',
+    shadowColor: 'rgba(63,3,11,0.12)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 6,

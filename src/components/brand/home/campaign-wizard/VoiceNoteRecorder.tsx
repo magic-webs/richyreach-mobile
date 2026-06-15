@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: 'rgba(63,3,11,0.12)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,

@@ -4,6 +4,7 @@ export interface CampaignWizardState {
   createStep: 1 | 2 | 3 | 4 | 5;
   campName: string;
   brandName: string;
+  selectedBrandProfileId: string | null; // tracks which profile chip is highlighted
   campObjective: 'Brand Awareness' | 'Product Launch' | 'App Installs' | 'Website Traffic' | 'Sales/Conversions' | 'Lead Generation';
   campDescription: string;
   campLocationType: 'Pan India' | 'State' | 'City' | 'Pincode Radius';
@@ -108,6 +109,7 @@ const initialValues: CampaignWizardState = {
   createStep: 1,
   campName: '',
   brandName: '',
+  selectedBrandProfileId: null,
   campObjective: 'Brand Awareness',
   campDescription: '',
   campLocationType: 'Pan India',

@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
 
   // Grid style
   campaignGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  campaignCard: { width: (W - 36 - 14) / 2, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', ...Shadow.card },
+  campaignCard: { width: (W - 8 - 14) / 2, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', ...Shadow.card },
   campaignThumb: { position: 'relative' },
   campaignApplied: { position: 'absolute', top: 7, right: 7, backgroundColor: 'rgba(42,2,7,0.62)', borderRadius: 99, paddingHorizontal: 7, paddingVertical: 3 },
   campaignAppliedText: { color: Colors.cream, fontSize: 10, fontWeight: '700' },
