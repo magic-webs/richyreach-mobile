@@ -183,6 +183,8 @@ export default function TabLayout() {
         <Tabs.Screen name="brand/arena" />
         <Tabs.Screen name="brand/profile" />
         <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
+        <Tabs.Screen name="brand/campaign/[id]" options={{ href: null }} />
+        <Tabs.Screen name="brand/marketplace/creator/[id]" options={{ href: null }} />
       </Tabs>
       <FloatingChatButton />
     </View>

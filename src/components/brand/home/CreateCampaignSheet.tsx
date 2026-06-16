@@ -119,6 +119,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       resetStore();
       
       // Select the active brand profile by default when opening the wizard
+      const { brandProfiles, activeBrandProfileId } = useProfilesStore.getState();
       const activeProfile = brandProfiles.find((p) => p.id === activeBrandProfileId) || brandProfiles[0];
       if (activeProfile) {
         useCampaignWizardStore.getState().updateState({
@@ -127,7 +128,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         });
       }
     }
-  }, [isOpen, resetStore, brandProfiles, activeBrandProfileId]);
+  }, [isOpen, resetStore]);
 
   const handleLaunchCampaign = async () => {
     if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {

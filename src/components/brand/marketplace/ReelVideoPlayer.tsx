@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { useIsFocused } from 'expo-router';
 
 // Module-level cache to persist the user's mute/unmute preference across item swiping/unmounting
-let isGlobalMuted = false;
+let isGlobalMuted = true;
 
 interface ReelVideoPlayerProps {
   videoUrl: string;

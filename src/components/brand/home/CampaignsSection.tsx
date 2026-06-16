@@ -4,10 +4,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
-import React from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useProfilesStore } from '@/store/profiles';
+import { useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 
 interface CampaignCardProps {
   title: string;
@@ -17,101 +18,88 @@ interface CampaignCardProps {
   spent: number;
   total: number;
   viewMode?: 'list' | 'grid';
+  onPress?: () => void;
+  image?: string;
 }
 
-function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list' }: CampaignCardProps) {
+function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list', onPress, image }: CampaignCardProps) {
   const percentage = Math.round((spent / total) * 100);
   const isGrid = viewMode === 'grid';
   return (
-    <View style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
-      <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
-        <PlaceholderImage tone={tone} height={isGrid ? 36 : 48} width={isGrid ? 36 : 48} borderRadius={12} />
-        <View style={styles.campaignInfo}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.campaignTitle, isGrid && styles.campaignTitleGrid]} numberOfLines={isGrid ? 2 : 1}>{title}</Text>
-            {!isGrid && (
-              <View style={styles.activeBadge}>
-                <Text style={styles.activeText}>Active</Text>
-              </View>
-            )}
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={[styles.campaignCardContainer, isGrid && styles.campaignCardGridContainer]}
+    >
+      <BlurView intensity={80} tint="light" style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
+        <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
+          {image ? (
+            <Image
+              source={{ uri: image }}
+              style={[styles.bannerImage, isGrid && styles.bannerImageGrid]}
+            />
+          ) : (
+            <PlaceholderImage tone={tone} height={isGrid ? 90 : 48} width={isGrid ? '100%' : 48} borderRadius={12} />
+          )}
+          <View style={styles.campaignInfo}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.campaignTitle, isGrid && styles.campaignTitleGrid]} numberOfLines={isGrid ? 2 : 1}>{title}</Text>
+              {!isGrid && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeText}>Active</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.campaignMeta, isGrid && styles.campaignMetaGrid]}>
+              <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{creators}</Text> {isGrid ? 'crs' : 'creators'} {isGrid ? '\nReach: ' : '  Reach: '}
+              <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{reach}</Text>
+            </Text>
           </View>
-          <Text style={[styles.campaignMeta, isGrid && styles.campaignMetaGrid]}>
-            <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{creators}</Text> {isGrid ? 'crs' : 'creators'} {isGrid ? '\nReach: ' : '  Reach: '}
-            <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{reach}</Text>
-          </Text>
         </View>
-      </View>
 
-      <View style={styles.campaignProgress}>
-        <View style={styles.progressTextRow}>
-          <Text style={styles.progressBudget}>
-            ₹{spent.toLocaleString()}{!isGrid && ` of ₹${total.toLocaleString()}`}
-          </Text>
-          <Text style={styles.progressPercent}>{percentage}%</Text>
+        <View style={styles.campaignProgress}>
+          <View style={styles.progressTextRow}>
+            <Text style={styles.progressBudget}>
+              ₹{spent.toLocaleString()}{!isGrid && ` of ₹${total.toLocaleString()}`}
+            </Text>
+            <Text style={styles.progressPercent}>{percentage}%</Text>
+          </View>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
+          </View>
         </View>
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
-        </View>
-      </View>
-    </View>
+      </BlurView>
+    </TouchableOpacity>
   );
 }
 
 function CampaignCardSkeleton({ viewMode = 'list' }: { viewMode?: 'list' | 'grid' }) {
   const isGrid = viewMode === 'grid';
   return (
-    <View style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
-      <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
-        <Skeleton variant="rect" width={isGrid ? 36 : 48} height={isGrid ? 36 : 48} borderRadius={12} />
-        <View style={styles.campaignInfo}>
-          <View style={styles.titleRow}>
-            <Skeleton variant="text" width={isGrid ? "90%" : "60%"} />
-            {!isGrid && <Skeleton variant="rect" width={50} height={18} borderRadius={99} style={{ marginLeft: 8 }} />}
+    <View style={[styles.campaignCardContainer, isGrid && styles.campaignCardGridContainer]}>
+      <BlurView intensity={80} tint="light" style={[styles.campaignCard, isGrid && styles.campaignCardGrid]}>
+        <View style={[styles.campaignHeader, isGrid && styles.campaignHeaderGrid]}>
+          <Skeleton variant="rect" width={isGrid ? '100%' : 48} height={isGrid ? 90 : 48} borderRadius={12} />
+          <View style={styles.campaignInfo}>
+            <View style={styles.titleRow}>
+              <Skeleton variant="text" width={isGrid ? "90%" : "60%"} />
+              {!isGrid && <Skeleton variant="rect" width={50} height={18} borderRadius={99} style={{ marginLeft: 8 }} />}
+            </View>
+            <Skeleton variant="text" width={isGrid ? "60%" : "40%"} style={{ marginTop: 8 }} />
           </View>
-          <Skeleton variant="text" width={isGrid ? "60%" : "40%"} style={{ marginTop: 8 }} />
         </View>
-      </View>
 
-      <View style={styles.campaignProgress}>
-        <View style={styles.progressTextRow}>
-          <Skeleton variant="text" width="45%" />
-          <Skeleton variant="text" width="15%" />
+        <View style={styles.campaignProgress}>
+          <View style={styles.progressTextRow}>
+            <Skeleton variant="text" width="45%" />
+            <Skeleton variant="text" width="15%" />
+          </View>
+          <Skeleton variant="rect" height={8} borderRadius={4} style={{ marginTop: 8 }} />
         </View>
-        <Skeleton variant="rect" height={8} borderRadius={4} style={{ marginTop: 8 }} />
-      </View>
+      </BlurView>
     </View>
   );
 }
-
-const MOCK_CAMPAIGNS = [
-  {
-    id: 'mock-1',
-    title: 'Summer Glow Serum',
-    tone: 'rose' as const,
-    creatorsCount: 2,
-    expectedReach: 2400000,
-    spent: 360000,
-    budget: 48000000, // in cents
-  },
-  {
-    id: 'mock-2',
-    title: 'Heritage Chronograph',
-    tone: 'ox' as const,
-    creatorsCount: 2,
-    expectedReach: 1100000,
-    spent: 240000,
-    budget: 36000000, // in cents
-  },
-  {
-    id: 'mock-3',
-    title: 'Glass-Skin Routine',
-    tone: 'rose' as const,
-    creatorsCount: 0,
-    expectedReach: 0,
-    spent: 0,
-    budget: 33600000, // in cents
-  },
-];
 
 interface CampaignsSectionProps {
   onNewCampaign: () => void;
@@ -120,6 +108,7 @@ interface CampaignsSectionProps {
 
 export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+  const router = useRouter();
 
   const { data: campaignsData, isLoading: loading } = useQuery<any>({
     queryKey: ['brandCampaigns', activeProfileId],
@@ -155,10 +144,10 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
         <View style={styles.headerControls}>
           <View style={styles.viewToggleGroup}>
             <Animated.View style={[styles.viewToggleSlider, { width: btnWidth, transform: [{ translateX }] }]} />
-            <TouchableOpacity 
+            <TouchableOpacity
               onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
-              onPress={() => setViewMode('grid')} 
-              style={styles.viewToggleBtn} 
+              onPress={() => setViewMode('grid')}
+              style={styles.viewToggleBtn}
               activeOpacity={0.8}
             >
               <Icon name="grid" size={13} color={viewMode === 'grid' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'} />
@@ -220,6 +209,7 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
             return (
               <CampaignCard
                 key={c.id}
+                image={c.bannerImage || c.imageUrl}
                 title={c.title}
                 tone={c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox')}
                 creators={creators}
@@ -227,6 +217,7 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
                 spent={spent}
                 total={total}
                 viewMode={viewMode}
+                onPress={() => router.push({ pathname: '/brand/campaign/[id]', params: { id: c.id } } as any)}
               />
             );
           })
@@ -239,6 +230,16 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
 const styles = StyleSheet.create({
   section: {
     marginBottom: 28,
+  },
+  bannerImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+  },
+  bannerImageGrid: {
+    width: '100%',
+    height: 90,
+    borderRadius: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -298,13 +299,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  campaignCard: {
-    backgroundColor: Colors.white,
+  campaignCardContainer: {
     borderRadius: Radius.lg,
-    padding: 16,
     ...Shadow.card,
-    borderWidth: 0.5,
-    borderColor: 'rgba(63, 3, 11, 0.04)',
+    overflow: 'hidden',
+  },
+  campaignCardGridContainer: {
+    width: '48%',
+  },
+  campaignCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
   },
   campaignHeader: {
     flexDirection: 'row',
@@ -376,7 +383,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   campaignCardGrid: {
-    width: '48%',
     padding: 12,
   },
   campaignHeaderGrid: {

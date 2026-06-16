@@ -44,19 +44,8 @@ export function HomeHeader({
               </View>
             )}
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.greetSub}>
-              {activeProfileHandle ? `@${activeProfileHandle}` : userName}
-            </Text>
-            <View style={styles.switchRow}>
-              <Text style={styles.greetTitle}>
-                {isBrand ? 'Brand Account' : 'Creator Account'}
-              </Text>
-              {onProfileSwitchPress && <Icon name="chevDown" size={13} color={Colors.oxblood} />}
-            </View>
-          </View>
         </TouchableOpacity>
-        
+
         <RoleToggle
           role={isBrand ? 'brand' : 'creator'}
           onChange={onRoleChange}

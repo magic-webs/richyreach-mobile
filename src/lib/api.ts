@@ -55,6 +55,13 @@ export const api = {
         activeProfileId,
       });
     },
+    update: (id: string, data: any) => request(`/campaigns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    delete: (id: string) => request(`/campaigns/${id}`, {
+      method: 'DELETE',
+    }),
   },
   influencers: {
     list: () => request('/influencers'),

@@ -145,7 +145,7 @@ export default function CreatorProfileDetail() {
     <View style={styles.root}>
       {/* Fixed Top nav (Outside ScrollView to prevent scrolling away & receive touches reliably) */}
       <View style={[styles.navHeaderFixed, { top: Math.max(insets.top, 16) }]}>
-        <TouchableOpacity onPress={() => router.replace('/brand/marketplace')}
+        <TouchableOpacity onPress={() => router.back()}
           style={styles.navBtn} activeOpacity={0.8}>
           <Icon name="back" size={22} color={Colors.oxblood} />
         </TouchableOpacity>
