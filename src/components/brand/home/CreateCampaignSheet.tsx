@@ -2,6 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
+import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import React, { useEffect } from 'react';
 import {
@@ -36,6 +37,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
     createStep,
     campName,
     brandName,
+    selectedBrandProfileId,
     campObjective,
     campDescription,
     campLocationType,
@@ -110,11 +112,22 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
   const creators = parseInt(numCreators) || 0;
   const totalBudget = cost * creators;
 
+  const { brandProfiles, activeBrandProfileId } = useProfilesStore();
+
   useEffect(() => {
     if (isOpen) {
       resetStore();
+      
+      // Select the active brand profile by default when opening the wizard
+      const activeProfile = brandProfiles.find((p) => p.id === activeBrandProfileId) || brandProfiles[0];
+      if (activeProfile) {
+        useCampaignWizardStore.getState().updateState({
+          brandName: activeProfile.companyName,
+          selectedBrandProfileId: activeProfile.id,
+        });
+      }
     }
-  }, [isOpen, resetStore]);
+  }, [isOpen, resetStore, brandProfiles, activeBrandProfileId]);
 
   const handleLaunchCampaign = async () => {
     if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
@@ -314,7 +327,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         };
       }
 
-      await api.campaigns.create(finalPayload);
+      await api.campaigns.create(finalPayload, selectedBrandProfileId);
 
       showModal({
         title: 'Campaign Launched! 🚀',

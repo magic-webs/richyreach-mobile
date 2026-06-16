@@ -47,11 +47,12 @@ export const api = {
   campaigns: {
     list: () => request('/campaigns'),
     get: (id: string) => request(`/campaigns/${id}`),
-    create: (data: FormData | any) => {
+    create: (data: FormData | any, activeProfileId?: string | null) => {
       const isFormData = data instanceof FormData;
       return request('/campaigns/create', {
         method: 'POST',
         body: isFormData ? data : JSON.stringify(data),
+        activeProfileId,
       });
     },
   },
