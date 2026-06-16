@@ -1,6 +1,4 @@
-import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -9,34 +7,200 @@ import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
+import { TactileButton } from '@/components/ui/tactile-button';
 
-const CATS = ['All', 'Beauty', 'Fashion', 'Tech', 'Fitness', 'Luxury'];
+const SORTS = ['Top match', 'Highest pay', 'Ending soon', 'New'];
+
+function StripeOverlay() {
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', opacity: 0.08 }]}>
+      {[...Array(16)].map((_, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            width: 14,
+            height: 400,
+            backgroundColor: '#fff',
+            transform: [{ rotate: '45deg' }],
+            left: i * 32 - 100,
+            top: -100,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+function StripedBanner({ tone, budget, imageUrl }: { tone: 'rose' | 'ox' | 'cream'; budget: string; imageUrl?: string | null }) {
+  const gradientColors = tone === 'rose'
+    ? ['#b46a74', '#8d4750'] as [string, string]
+    : tone === 'ox'
+      ? ['#5a1018', '#3f030b'] as [string, string]
+      : ['#dcc7b8', '#b46a74'] as [string, string];
+
+  return (
+    <View style={styles.bannerContainer}>
+      {imageUrl ? (
+        <>
+          <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(42,2,7,0.38)' }]} />
+        </>
+      ) : (
+        <>
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <StripeOverlay />
+        </>
+      )}
+
+      {/* Bottom badges */}
+      <View style={styles.bannerBadges}>
+        <View style={styles.platformBadge}>
+          <Icon name="instagram" size={13} color="#fff" />
+          <Text style={styles.platformText}>Instagram</Text>
+        </View>
+
+        <View style={styles.payBadge}>
+          <Text style={styles.payAmount}>{budget}</Text>
+          <Text style={styles.payLabel}>PAID</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
+  const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+
+  // Dynamic hashtags based on category & reach
+  const hashtags = React.useMemo(() => {
+    const defaultTags = ['#PaidCollab'];
+    if (cm.cat === 'Beauty') return ['#Beauty', '#PaidCollab', '#20kreach'];
+    if (cm.cat === 'Luxury') return ['#Luxury', '#Chronograph', '#80kreach'];
+    if (cm.cat === 'Fitness') return ['#Fitness', '#MorningMovement', '#15kreach'];
+    if (cm.cat === 'Tech') return ['#Tech', '#Unboxing', '#50kreach'];
+    if (cm.cat === 'Fashion') return ['#Fashion', '#AWCollection', '#60kreach'];
+    return [`#${cm.cat}`, ...defaultTags];
+  }, [cm.cat]);
+
+  return (
+    <View style={styles.newCard}>
+      {/* Header */}
+      <View style={styles.newCardHeader}>
+        <View style={styles.newCardHeaderLeft}>
+          <View style={[styles.brandAvatar, { backgroundColor: cm.tone === 'rose' ? Colors.roseSoft : Colors.oxblood2, overflow: 'hidden' }]}>
+            {cm.brandLogo ? (
+              <Image source={{ uri: cm.brandLogo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <Text style={styles.brandAvatarText}>{cm.brand.charAt(0).toUpperCase()}</Text>
+            )}
+          </View>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={styles.newBrandName}>{cm.brand}</Text>
+              {cm.verified && <Icon name="verified" size={14} color={Colors.rose} />}
+              {cm.id === 'lumiere' && (
+                <View style={styles.featuredBadge}>
+                  <Text style={styles.featuredBadgeText}>FEATURED</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.newCardMeta}>
+              {cm.cat} · {cm.deadline}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.moreBtn}>
+          <Icon name="more" size={20} color="rgba(63,3,11,0.5)" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Banner & Title */}
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <StripedBanner tone={cm.tone} budget={cm.budget} imageUrl={cm.imageUrl} />
+        <Text style={styles.cardCampaignTitle}>{cm.title}</Text>
+      </TouchableOpacity>
+
+      {/* Action Icons */}
+      <View style={styles.actionIconRow}>
+        <View style={styles.leftIcons}>
+          <TouchableOpacity onPress={() => setLiked(!liked)} style={styles.iconBtn}>
+            <Icon name="heart" size={22} color={liked ? '#e74c3c' : Colors.oxblood} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={onPress}>
+            <Icon name="chat" size={22} color={Colors.oxblood} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Icon name="send" size={22} color={Colors.oxblood} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={() => setBookmarked(!bookmarked)} style={styles.iconBtn}>
+          <Icon name="bookmark" size={22} color={bookmarked ? Colors.rose : Colors.oxblood} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Application Count & Description */}
+      <View style={styles.cardDetails}>
+        <Text style={styles.appliedCount}>{cm.applicants} creators applied</Text>
+        <Text style={styles.cardDesc} numberOfLines={2}>
+          {cm.about}
+        </Text>
+        <View style={styles.hashtagRow}>
+          {hashtags.map((tag) => (
+            <Text key={tag} style={styles.hashtagText}>
+              {tag}
+            </Text>
+          ))}
+        </View>
+      </View>
+
+      {/* Footer CTA Buttons */}
+      <View style={styles.newCardFooter}>
+        <TactileButton
+          onPress={onPress}
+          text={`Apply Now · ${cm.budget}`}
+          variant="primary"
+          style={{ flex: 1 }}
+          fullWidth
+        />
+        <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.arrowCtaBtn}>
+          <Icon name="arrow" size={18} color={Colors.oxblood} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 function CampaignSkeletonCard() {
   return (
-    <View style={styles.card}>
-      <View style={styles.cardThumb}>
-        <Skeleton width={96} height={104} borderRadius={14} />
-      </View>
-      <View style={[styles.cardBody, { justifyContent: 'space-between' }]}>
-        <Skeleton width={100} height={16} borderRadius={4} />
-        <Skeleton width="90%" height={16} borderRadius={4} style={{ marginTop: 4 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <View style={{ gap: 4 }}>
-            <Skeleton width={60} height={18} borderRadius={4} />
-            <Skeleton width={40} height={12} borderRadius={4} />
-          </View>
-          <Skeleton width={60} height={14} borderRadius={4} />
+    <View style={styles.newCard}>
+      <View style={styles.newCardHeader}>
+        <Skeleton width={40} height={40} borderRadius={20} />
+        <View style={{ gap: 4, marginLeft: 8 }}>
+          <Skeleton width={100} height={14} borderRadius={4} />
+          <Skeleton width={60} height={10} borderRadius={4} />
         </View>
+      </View>
+      <Skeleton width="100%" height={190} borderRadius={18} style={{ marginVertical: 12 }} />
+      <View style={{ gap: 8 }}>
+        <Skeleton width={120} height={14} borderRadius={4} />
+        <Skeleton width="90%" height={12} borderRadius={4} />
       </View>
     </View>
   );
@@ -49,7 +213,8 @@ export default function MarketplaceScreen() {
   const session = useAuthStore((s) => s.session);
 
   const queryClient = useQueryClient();
-  const [cat, setCat] = useState('All');
+  const cat = 'All';
+  const [sortBy, setSortBy] = useState('Top match');
 
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
@@ -69,19 +234,16 @@ export default function MarketplaceScreen() {
   const activeInfluencer = influencerProfiles.find((p) => p.id === activeInfluencerProfileId);
   const activeBrand = brandProfiles.find((p) => p.id === activeBrandProfileId);
 
-  const activeAvatar = role === 'brand' ? activeBrand?.logo : activeInfluencer?.avatar;
-  const activeHandle = role === 'brand' ? activeBrand?.companyName : activeInfluencer?.instagramHandle;
-
   // Load profiles on mount/refresh
   useEffect(() => {
     if (session?.user?.id) {
       if (role === 'brand') {
-        loadBrandProfiles(session.user.id).catch(() => {});
+        loadBrandProfiles(session.user.id).catch(() => { });
       } else {
-        loadInfluencerProfiles(session.user.id).catch(() => {});
+        loadInfluencerProfiles(session.user.id).catch(() => { });
       }
     }
-  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId]);
+  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId, loadBrandProfiles, loadInfluencerProfiles]);
 
   const { data: rawCampaignListData, isLoading: loading } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
@@ -94,85 +256,97 @@ export default function MarketplaceScreen() {
     },
   });
 
-  const rawCampaignList = (rawCampaignListData ?? []) as any[];
-
   const campaignList = React.useMemo(() => {
-    if (!rawCampaignList || rawCampaignList.length === 0) {
+    const list = (rawCampaignListData ?? []) as any[];
+    if (list.length === 0) {
       return [];
     }
-    return rawCampaignList.map((c: any) => ({
+    return list.map((c: any) => ({
       id: c.id,
       brand: c.brandName || c.brand?.companyName || "Richy Brand",
       cat: c.campaignType || c.category || "General",
       verified: c.verified || c.brand?.verified || false,
       title: c.title,
       budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+      budgetNum: typeof c.budget === 'number' ? c.budget : (parseInt(c.budget?.replace(/[^\d]/g, '')) || 10000),
       deadline: c.deadline || '5 days left',
       applicants: c.applicants || 0,
       tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
       about: c.description || c.about,
-      deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+      deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : ['1 Reel'],
+      imageUrl: c.imageUrl || null,
+      brandLogo: c.brandLogo || c.brand?.logo || null,
     }));
-  }, [rawCampaignList]);
+  }, [rawCampaignListData]);
 
-  const list = campaignList.filter((c: any) => cat === 'All' || c.cat === cat);
+  // Search query state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtering by category and search query
+  const filteredList = React.useMemo(() => {
+    return campaignList.filter((c: any) => {
+      const matchesCategory = cat === 'All' || c.cat === cat;
+      const matchesSearch = !searchQuery ||
+        c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.about?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [campaignList, cat, searchQuery]);
+
+  // Sorting
+  const sortedList = React.useMemo(() => {
+    let result = [...filteredList];
+    if (sortBy === 'Highest pay') {
+      result.sort((a, b) => b.budgetNum - a.budgetNum);
+    } else if (sortBy === 'Ending soon') {
+      const getDays = (str: string) => parseInt(str) || 99;
+      result.sort((a, b) => getDays(a.deadline) - getDays(b.deadline));
+    } else if (sortBy === 'New') {
+      result.reverse();
+    }
+    return result;
+  }, [filteredList, sortBy]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => {
-              if (role === 'brand') {
-                setIsBrandSwitcherOpen(true);
-              } else {
-                setIsInfluencerSwitcherOpen(true);
-              }
-            }}
-            activeOpacity={0.8}
-            style={styles.profileSwitchTrigger}
-          >
-            <View style={styles.avatarContainer}>
-              {activeAvatar ? (
-                <Image source={{ uri: activeAvatar }} style={styles.avatarImage} contentFit="cover" />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarFallbackText}>
-                    {activeHandle ? activeHandle.charAt(0).toUpperCase() : 'U'}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.greetSub}>
-                {activeHandle ? `@${activeHandle}` : 'Marketplace'}
-              </Text>
-              <View style={styles.switchRow}>
-                <Text style={styles.greetTitle}>Marketplace</Text>
-                <Icon name="chevDown" size={13} color={Colors.oxblood} />
-              </View>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterIconBtn} activeOpacity={0.8}>
-            <Icon name="filter" size={20} color={Colors.oxblood} />
-          </TouchableOpacity>
+          <Text style={[{ fontFamily: FontFamily.sansMedium, fontSize: 24, color: Colors.oxblood }]}>Marketplace</Text>
+        </View>
+        <Text style={[styles.greetSub, { fontFamily: FontFamily.sansRegular }]}>Discover the latest collaborations and campaigns</Text>
+
+        {/* Search Bar */}
+        <View style={styles.searchBarContainer}>
+          <Icon name="search" size={18} color="rgba(63,3,11,0.45)" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search campaigns, brands..."
+            placeholderTextColor="rgba(63,3,11,0.4)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+              <Icon name="x" size={16} color="rgba(63,3,11,0.45)" />
+            </TouchableOpacity>
+          )}
         </View>
 
-        <View style={styles.searchBar}>
-          <Icon name="search" size={18} color={Colors.rose} />
-          <Text style={styles.searchPlaceholder}>Search campaigns…</Text>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
-          {CATS.map((c) => (
+        {/* Sort/Filter Pills Row */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortScroll}>
+          {SORTS.map((s) => (
             <TouchableOpacity
-              key={c}
-              onPress={() => setCat(c)}
+              key={s}
+              onPress={() => setSortBy(s)}
               activeOpacity={0.8}
-              style={[styles.catBtn, cat === c && styles.catBtnActive]}
+              style={[styles.sortPillBtn, sortBy === s && styles.sortPillBtnActive]}
             >
-              <Text style={[styles.catBtnText, cat === c && styles.catBtnTextActive]}>{c}</Text>
+              <Text style={[styles.sortPillText, sortBy === s && styles.sortPillTextActive]}>{s}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -184,30 +358,21 @@ export default function MarketplaceScreen() {
           <View style={styles.listHeader}>
             <Skeleton width={80} height={16} borderRadius={4} />
           </View>
-          <View style={{ gap: 14 }}>
-            <CampaignSkeletonCard />
+          <View style={{ gap: 16 }}>
             <CampaignSkeletonCard />
             <CampaignSkeletonCard />
           </View>
         </View>
       ) : (
         <FlatList
-          data={list}
+          data={sortedList}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: 130 }]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <View style={{ marginBottom: 14 }}>
+            <View style={{ marginBottom: 12 }}>
               <PromoBannerCarousel position="marketplace_top" />
-              {list.length > 0 && (
-                <View style={[styles.listHeader, { marginTop: 14, marginBottom: 0 }]}>
-                  <Text style={styles.listCount}>{list.length} campaigns</Text>
-                  <TouchableOpacity style={styles.sortBtn} activeOpacity={0.8}>
-                    <Text style={styles.sortText}>Top match</Text>
-                    <Icon name="chevDown" size={15} color={Colors.oxblood} />
-                  </TouchableOpacity>
-                </View>
-              )}
+              <Text style={styles.openGigsText}>{sortedList.length} open gigs</Text>
             </View>
           }
           ListEmptyComponent={
@@ -223,40 +388,13 @@ export default function MarketplaceScreen() {
               </Text>
             </View>
           }
-          renderItem={({ item: cm }) => (
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/collab/[id]', params: { id: cm.id } })}
-              activeOpacity={0.85}
-              style={styles.card}
-            >
-              <View style={styles.cardThumb}>
-                <PlaceholderImage tone={cm.tone} height={104} width={96} borderRadius={14} />
-                {cm.verified && (
-                  <View style={styles.verifiedBadge}>
-                    <Icon name="verified" size={15} color={Colors.cream} />
-                  </View>
-                )}
-                <View style={styles.catPill}>
-                  <Text style={styles.catPillText}>{cm.cat}</Text>
-                </View>
-              </View>
-              <View style={styles.cardBody}>
-                <Text style={styles.brandName} numberOfLines={1}>{cm.brand}</Text>
-                <Text style={styles.campaignTitle} numberOfLines={2}>{cm.title}</Text>
-                <View style={styles.cardFooter}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.budget}>{cm.budget}</Text>
-                    <View style={styles.deadlineRow}>
-                      <Icon name="clock" size={12} color={Colors.rose} />
-                      <Text style={styles.deadline}>{cm.deadline}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.applied}>{cm.applicants} applied</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+          renderItem={({ item }) => (
+            <CampaignCard
+              cm={item}
+              onPress={() => router.push({ pathname: '/collab/[id]', params: { id: item.id } })}
+            />
           )}
-          ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         />
       )}
 
@@ -316,83 +454,277 @@ export default function MarketplaceScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
   header: {
-    backgroundColor: 'rgba(244,236,228,0.9)',
+    backgroundColor: 'rgba(244,236,228,0.92)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(63,3,11,0.07)',
     paddingHorizontal: 18,
     paddingTop: 8,
-    paddingBottom: 12,
-    gap: 10,
+    paddingBottom: 14,
+    gap: 12,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  profileSwitchTrigger: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, marginRight: 12 },
-  avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(180,106,116,0.15)',
-    borderWidth: 1.5,
-    borderColor: Colors.oxblood,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.oxbloodDeep,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarFallbackText: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 16,
-    color: Colors.cream,
-    fontWeight: '700',
-  },
-  textContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  profileSwitchTrigger: { flex: 1, marginRight: 12 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
-  greetSub: { fontSize: 11, color: Colors.rose, fontWeight: '700' },
-  greetTitle: { fontFamily: FontFamily.sansMedium, fontSize: 14.5, fontWeight: '700', color: Colors.ink },
-  filterIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...Shadow.card },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, ...Shadow.card },
-  searchPlaceholder: { fontSize: 14, color: 'rgba(63,3,11,0.4)', flex: 1 },
+  greetSub: { fontSize: 13, color: Colors.rose, fontWeight: '700', fontFamily: FontFamily.sansMedium },
+  greetTitle: { fontFamily: FontFamily.serif, fontSize: 32, fontWeight: '700', color: Colors.ink },
+  headerRightButtons: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  circleHeaderBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.card,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.04)',
+  },
   catScroll: { gap: 8 },
-  catBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: '#fff', ...Shadow.card },
+  catBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', ...Shadow.card, borderWidth: 1, borderColor: 'rgba(63,3,11,0.04)' },
   catBtnActive: { backgroundColor: Colors.oxblood, ...Shadow.button, shadowColor: Colors.oxblood, shadowOpacity: 0.25 },
-  catBtnText: { fontFamily: FontFamily.sans, fontSize: 12.5, fontWeight: '700', color: Colors.oxblood },
+  catBtnText: { fontFamily: FontFamily.sans, fontSize: 13, fontWeight: '700', color: Colors.oxblood },
   catBtnTextActive: { color: Colors.cream },
 
-  list: { padding: 18 },
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  listCount: { fontSize: 13, color: 'rgba(63,3,11,0.6)', fontWeight: '600' },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sortText: { fontSize: 13, color: Colors.oxblood, fontWeight: '700' },
+  sortScroll: { gap: 8, marginTop: 2 },
+  sortPillBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: '#fcfcfc', borderWidth: 1, borderColor: 'rgba(63,3,11,0.08)' },
+  sortPillBtnActive: { backgroundColor: Colors.oxblood, borderColor: Colors.oxblood },
+  sortPillText: { fontFamily: FontFamily.sansMedium, fontSize: 12, fontWeight: '700', color: 'rgba(63,3,11,0.6)' },
+  sortPillTextActive: { color: Colors.cream },
 
-  card: { flexDirection: 'row', gap: 14, backgroundColor: '#fff', borderRadius: 20, padding: 12, ...Shadow.card },
-  cardThumb: { position: 'relative', flexShrink: 0 },
-  verifiedBadge: { position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 99, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center' },
-  catPill: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(42,2,7,0.55)', borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2 },
-  catPillText: { color: Colors.cream, fontSize: 9.5, fontWeight: '700' },
-  cardBody: { flex: 1, minWidth: 0, justifyContent: 'space-between' },
-  brandName: { fontWeight: '700', fontSize: 14.5, color: Colors.ink },
-  campaignTitle: { fontSize: 13, color: 'rgba(63,3,11,0.65)', marginTop: 3, lineHeight: 18 },
-  cardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 8 },
-  budget: { fontFamily: FontFamily.serif, fontSize: 18, fontWeight: '700', color: Colors.oxblood },
-  deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  deadline: { fontSize: 11, color: Colors.rose, fontWeight: '600' },
-  applied: { fontSize: 11.5, color: 'rgba(63,3,11,0.5)', fontWeight: '600' },
+  list: { padding: 18, paddingTop: 10 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  openGigsText: { fontSize: 14, color: 'rgba(63,3,11,0.5)', fontWeight: '600', fontFamily: FontFamily.sansMedium, marginTop: 12 },
+
+  // Premium Cards Styles
+  newCard: {
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    padding: 16,
+    ...Shadow.card,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.04)',
+  },
+  newCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  newCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  brandAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandAvatarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: FontFamily.sans,
+  },
+  newBrandName: {
+    fontFamily: FontFamily.sans,
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.ink,
+  },
+  featuredBadge: {
+    backgroundColor: '#e67e22',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+  },
+  featuredBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '800',
+    fontFamily: FontFamily.sans,
+  },
+  newCardMeta: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 2,
+  },
+  moreBtn: {
+    padding: 4,
+  },
+
+  // Banner Container
+  bannerContainer: {
+    height: 190,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 12,
+    marginBottom: 0,
+  },
+  cardCampaignTitle: {
+    fontFamily: FontFamily.serif,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.ink,
+    marginTop: 12,
+    marginBottom: 2,
+    lineHeight: 24,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    marginTop: 6,
+    marginBottom: 4,
+    ...Shadow.card,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    color: Colors.ink,
+    marginLeft: 8,
+    paddingVertical: 8,
+  },
+  bannerBadges: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  platformBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(42,2,7,0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  platformText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '700',
+    fontFamily: FontFamily.sansMedium,
+  },
+  payBadge: {
+    backgroundColor: 'rgba(42,2,7,0.75)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  payAmount: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: FontFamily.sans,
+  },
+  payLabel: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 0.5,
+  },
+
+  // Action Icons
+  actionIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  leftIcons: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  iconBtn: {
+    padding: 4,
+  },
+
+  // Details
+  cardDetails: {
+    marginTop: 8,
+    gap: 5,
+  },
+  appliedCount: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  cardDesc: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(63,3,11,0.65)',
+  },
+  hashtagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  hashtagText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: Colors.rose,
+  },
+
+  // Footer CTA buttons
+  newCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  applyCtaBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.oxbloodDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.button,
+    shadowColor: Colors.oxblood,
+    shadowOpacity: 0.15,
+  },
+  applyCtaText: {
+    color: Colors.cream,
+    fontFamily: FontFamily.sans,
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
+  arrowCtaBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.card,
+  },
 
   emptyCard: {
     alignItems: 'center',

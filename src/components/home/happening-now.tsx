@@ -3,18 +3,16 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
-
-const { width: W } = Dimensions.get('window');
+import React, { useEffect } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 interface HappeningNowProps {
   activity: any[];
 }
 
 export function HappeningNow({ activity }: HappeningNowProps) {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const scrollAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = React.useMemo(() => new Animated.Value(0), []);
+  const scrollAnim = React.useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -106,7 +104,7 @@ export function HappeningNow({ activity }: HappeningNowProps) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 22 },
+  section: { marginTop: 30 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sectionIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontFamily: FontFamily.sansMedium, fontSize: 20, fontWeight: '700', color: Colors.ink, flex: 1 },

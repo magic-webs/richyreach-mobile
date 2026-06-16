@@ -161,6 +161,8 @@ function CustomTabBar({ state, navigation }: any) {
 }
 
 export default function TabLayout() {
+  const role = useAuthStore((s) => s.role);
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -174,17 +176,22 @@ export default function TabLayout() {
           },
         }}
       >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="marketplace" />
-        <Tabs.Screen name="arena" />
-        <Tabs.Screen name="profile" />
-        <Tabs.Screen name="brand/index" />
-        <Tabs.Screen name="brand/marketplace" />
-        <Tabs.Screen name="brand/arena" />
-        <Tabs.Screen name="brand/profile" />
-        <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
-        <Tabs.Screen name="brand/campaign/[id]" options={{ href: null }} />
-        <Tabs.Screen name="brand/marketplace/creator/[id]" options={{ href: null }} />
+        <Tabs.Protected guard={role !== 'brand'}>
+          <Tabs.Screen name="index" />
+          <Tabs.Screen name="marketplace" />
+          <Tabs.Screen name="arena" />
+          <Tabs.Screen name="profile" />
+        </Tabs.Protected>
+
+        <Tabs.Protected guard={role === 'brand'}>
+          <Tabs.Screen name="brand/index" />
+          <Tabs.Screen name="brand/marketplace" />
+          <Tabs.Screen name="brand/arena" />
+          <Tabs.Screen name="brand/profile" />
+          <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
+          <Tabs.Screen name="brand/campaign/[id]" options={{ href: null }} />
+          <Tabs.Screen name="brand/marketplace/creator/[id]" options={{ href: null }} />
+        </Tabs.Protected>
       </Tabs>
       <FloatingChatButton />
     </View>

@@ -10,6 +10,7 @@ import { HomeHeader } from '@/components/home/home-header';
 import { LiveCampaigns } from '@/components/home/live-campaigns';
 import { OfferBanner } from '@/components/home/offer-banner';
 import { TrendingAudio } from '@/components/home/trending-audio';
+import { NotificationsSheet } from '@/components/home/NotificationsSheet';
 
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
@@ -56,6 +57,7 @@ export default function HomeScreen() {
   const [isBrandSwitcherOpen, setIsBrandSwitcherOpen] = useState(false);
   const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
   const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const {
     influencerProfiles,
@@ -81,7 +83,7 @@ export default function HomeScreen() {
         loadInfluencerProfiles(session.user.id).catch(() => { });
       }
     }
-  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId]);
+  }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId, loadBrandProfiles, loadInfluencerProfiles]);
 
   const { data: rawCampaignListData, isLoading: loadingCampaigns } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
@@ -106,13 +108,12 @@ export default function HomeScreen() {
     enabled: !!session?.user?.id,
   });
 
-  const rawCampaignList = (rawCampaignListData ?? []) as any[];
-
   const campaignList = React.useMemo(() => {
-    if (!rawCampaignList || rawCampaignList.length === 0) {
+    const list = (rawCampaignListData ?? []) as any[];
+    if (list.length === 0) {
       return [];
     }
-    return rawCampaignList.map((c: any) => ({
+    return list.map((c: any) => ({
       id: c.id,
       brand: c.brandName || c.brand?.companyName || 'Richy Brand',
       cat: c.campaignType || c.category || 'General',
@@ -127,8 +128,9 @@ export default function HomeScreen() {
       tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
       about: c.description || c.about,
       deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+      imageUrl: c.imageUrl || null,
     }));
-  }, [rawCampaignList]);
+  }, [rawCampaignListData]);
 
   const musicsList = React.useMemo(() => {
     if (!songsData || songsData.length === 0) {
@@ -181,6 +183,10 @@ export default function HomeScreen() {
     });
   }, [notificationsData]);
 
+  const hasUnread = React.useMemo(() => {
+    return (notificationsData ?? []).some((n: any) => !n.read);
+  }, [notificationsData]);
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Sticky header */}
@@ -198,6 +204,8 @@ export default function HomeScreen() {
         }}
         activeProfileAvatar={activeAvatar}
         activeProfileHandle={activeHandle}
+        onNotificationPress={() => setIsNotificationsOpen(true)}
+        hasUnread={hasUnread}
       />
 
       <ScrollView
@@ -215,22 +223,25 @@ export default function HomeScreen() {
           <OfferBanner />
         </View>
 
-        {/* Live campaigns */}
-        <LiveCampaigns
-          campaignList={campaignList}
-          loading={loadingCampaigns}
-          onSeeAllPress={() => router.push('/(tabs)/marketplace')}
-          onCampaignPress={(id) => router.push({ pathname: '/collab/[id]', params: { id } })}
-        />
+        <View style={{ gap: 25 }}>
 
-        {/* Happening now */}
-        <HappeningNow activity={activityList} />
+          {/* Live campaigns */}
+          <LiveCampaigns
+            campaignList={campaignList}
+            loading={loadingCampaigns}
+            onSeeAllPress={() => router.push('/(tabs)/marketplace')}
+            onCampaignPress={(id) => router.push({ pathname: '/collab/[id]', params: { id } })}
+          />
 
-        {/* Trending audio */}
-        <TrendingAudio musics={musicsList} />
+          {/* Happening now */}
+          <HappeningNow activity={activityList} />
 
-        {/* Tagline footer */}
-        <HomeFooter />
+          {/* Trending audio */}
+          <TrendingAudio musics={musicsList} />
+
+          {/* Tagline footer */}
+          <HomeFooter />
+        </View>
       </ScrollView>
 
       <SwitchInfluencerProfileSheet
@@ -284,12 +295,26 @@ export default function HomeScreen() {
         }}
         initialData={null}
       />
+
+      <NotificationsSheet
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.creamLite },
-  bodyContainer: { padding: 4, paddingBottom: 130 },
-  section: { marginTop: 22 },
+  root: {
+    flex: 1,
+    backgroundColor: Colors.creamLite,
+  },
+  bodyContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 130
+  },
+  section: {
+    marginTop: 30
+  },
 });

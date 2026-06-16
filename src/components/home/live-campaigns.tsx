@@ -4,7 +4,7 @@ import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image } from 'expo-image';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width: W } = Dimensions.get('window');
@@ -51,7 +51,7 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [btnWidth, setBtnWidth] = useState(29); // fallback
 
-  const slideAnim = useRef(new Animated.Value(viewMode === 'list' ? 1 : 0)).current;
+  const slideAnim = React.useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     Animated.spring(slideAnim, {
@@ -129,12 +129,20 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
               style={isGrid ? styles.campaignCard : styles.campaignCardList}
             >
               <View style={isGrid ? styles.campaignThumb : styles.campaignThumbList}>
-                <PlaceholderImage 
-                  tone={cm.tone} 
-                  height={isGrid ? 92 : 80} 
-                  width={isGrid ? undefined : 80} 
-                  borderRadius={isGrid ? 0 : 12} 
-                />
+                {cm.imageUrl ? (
+                  <Image 
+                    source={{ uri: cm.imageUrl }} 
+                    style={isGrid ? { width: '100%', height: 92 } : { width: 80, height: 80 }} 
+                    contentFit="cover" 
+                  />
+                ) : (
+                  <PlaceholderImage 
+                    tone={cm.tone} 
+                    height={isGrid ? 92 : 80} 
+                    width={isGrid ? undefined : 80} 
+                    borderRadius={isGrid ? 0 : 12} 
+                  />
+                )}
                 {isGrid && (
                   <View style={styles.campaignApplied}>
                     <Text style={styles.campaignAppliedText}>{cm.applicants} applied</Text>
@@ -150,6 +158,10 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
               <View style={isGrid ? styles.campaignInfo : styles.campaignInfoList}>
                 <Text style={styles.campaignBrand} numberOfLines={1}>
                   {cm.brand}
+                </Text>
+
+                <Text style={styles.campaignTitle} numberOfLines={1}>
+                  {cm.title}
                 </Text>
                 
                 {!isGrid && (
@@ -174,7 +186,7 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 22 },
+  section: { marginTop: 30 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sectionIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontFamily: FontFamily.sansMedium, fontSize: 20, fontWeight: '700', color: Colors.ink, flex: 1 },
@@ -206,13 +218,22 @@ const styles = StyleSheet.create({
 
   // Grid style
   campaignGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  campaignCard: { width: (W - 8 - 14) / 2, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', ...Shadow.card },
+  campaignCard: {
+    width: (W - 32 - 14) / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    ...Shadow.card,
+  },
   campaignThumb: { position: 'relative' },
   campaignApplied: { position: 'absolute', top: 7, right: 7, backgroundColor: 'rgba(42,2,7,0.62)', borderRadius: 99, paddingHorizontal: 7, paddingVertical: 3 },
   campaignAppliedText: { color: Colors.cream, fontSize: 10, fontWeight: '700' },
   verifiedBadge: { position: 'absolute', bottom: 7, left: 7, width: 20, height: 20, borderRadius: 99, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center' },
   campaignInfo: { padding: 10 },
   campaignBrand: { fontWeight: '700', fontSize: 13.5, color: Colors.ink, fontFamily: FontFamily.sansMedium },
+  campaignTitle: { fontSize: 11.5, color: 'rgba(63,3,11,0.5)', fontFamily: FontFamily.sansRegular, marginTop: 2 },
   campaignFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
   campaignBudget: { fontFamily: FontFamily.sansMedium, fontSize: 16, fontWeight: '700', color: Colors.oxblood },
   campaignArrow: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
@@ -222,9 +243,11 @@ const styles = StyleSheet.create({
   campaignCardList: {
     width: '100%',
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
     borderRadius: 18,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
     ...Shadow.card,
     padding: 10,
     gap: 12,

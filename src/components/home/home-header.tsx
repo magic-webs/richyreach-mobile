@@ -1,8 +1,8 @@
 import { Icon } from '@/components/ui/icon';
-import { RoleToggle } from '@/components/ui/role-toggle';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 interface HomeHeaderProps {
   isBrand: boolean;
@@ -12,6 +12,8 @@ interface HomeHeaderProps {
   onProfileSwitchPress?: () => void;
   activeProfileAvatar?: string | null;
   activeProfileHandle?: string | null;
+  onNotificationPress?: () => void;
+  hasUnread?: boolean;
 }
 
 export function HomeHeader({
@@ -22,6 +24,8 @@ export function HomeHeader({
   onProfileSwitchPress,
   activeProfileAvatar,
   activeProfileHandle,
+  onNotificationPress,
+  hasUnread = false,
 }: HomeHeaderProps) {
   return (
     <View style={styles.header}>
@@ -44,12 +48,42 @@ export function HomeHeader({
               </View>
             )}
           </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.greetSub}>
+              {activeProfileHandle ? `@${activeProfileHandle}` : userName}
+            </Text>
+            <View style={styles.switchRow}>
+              <Text style={styles.greetTitle}>
+                {isBrand ? 'Brand Account' : 'Creator Account'}
+              </Text>
+              {onProfileSwitchPress && <Icon name="chevDown" size={13} color={Colors.oxblood} />}
+            </View>
+          </View>
         </TouchableOpacity>
 
-        <RoleToggle
-          role={isBrand ? 'brand' : 'creator'}
-          onChange={onRoleChange}
-        />
+        {/* Notification Bell Button */}
+        <TouchableOpacity
+          onPress={onNotificationPress}
+          disabled={!onNotificationPress}
+          activeOpacity={0.85}
+          style={styles.notificationTrigger}
+        >
+          <Svg
+            viewBox="0 0 24 24"
+            width={21}
+            height={21}
+            color={Colors.oxblood}
+            fill="none"
+            stroke={Colors.oxblood}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <Path d="M15.5 18C15.5 19.933 13.933 21.5 12 21.5C10.067 21.5 8.5 19.933 8.5 18" />
+            <Path d="M19.2311 18H4.76887C3.79195 18 3 17.208 3 16.2311C3 15.762 3.18636 15.3121 3.51809 14.9803L4.12132 14.3771C4.68393 13.8145 5 13.0514 5 12.2558V9.5C5 5.63401 8.13401 2.5 12 2.5C15.866 2.5 19 5.634 19 9.5V12.2558C19 13.0514 19.3161 13.8145 19.8787 14.3771L20.4819 14.9803C20.8136 15.3121 21 15.762 21 16.2311C21 17.208 20.208 18 19.2311 18Z" />
+          </Svg>
+          {hasUnread && <View style={styles.notificationBadge} />}
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
@@ -81,6 +115,29 @@ const styles = StyleSheet.create({
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   profileSwitchTrigger: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, marginRight: 12 },
+  notificationTrigger: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.2,
+    borderColor: 'rgba(63,3,11,0.06)',
+    position: 'relative',
+    ...Shadow.card,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e74c3c',
+    borderWidth: 1.2,
+    borderColor: '#fff',
+  },
   avatarContainer: {
     width: 44,
     height: 44,

@@ -19,7 +19,7 @@ import {
 } from '@expo-google-fonts/montserrat';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,13 +38,9 @@ const queryClient = new QueryClient({
 SplashScreen.preventAutoHideAsync();
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const segments = useSegments();
-  const session = useAuthStore((s) => s.session);
   const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
   const onboardingSeen = useAuthStore((s) => s.onboardingSeen);
-  const role = useAuthStore((s) => s.role);
 
   useEffect(() => {
     (async () => {
@@ -69,85 +65,31 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         useAuthStore.setState({ isLoading: false });
       }
     })();
-  }, []);
+  }, [setSession]);
 
-  useEffect(() => {
-    if (isLoading || onboardingSeen === null) return;
-    const inAuth = segments[0] === '(auth)';
-    const inOnboarding = inAuth && segments[1] === 'onboarding';
-    const isMagicLogin = inAuth && segments[1] === 'magic-login';
-
-    if (isMagicLogin) return;
-
-    if (!session) {
-      if (!onboardingSeen) {
-        if (!inOnboarding) {
-          router.replace('/(auth)/onboarding');
-        }
-      } else {
-        if (!inAuth || inOnboarding) {
-          router.replace('/(auth)');
-        }
-      }
-    } else {
-      if (inAuth) {
-        if (role === 'brand') {
-          router.replace('/brand');
-        } else {
-          router.replace('/(tabs)');
-        }
-      } else {
-        // Redirection guards for route protection
-        const isBrandRoute = segments[0] === '(tabs)' && segments[1] === 'brand';
-        const isCreatorRoute = segments[0] === '(tabs)' && segments[1] !== 'brand';
-
-        if (role === 'brand' && isCreatorRoute) {
-          if (segments[1] === 'marketplace') {
-            router.replace('/brand/marketplace' as any);
-          } else if (segments[1] === 'arena') {
-            router.replace('/brand/arena' as any);
-          } else if (segments[1] === 'profile') {
-            router.replace('/brand/profile' as any);
-          } else {
-            router.replace('/brand' as any);
-          }
-        } else if (role !== 'brand' && isBrandRoute) {
-          if (segments[2] === 'marketplace') {
-            router.replace('/marketplace' as any);
-          } else if (segments[2] === 'arena') {
-            router.replace('/arena' as any);
-          } else if (segments[2] === 'profile') {
-            router.replace('/profile' as any);
-          } else {
-            router.replace('/(tabs)' as any);
-          }
-        }
-      }
-    }
-  }, [session, segments, isLoading, onboardingSeen, role]);
-
-  const isAllowed = React.useMemo(() => {
-    if (isLoading || onboardingSeen === null) return false;
-    const inAuth = segments[0] === '(auth)';
-    const inOnboarding = inAuth && segments[1] === 'onboarding';
-    const isMagicLogin = inAuth && segments[1] === 'magic-login';
-
-    if (isMagicLogin) return true;
-
-    if (!session) {
-      if (!onboardingSeen) {
-        return inOnboarding;
-      } else {
-        return inAuth && !inOnboarding;
-      }
-    } else {
-      return !inAuth;
-    }
-  }, [session, segments, isLoading, onboardingSeen]);
-
-  if (!isAllowed) return <SplashLoader />;
+  if (isLoading || onboardingSeen === null) return <SplashLoader />;
 
   return <>{children}</>;
+}
+
+function NavigationLayout() {
+  const session = useAuthStore((s) => s.session);
+  const isLoggedIn = !!session;
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!isLoggedIn}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={isLoggedIn}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="chat" />
+        <Stack.Screen name="collab" />
+        <Stack.Screen name="insights" />
+      </Stack.Protected>
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -168,7 +110,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
             <AuthGuard>
-              <Slot />
+              <NavigationLayout />
               <ActionModal />
             </AuthGuard>
           </BottomSheetModalProvider>

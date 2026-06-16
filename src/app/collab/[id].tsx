@@ -3,7 +3,6 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { campaigns } from '@/data/mock';
 import { api } from '@/lib/api';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { useProfilesStore } from '@/store/profiles';
@@ -11,10 +10,67 @@ import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function CollabDetailSkeleton() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  return (
+    <View style={styles.root}>
+      {/* Hero skeleton */}
+      <View style={[styles.heroWrap, { backgroundColor: Colors.creamLite }]}>
+        {/* Top nav */}
+        <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
+            <Icon name="back" size={22} color={Colors.oxblood} />
+          </TouchableOpacity>
+        </View>
+        <View style={StyleSheet.absoluteFill}>
+          <Skeleton width="100%" height={300} borderRadius={0} />
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Body skeleton */}
+        <View style={styles.body}>
+          {/* Budget strip */}
+          <Skeleton width="100%" height={80} borderRadius={18} />
+
+          {/* Facts grid */}
+          <View style={[styles.factsWrap, { marginTop: 24 }]}>
+            {[...Array(4)].map((_, i) => (
+              <View key={i} style={[styles.factCard, { borderWidth: 0 }]}>
+                <Skeleton width={30} height={30} borderRadius={15} />
+                <Skeleton width={80} height={16} borderRadius={4} style={{ marginTop: 10 }} />
+                <Skeleton width={60} height={10} borderRadius={4} style={{ marginTop: 6 }} />
+              </View>
+            ))}
+          </View>
+
+          {/* The Brief section */}
+          <View style={{ marginTop: 28 }}>
+            <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+            <Skeleton width="100%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+            <Skeleton width="95%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+            <Skeleton width="70%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+          </View>
+
+          {/* Deliverables section */}
+          <View style={{ marginTop: 28 }}>
+            <Skeleton width={140} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+            <Skeleton width="100%" height={60} borderRadius={18} />
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
 
 export default function CollabDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,12 +82,12 @@ export default function CollabDetail() {
   const queryClient = useQueryClient();
 
   // Entrance animations state
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(30)).current;
-  const heroScale = useRef(new Animated.Value(1.12)).current;
+  const fadeAnim = React.useMemo(() => new Animated.Value(0), []);
+  const translateYAnim = React.useMemo(() => new Animated.Value(30), []);
+  const heroScale = React.useMemo(() => new Animated.Value(1.12), []);
 
   // Apply button bounce scale state
-  const applyScale = useRef(new Animated.Value(1)).current;
+  const applyScale = React.useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     // Run entrance stagger animations on mount
@@ -55,22 +111,23 @@ export default function CollabDetail() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, heroScale, translateYAnim]);
 
-  const { data: collabData } = useQuery<any>({
+  const { data: collabData, isLoading } = useQuery<any>({
     queryKey: ['collab', id],
     queryFn: () => api.campaigns.get(id),
     enabled: !!id,
   });
 
   const cm = React.useMemo(() => {
-    const c = collabData;
-    if (!c || Array.isArray(c)) {
-      return campaigns.find((item) => item.id === id) ?? campaigns[0];
+    const c = collabData?.campaign;
+    if (!c) {
+      return null;
     }
     return {
       id: c.id,
       brand: c.brandName || c.brand?.companyName || 'Richy Brand',
+      brandLogo: c.brandLogo || c.brand?.logo || null,
       cat: c.campaignType || c.category || 'General',
       verified: c.verified ?? c.brand?.verified ?? false,
       title: c.title,
@@ -83,8 +140,9 @@ export default function CollabDetail() {
       platform: c.platform || 'Instagram',
       type: c.campaignType || 'Reel',
       followers: c.followers || '10k+',
+      imageUrl: c.imageUrl || null,
     };
-  }, [collabData, id]);
+  }, [collabData]);
 
   const triggerApplyAnimation = () => {
     Animated.sequence([
@@ -111,7 +169,10 @@ export default function CollabDetail() {
       if (previousCollab) {
         queryClient.setQueryData(['collab', id], {
           ...previousCollab,
-          applicants: (previousCollab.applicants ?? 0) + 1,
+          campaign: {
+            ...previousCollab.campaign,
+            applicants: (previousCollab.campaign.applicants ?? 0) + 1,
+          }
         });
       }
       setApplied(true);
@@ -154,7 +215,7 @@ export default function CollabDetail() {
           }
           profiles = fetched;
         }
-      } catch (e) {
+      } catch {
         // Suppress errors
       }
     }
@@ -166,6 +227,10 @@ export default function CollabDetail() {
 
     applyMutation.mutate();
   };
+
+  if (isLoading || !cm) {
+    return <CollabDetailSkeleton />;
+  }
 
   const facts = [
     { icon: 'reel', label: 'Platform', value: cm.platform },
@@ -180,7 +245,11 @@ export default function CollabDetail() {
         {/* Hero with zoomed container */}
         <View style={styles.heroWrap}>
           <Animated.View style={{ transform: [{ scale: heroScale }], width: '100%', height: '100%' }}>
-            <PlaceholderImage tone={cm.tone} height={300} borderRadius={0} />
+            {cm.imageUrl ? (
+              <Image source={{ uri: cm.imageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <PlaceholderImage tone={cm.tone} height={300} borderRadius={0} />
+            )}
           </Animated.View>
           <LinearGradient
             colors={['rgba(42,2,7,0.45)', 'transparent', 'rgba(42,2,7,0.85)']}
@@ -202,7 +271,11 @@ export default function CollabDetail() {
           {/* Title overlay */}
           <View style={styles.heroTitle}>
             <View style={styles.brandRow}>
-              <PlaceholderImage tone="cream" height={30} width={30} borderRadius={99} />
+              {cm.brandLogo ? (
+                <Image source={{ uri: cm.brandLogo }} style={{ height: 30, width: 30, borderRadius: 15 }} contentFit="cover" />
+              ) : (
+                <PlaceholderImage tone="cream" height={30} width={30} borderRadius={99} />
+              )}
               <Text style={styles.brandName}>{cm.brand}</Text>
               {cm.verified && <Icon name="verified" size={15} color={Colors.roseSoft} />}
               <Text style={styles.reachText}>· {cm.followers} reach</Text>
@@ -264,7 +337,11 @@ export default function CollabDetail() {
           <View style={{ marginTop: 24 }}>
             <SectionHead title="About the brand" action={null} />
             <View style={styles.brandCard}>
-              <PlaceholderImage tone={cm.tone} height={52} width={52} borderRadius={14} />
+              {cm.brandLogo ? (
+                <Image source={{ uri: cm.brandLogo }} style={{ height: 52, width: 52, borderRadius: 14 }} contentFit="cover" />
+              ) : (
+                <PlaceholderImage tone={cm.tone} height={52} width={52} borderRadius={14} />
+              )}
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <Text style={styles.brandCardName}>{cm.brand}</Text>

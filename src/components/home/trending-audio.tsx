@@ -82,10 +82,10 @@ export function TrendingAudio({ musics }: TrendingAudioProps) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 22 },
+  section: { marginTop: 30 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sectionIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontFamily: FontFamily.serif, fontSize: 20, fontWeight: '700', color: Colors.ink, flex: 1 },
+  sectionTitle: { fontFamily: FontFamily.sansMedium, fontSize: 20, fontWeight: '700', color: Colors.ink, flex: 1 },
   seeAll: { fontSize: 13, color: Colors.rose, fontWeight: '700' },
   musicCard: { width: 132 },
   musicThumb: { position: 'relative' },

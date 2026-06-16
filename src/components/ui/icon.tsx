@@ -76,6 +76,7 @@ const FEATHER_MAP: Record<string, FeatherName> = {
   trash: 'trash-2',
   volume: 'volume-2',
   mute: 'volume-x',
+  instagram: 'instagram',
 };
 
 export function Icon({ name, size = 24, color = 'currentColor' }: IconProps) {
