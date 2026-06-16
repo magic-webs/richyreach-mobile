@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUIStore } from '@/store/ui';
 
 import { useAuthStore } from '@/store/auth';
+import { StatusBar } from 'expo-status-bar';
 
 const CREATOR_TABS = [
   { key: 'index', icon: 'home', label: 'Home' },
@@ -181,6 +182,7 @@ export default function TabLayout() {
         <Tabs.Screen name="brand/marketplace" />
         <Tabs.Screen name="brand/arena" />
         <Tabs.Screen name="brand/profile" />
+        <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
       </Tabs>
       <FloatingChatButton />
     </View>

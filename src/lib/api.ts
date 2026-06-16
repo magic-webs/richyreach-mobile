@@ -57,6 +57,7 @@ export const api = {
   },
   influencers: {
     list: () => request('/influencers'),
+    get: (id: string) => request(`/influencers/${id}`),
     marketplace: () => request('/influencers/marketplace-campaigns'),
     dashboard: () => request('/influencers/dashboard'),
     earnings: () => request<any[]>('/influencers/earnings'),

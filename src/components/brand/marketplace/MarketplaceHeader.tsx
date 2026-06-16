@@ -8,12 +8,16 @@ interface MarketplaceHeaderProps {
   activeBrandLogo?: string | null;
   activeBrandName?: string | null;
   onProfileSwitchPress?: () => void;
+  selectedCount?: number;
+  onSelectedPress?: () => void;
 }
 
 export function MarketplaceHeader({
   activeBrandLogo,
   activeBrandName,
   onProfileSwitchPress,
+  selectedCount = 0,
+  onSelectedPress,
 }: MarketplaceHeaderProps) {
   const showModal = useUIStore((s) => s.showModal);
 
@@ -47,9 +51,12 @@ export function MarketplaceHeader({
       <TouchableOpacity
         style={styles.inviteListBtn}
         activeOpacity={0.8}
-        onPress={() => showModal({ title: 'Invite List', message: 'You have 0 creators currently in your review invite list.' })}
+        onPress={onSelectedPress || (() => showModal({ title: 'Shortlist', message: `You have ${selectedCount} items shortlisted.` }))}
       >
-        <Text style={styles.inviteListText}>+ Invite list</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Icon name="bookmark" size={13} color={Colors.cream} />
+          <Text style={styles.inviteListText}>Shortlist ({selectedCount})</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );

@@ -12,9 +12,10 @@ interface InviteCreatorSheetProps {
   creator: Partial<Creator> | null;
   onMessageFirst: () => void;
   onSendInvite: (campaign: string) => void;
+  selectedService?: any | null;
 }
 
-export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, onSendInvite }: InviteCreatorSheetProps) {
+export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, onSendInvite, selectedService }: InviteCreatorSheetProps) {
   const [selectedCampaign, setSelectedCampaign] = useState('Summer Glow Serum');
 
   return (
@@ -38,6 +39,18 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
             <Text style={styles.sheetCreatorRateText}>Rate: {creator?.rate}/post</Text>
           </View>
         </View>
+
+        {/* Selected Service Info */}
+        {selectedService && (
+          <View style={styles.sheetServiceInfo}>
+            <Text style={styles.sheetServiceLabel}>SELECTED SERVICE</Text>
+            <View style={styles.sheetServiceCard}>
+              <Icon name="briefcase" size={14} color={Colors.oxblood} />
+              <Text style={styles.sheetServiceName} numberOfLines={1}>{selectedService.name}</Text>
+              <Text style={styles.sheetServicePrice}>₹{selectedService.price.toLocaleString()}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Campaign Selection list */}
         <Text style={styles.sheetSelectLabel}>SELECT CAMPAIGN</Text>
@@ -214,5 +227,39 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 14,
     color: Colors.cream,
+  },
+  sheetServiceInfo: {
+    gap: 6,
+    marginTop: 4,
+  },
+  sheetServiceLabel: {
+    fontFamily: FontFamily.sans,
+    fontSize: 10.5,
+    color: 'rgba(63, 3, 11, 0.5)',
+    letterSpacing: 0.8,
+  },
+  sheetServiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(180, 106, 116, 0.08)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(180, 106, 116, 0.15)',
+  },
+  sheetServiceName: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.oxblood,
+    fontWeight: '700',
+    flex: 1,
+  },
+  sheetServicePrice: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.green,
+    fontWeight: '700',
   },
 });

@@ -1,36 +1,29 @@
 import { ReelVideoPlayer } from '@/components/brand/marketplace/ReelVideoPlayer';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Image } from 'expo-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
+import { useShortlistStore } from '@/store/shortlist';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SelectedServicesSheet } from '@/components/brand/marketplace/SelectedServicesSheet';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { InviteCreatorSheet } from '@/components/brand/marketplace/InviteCreatorSheet';
-import { MarketplaceBanner } from '@/components/brand/marketplace/MarketplaceBanner';
 import { Creator } from '@/components/brand/marketplace/MarketplaceCreatorCard';
-import { MarketplaceCreatorList } from '@/components/brand/marketplace/MarketplaceCreatorList';
-import { MarketplaceFilters } from '@/components/brand/marketplace/MarketplaceFilters';
 import { MarketplaceHeader } from '@/components/brand/marketplace/MarketplaceHeader';
-import { MarketplaceSearch } from '@/components/brand/marketplace/MarketplaceSearch';
-
-const FALLBACK_THUMBNAILS = [
-  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=600',
-  'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600',
-  'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=600',
-  'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=600',
-];
 
 interface SwipeableServiceCardProps {
   item: any;
@@ -41,6 +34,11 @@ interface SwipeableServiceCardProps {
   handleSelect: (item: any) => void;
   handleReject: (index: number) => void;
   actionFeedback: { index: number | null; type: 'select' | 'reject' | null };
+  handleViewCreator: (id: string) => void;
+  isBookmarked: boolean;
+  onToggleBookmark: () => void;
+  isSelected: boolean;
+  onInvite: () => void;
 }
 
 function SwipeableServiceCard({
@@ -52,8 +50,20 @@ function SwipeableServiceCard({
   handleSelect,
   handleReject,
   actionFeedback,
+  handleViewCreator,
+  isBookmarked,
+  onToggleBookmark,
+  isSelected,
+  onInvite,
 }: SwipeableServiceCardProps) {
   const translateX = useSharedValue(0);
+  const [showDesc, setShowDesc] = useState(false);
+
+  useEffect(() => {
+    if (activeVideoIndex !== index) {
+      setShowDesc(false);
+    }
+  }, [activeVideoIndex, index]);
 
   const gesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
@@ -96,9 +106,116 @@ function SwipeableServiceCard({
     return { opacity };
   });
 
-  return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }]}>
+  const cardRef = React.useRef<any>(null);
+
+  // Web Touch Handlers:
+  const touchStartX = React.useRef(0);
+  const touchStartY = React.useRef(0);
+  const isDraggingWeb = React.useRef(false);
+
+  const handleTouchStart = (e: any) => {
+    if (Platform.OS !== 'web') return;
+    touchStartX.current = e.nativeEvent.touches[0].clientX;
+    touchStartY.current = e.nativeEvent.touches[0].clientY;
+    isDraggingWeb.current = true;
+  };
+
+  const handleTouchMove = (e: any) => {
+    if (Platform.OS !== 'web' || !isDraggingWeb.current) return;
+    const currentX = e.nativeEvent.touches[0].clientX;
+    const currentY = e.nativeEvent.touches[0].clientY;
+    const diffX = currentX - touchStartX.current;
+    const diffY = currentY - touchStartY.current;
+
+    // Drag only horizontally
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      translateX.value = diffX;
+    }
+  };
+
+  const handleTouchEnd = (e: any) => {
+    if (Platform.OS !== 'web' || !isDraggingWeb.current) return;
+    isDraggingWeb.current = false;
+    const finalX = translateX.value;
+
+    if (finalX > 120) {
+      translateX.value = withTiming(500, { duration: 250 }, () => {
+        runOnJS(handleSelect)(item);
+        translateX.value = 0;
+      });
+    } else if (finalX < -120) {
+      translateX.value = withTiming(-500, { duration: 250 }, () => {
+        runOnJS(handleReject)(index);
+        translateX.value = 0;
+      });
+    } else {
+      translateX.value = withTiming(0, { duration: 200 });
+    }
+  };
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || !cardRef.current) return;
+    const element = cardRef.current;
+
+    let startX = 0;
+    let startY = 0;
+    let isMouseDown = false;
+
+    const onMouseDown = (e: MouseEvent) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      isMouseDown = true;
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isMouseDown) return;
+      const diffX = e.clientX - startX;
+      const diffY = e.clientY - startY;
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        translateX.value = diffX;
+      }
+    };
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isMouseDown) return;
+      isMouseDown = false;
+      const finalX = translateX.value;
+
+      if (finalX > 120) {
+        translateX.value = withTiming(500, { duration: 250 }, () => {
+          runOnJS(handleSelect)(item);
+          translateX.value = 0;
+        });
+      } else if (finalX < -120) {
+        translateX.value = withTiming(-500, { duration: 250 }, () => {
+          runOnJS(handleReject)(index);
+          translateX.value = 0;
+        });
+      } else {
+        translateX.value = withTiming(0, { duration: 200 });
+      }
+    };
+
+    element.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      element.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [containerHeight, activeVideoIndex, item, index]);
+
+  if (Platform.OS === 'web') {
+    return (
+      <Animated.View
+        ref={cardRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={[styles.cardItem, animatedStyle, { height: containerHeight }]}
+      >
         {/* Media Cover (using ReelVideoPlayer) */}
         <View style={styles.mediaContainer}>
           <ReelVideoPlayer
@@ -106,75 +223,231 @@ function SwipeableServiceCard({
             isPlaying={index === activeVideoIndex && mode === 'services'}
             height={containerHeight}
           />
-          <LinearGradient
-            colors={['transparent', 'rgba(42, 2, 7, 0.4)', 'rgba(42, 2, 7, 0.92)']}
-            style={styles.gradientOverlay}
-            pointerEvents="none"
-          />
+        </View>
 
-          {/* Category tag */}
-          <View style={styles.feedCategoryBadge}>
-            <Text style={styles.feedCategoryText}>{item.category}</Text>
+        {/* Right Toolbar Overlay (Instagram Reels Style) */}
+        <View style={styles.reelsRightBar}>
+          {/* Select Star Button */}
+          {/* <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleSelect(item)}
+            style={styles.reelsActionBtn}
+          >
+            <View style={[styles.reelsIconCircle, isSelected && styles.reelsIconCircleSelected]}>
+              <Icon name="star" size={20} color={isSelected ? Colors.gold : Colors.white} />
+            </View>
+            <Text style={styles.reelsActionText}>{isSelected ? 'Selected' : 'Select'}</Text>
+          </TouchableOpacity> */}
+
+          {/* Bookmark Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onToggleBookmark}
+            style={styles.reelsActionBtn}
+          >
+            <View style={[styles.reelsIconCircle, isBookmarked && styles.reelsIconCircleBookmarked]}>
+              <Icon name="bookmark" size={20} color={isBookmarked ? Colors.gold : Colors.white} />
+            </View>
+            <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
+          </TouchableOpacity>
+
+          {/* Invite Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onInvite}
+            style={styles.reelsActionBtn}
+          >
+            <View style={styles.reelsIconCircle}>
+              <Icon name="send" size={18} color={Colors.white} />
+            </View>
+            <Text style={styles.reelsActionText}>Invite</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Details overlay (Bottom & Left aligned) */}
+        <View style={styles.reelsDetailsOverlay}>
+          {/* Creator Identity */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleViewCreator(item.creator?.id)}
+            style={styles.reelsCreatorRow}
+          >
+            {item.creator?.avatar ? (
+              <Image source={{ uri: item.creator.avatar }} style={styles.reelsCreatorMiniAvatar} contentFit="cover" />
+            ) : (
+              <PlaceholderImage tone={item.creator?.tone} height={28} width={28} borderRadius={14} />
+            )}
+            <Text style={styles.reelsCreatorHandle}>{item.creator?.handle}</Text>
+            <Icon name="verified" size={14} color={Colors.rose} />
+            {item.creator?.niche?.[0] && (
+              <View style={styles.reelsNicheBadge}>
+                <Text style={styles.reelsNicheText}>{item.creator.niche[0]}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Service Title */}
+          <TouchableOpacity activeOpacity={0.85} onPress={() => setShowDesc(!showDesc)}>
+            <Text style={styles.reelsServiceTitle} numberOfLines={1}>
+              {item.name} {showDesc ? '▾' : '▸'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Service Description */}
+          {showDesc && item.description && (
+            <Text style={styles.reelsServiceDesc}>
+              {item.description}
+            </Text>
+          )}
+
+          {/* Music ticker */}
+          <View style={styles.reelsMusicRow}>
+            <Icon name="music" size={12} color="rgba(255, 255, 255, 0.7)" />
+            <Text style={styles.reelsMusicText} numberOfLines={1}>
+              Original Audio · {item.creator?.name || 'Creator'}
+            </Text>
+          </View>
+
+          {/* Metrics Pill Grid */}
+          <View style={styles.reelsMetricsRow}>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Price:</Text>
+              <Text style={styles.reelsMetricValue}>₹{item.price.toLocaleString()}</Text>
+            </View>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Deliv:</Text>
+              <Text style={styles.reelsMetricValue}>{item.deliveryTime}</Text>
+            </View>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Rating:</Text>
+              <Text style={styles.reelsMetricValue}>{item.creator.rating} ★</Text>
+            </View>
           </View>
         </View>
 
-        {/* Details overlay */}
-        <View style={styles.cardDetails}>
-          {/* Creator attribution */}
-          <View style={styles.creatorRow}>
-            <PlaceholderImage tone={item.creator.tone} height={40} width={40} borderRadius={20} />
-            <View style={styles.creatorMeta}>
-              <Text style={styles.creatorNameText}>{item.creator.name}</Text>
-              <Text style={styles.creatorHandleText}>{item.creator.handle}</Text>
+        {/* Swipe Stamp indicators overlay */}
+        <Animated.View style={[styles.stampIndicator, styles.stampSelect, stampSelectStyle]}>
+          <Text style={styles.stampText}>SELECT</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.stampIndicator, styles.stampReject, stampRejectStyle]}>
+          <Text style={styles.stampText}>SKIP</Text>
+        </Animated.View>
+
+        {/* Feedback Badges */}
+        {actionFeedback.index === index && actionFeedback.type && (
+          <View style={[
+            styles.feedbackOverlay,
+            actionFeedback.type === 'select' ? styles.feedbackSelect : styles.feedbackReject
+          ]}>
+            <Text style={styles.feedbackText}>
+              {actionFeedback.type === 'select' ? 'SELECTED' : 'SKIPPED'}
+            </Text>
+          </View>
+        )}
+      </Animated.View>
+    );
+  }
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }]}>
+        {/* Media Cover (using ReelVideoPlayer) */}
+        <View style={styles.mediaContainer}>
+          {/* <StatusBar style='dark' /> */}
+          <ReelVideoPlayer
+            videoUrl={item.videoUrl || item.exampleUrl || 'https://res.cloudinary.com/demo/video/upload/dog.mp4'}
+            isPlaying={index === activeVideoIndex && mode === 'services'}
+            height={containerHeight}
+          />
+        </View>
+
+        {/* Right Toolbar Overlay (Instagram Reels Style) */}
+        <View style={styles.reelsRightBar}>
+          {/* Bookmark Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onToggleBookmark}
+            style={styles.reelsActionBtn}
+          >
+            <View style={[styles.reelsIconCircle, isBookmarked && styles.reelsIconCircleBookmarked]}>
+              <Icon name="bookmark" size={20} color={isBookmarked ? Colors.gold : Colors.white} />
             </View>
-            <View style={styles.creatorStats}>
-              <Text style={styles.creatorFollowersVal}>{item.creator.followers}</Text>
-              <Text style={styles.creatorFollowersLabel}>Followers</Text>
+            <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
+          </TouchableOpacity>
+
+          {/* Invite Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onInvite}
+            style={styles.reelsActionBtn}
+          >
+            <View style={styles.reelsIconCircle}>
+              <Icon name="send" size={18} color={Colors.white} />
             </View>
+            <Text style={styles.reelsActionText}>Invite</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Details overlay (Bottom & Left aligned) */}
+        <View style={styles.reelsDetailsOverlay}>
+          {/* Creator Identity */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleViewCreator(item.creator?.id)}
+            style={styles.reelsCreatorRow}
+          >
+            {item.creator?.avatar ? (
+              <Image source={{ uri: item.creator.avatar }} style={styles.reelsCreatorMiniAvatar} contentFit="cover" />
+            ) : (
+              <PlaceholderImage tone={item.creator?.tone} height={28} width={28} borderRadius={14} />
+            )}
+            <Text style={styles.reelsCreatorHandle}>{item.creator?.handle}</Text>
+            <Icon name="verified" size={14} color={Colors.rose} />
+            {item.creator?.niche?.[0] && (
+              <View style={styles.reelsNicheBadge}>
+                <Text style={styles.reelsNicheText}>{item.creator.niche[0]}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Service Title */}
+          <TouchableOpacity activeOpacity={0.85} onPress={() => setShowDesc(!showDesc)}>
+            <Text style={styles.reelsServiceTitle} numberOfLines={1}>
+              {item.name} {showDesc ? '▾' : '▸'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Service Description */}
+          {showDesc && item.description && (
+            <Text style={styles.reelsServiceDesc}>
+              {item.description}
+            </Text>
+          )}
+
+          {/* Music ticker */}
+          <View style={styles.reelsMusicRow}>
+            <Icon name="music" size={12} color="rgba(255, 255, 255, 0.7)" />
+            <Text style={styles.reelsMusicText} numberOfLines={1}>
+              Original Audio · {item.creator?.name || 'Creator'}
+            </Text>
           </View>
 
-          {/* Service texts */}
-          <View style={styles.serviceMeta}>
-            <Text numberOfLines={1} style={styles.serviceTitleFeed}>{item.name}</Text>
-            <Text numberOfLines={3} style={styles.serviceDescFeed}>{item.description}</Text>
-          </View>
-
-          {/* Stats row */}
-          <View style={styles.metricsRow}>
-            <View style={styles.metricCol}>
-              <Text style={styles.metricVal}>₹{item.price.toLocaleString()}</Text>
-              <Text style={styles.metricLabel}>Price</Text>
+          {/* Metrics Pill Grid */}
+          <View style={styles.reelsMetricsRow}>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Price:</Text>
+              <Text style={styles.reelsMetricValue}>₹{item.price.toLocaleString()}</Text>
             </View>
-            <View style={styles.metricCol}>
-              <Text style={styles.metricVal}>{item.deliveryTime}</Text>
-              <Text style={styles.metricLabel}>Delivery</Text>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Deliv:</Text>
+              <Text style={styles.reelsMetricValue}>{item.deliveryTime}</Text>
             </View>
-            <View style={styles.metricCol}>
-              <Text style={styles.metricVal}>{item.creator.rating} ★</Text>
-              <Text style={styles.metricLabel}>Rating</Text>
+            <View style={styles.reelsMetricBadge}>
+              <Text style={styles.reelsMetricLabel}>Rating:</Text>
+              <Text style={styles.reelsMetricValue}>{item.creator.rating} ★</Text>
             </View>
           </View>
-
-          {/* Floating actions */}
-          {/* <View style={styles.feedActions}>
-            <TouchableOpacity
-              style={[styles.feedActionBtn, styles.rejectBtn]}
-              activeOpacity={0.8}
-              onPress={() => handleReject(index)}
-            >
-              <Icon name="x" size={20} color={Colors.white} />
-              <Text style={styles.feedActionBtnText}>Skip</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.feedActionBtn, styles.selectBtn]}
-              activeOpacity={0.8}
-              onPress={() => handleSelect(item)}
-            >
-              <Icon name="check" size={20} color={Colors.white} />
-              <Text style={styles.feedActionBtnText}>Select</Text>
-            </TouchableOpacity>
-          </View> */}
         </View>
 
         {/* Swipe Stamp indicators overlay */}
@@ -206,17 +479,22 @@ export default function BrandMarketplaceScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ inviteCreator?: string; followers?: string; eng?: string; tone?: string }>();
   const showModal = useUIStore((s) => s.showModal);
+  const router = useRouter();
 
-  const [mode, setMode] = useState<'creators' | 'services'>('creators');
+  const mode = 'services';
   const [search, setSearch] = useState('');
   const [selectedTier, setSelectedTier] = useState('All');
 
   const queryClient = useQueryClient();
 
+  // Shortlist store state
+  const shortlistedServices = useShortlistStore((s) => s.shortlistedServices);
+  const loadShortlist = useShortlistStore((s) => s.loadShortlist);
+  const toggleShortlist = useShortlistStore((s) => s.toggleShortlist);
+
   // Invite sheet state
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<Partial<Creator> | null>(null);
-  const [bookmarked, setBookmarked] = useState<Record<string, boolean>>({});
 
   // Switcher and creation sheets state
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
@@ -231,10 +509,11 @@ export default function BrandMarketplaceScreen() {
 
   const activeBrand = brandProfiles.find((p) => p.id === activeBrandProfileId);
 
-  // Load profiles on mount/refresh
+  // Load profiles and shortlist on mount/refresh
   useEffect(() => {
     if (session?.user?.id) {
       loadBrandProfiles(session.user.id).catch(() => { });
+      loadShortlist(session.user.id).catch(() => { });
     }
   }, [session?.user?.id, activeBrandProfileId]);
 
@@ -281,6 +560,7 @@ export default function BrandMarketplaceScreen() {
           rate: c.pricing ? `₹${(c.pricing / 100).toLocaleString()}` : '₹15,000',
           niche: Array.isArray(c.niche) ? c.niche : c.niche ? [c.niche] : ['Lifestyle'],
           tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
+          avatar: c.avatar || null,
         };
       })
       .filter((item): item is NonNullable<typeof item> => !!item);
@@ -317,6 +597,7 @@ export default function BrandMarketplaceScreen() {
           rate: s.influencer.pricing ? `₹${(s.influencer.pricing / 100).toLocaleString()}` : '₹15,000',
           niche: Array.isArray(s.influencer.niche) ? s.influencer.niche : s.influencer.niche ? [s.influencer.niche] : ['Lifestyle'],
           tone: (s.influencer.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
+          avatar: s.influencer.avatar || null,
         };
       } else {
         creator = creators.find((c: any) => c.id === s.influencerProfileId) ||
@@ -369,7 +650,7 @@ export default function BrandMarketplaceScreen() {
   }).current;
 
   const viewabilityConfig = React.useRef({
-    itemVisiblePercentThreshold: 85,
+    itemVisiblePercentThreshold: 50,
   }).current;
 
   // Show/Hide Tab Bar triggers using directional scroll
@@ -382,19 +663,22 @@ export default function BrandMarketplaceScreen() {
       useUIStore.getState().setTabBarVisible(isScrollingUp);
     }
     lastOffsetY.current = currentOffset;
+
+    if (Platform.OS === 'web' && containerHeight > 0) {
+      const index = Math.round(currentOffset / containerHeight);
+      if (index !== activeVideoIndex) {
+        setActiveVideoIndex(index);
+      }
+    }
   };
 
-  // Reset tab bar and floating chat visible state on mount/unmount and mode change
+  // Reset tab bar and floating chat visible state on mount/unmount
   useEffect(() => {
     const setTabBarVisible = useUIStore.getState().setTabBarVisible;
     const setFloatingChatVisible = useUIStore.getState().setFloatingChatVisible;
-    if (mode === 'creators') {
-      setTabBarVisible(true);
-      setFloatingChatVisible(true);
-    } else if (mode === 'services') {
-      setFloatingChatVisible(false);
-    }
-  }, [mode]);
+    setTabBarVisible(true);
+    setFloatingChatVisible(false);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -421,8 +705,16 @@ export default function BrandMarketplaceScreen() {
     setActionFeedback({ index, type: 'select' });
     setTimeout(() => {
       setActionFeedback({ index: null, type: null });
-      handleOpenInvite(service.creator);
+      if (!session?.user?.id) return;
+      const isAlreadyShortlisted = useShortlistStore.getState().isShortlisted(service.id);
+      if (!isAlreadyShortlisted) {
+        toggleShortlist(session.user.id, service);
+      }
     }, 350);
+  };
+
+  const handleViewCreatorProfile = (creatorId: string) => {
+    router.push({ pathname: '/brand/marketplace/creator/[id]', params: { id: creatorId } });
   };
 
   useEffect(() => {
@@ -459,17 +751,16 @@ export default function BrandMarketplaceScreen() {
     });
   };
 
-  const toggleBookmark = (id: string, name: string) => {
-    setBookmarked((prev) => {
-      const state = !prev[id];
-      if (state) {
-        showModal({
-          title: 'Added to List',
-          message: `Saved ${name} to your shortlist.`,
-        });
-      }
-      return { ...prev, [id]: state };
-    });
+  const handleToggleBookmark = async (service: any) => {
+    if (!session?.user?.id) return;
+    await toggleShortlist(session.user.id, service);
+    const isNowShortlisted = useShortlistStore.getState().isShortlisted(service.id);
+    if (isNowShortlisted) {
+      showModal({
+        title: 'Added to Shortlist',
+        message: `Saved "${service.name}" by ${service.creator?.name || 'Creator'} to your shortlist.`,
+      });
+    }
   };
 
   const filteredCreators = creators.filter((creator: any) => {
@@ -494,90 +785,52 @@ export default function BrandMarketplaceScreen() {
         activeBrandLogo={activeBrand?.logo}
         activeBrandName={activeBrand?.companyName}
         onProfileSwitchPress={() => setIsSwitcherOpen(true)}
+        selectedCount={shortlistedServices.length}
+        onSelectedPress={() => router.push('/brand/shortlist')}
       />
 
-      {/* Sleek Mode Switcher */}
-      <View style={styles.switcherContainer}>
-        <TouchableOpacity
-          style={[styles.switcherTab, mode === 'creators' && styles.switcherTabActive]}
-          onPress={() => setMode('creators')}
-          activeOpacity={0.8}
-        >
-          <Icon name="users" size={16} color={mode === 'creators' ? Colors.white : Colors.oxblood} />
-          <Text style={[styles.switcherText, mode === 'creators' && styles.switcherTextActive]}>Creators</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.switcherTab, mode === 'services' && styles.switcherTabActive]}
-          onPress={() => setMode('services')}
-          activeOpacity={0.8}
-        >
-          <Icon name="bolt" size={16} color={mode === 'services' ? Colors.white : Colors.oxblood} />
-          <Text style={[styles.switcherText, mode === 'services' && styles.switcherTextActive]}>Services Feed</Text>
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {mode === 'creators' ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 130 }}
-          style={styles.body}
-        >
-          <MarketplaceSearch search={search} setSearch={setSearch} />
-
-          <MarketplaceFilters selectedTier={selectedTier} setSelectedTier={setSelectedTier} />
-
-          <MarketplaceBanner />
-
-          <MarketplaceCreatorList
-            loading={loading}
-            creators={filteredCreators}
-            bookmarked={bookmarked}
-            onToggleBookmark={toggleBookmark}
-            onInvite={handleOpenInvite}
+      <View
+        style={styles.feedWrapper}
+        onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+      >
+        {containerHeight > 0 && (
+          <FlatList
+            ref={flatListRef}
+            data={services}
+            keyExtractor={(item) => item.id}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            snapToInterval={containerHeight}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            removeClippedSubviews={true}
+            initialNumToRender={2}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => (
+              <SwipeableServiceCard
+                item={item}
+                index={index}
+                containerHeight={containerHeight}
+                activeVideoIndex={activeVideoIndex}
+                mode={mode}
+                handleSelect={handleSelect}
+                handleReject={handleReject}
+                actionFeedback={actionFeedback}
+                handleViewCreator={handleViewCreatorProfile}
+                isBookmarked={shortlistedServices.some((s) => s.id === item.id)}
+                onToggleBookmark={() => handleToggleBookmark(item)}
+                isSelected={shortlistedServices.some((s) => s.id === item.id)}
+                onInvite={() => handleOpenInvite(item.creator)}
+              />
+            )}
           />
-        </ScrollView>
-      ) : (
-        <View
-          style={styles.feedWrapper}
-          onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
-        >
-          {containerHeight > 0 && (
-            <FlatList
-              ref={flatListRef}
-              data={services}
-              keyExtractor={(item) => item.id}
-              pagingEnabled
-              showsVerticalScrollIndicator={false}
-              snapToInterval={containerHeight}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              removeClippedSubviews={true}
-              initialNumToRender={2}
-              maxToRenderPerBatch={3}
-              windowSize={5}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              renderItem={({ item, index }) => (
-                <SwipeableServiceCard
-                  item={item}
-                  index={index}
-                  containerHeight={containerHeight}
-                  activeVideoIndex={activeVideoIndex}
-                  mode={mode}
-                  handleSelect={handleSelect}
-                  handleReject={handleReject}
-                  actionFeedback={actionFeedback}
-                />
-              )}
-            />
-          )}
-        </View>
-      )}
+        )}
+      </View>
 
       <InviteCreatorSheet
         isOpen={inviteOpen}
@@ -835,35 +1088,172 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     marginTop: 2,
   },
-  feedActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
+  reelsRightBar: {
+    position: 'absolute',
+    right: 12,
+    bottom: 30,
+    alignItems: 'center',
+    gap: 16,
+    zIndex: 10,
   },
-  feedActionBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    flexDirection: 'row',
+  reelsAvatarContainer: {
+    position: 'relative',
+    marginBottom: 6,
+  },
+  reelsAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  reelsAvatarPlus: {
+    position: 'absolute',
+    bottom: -3,
+    left: '50%',
+    transform: [{ translateX: -8 }],
+    backgroundColor: Colors.roseDeep,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.white,
+  },
+  reelsActionBtn: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  reelsIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  reelsIconCircleSelected: {
+    backgroundColor: 'rgba(243, 201, 105, 0.25)',
+    borderColor: Colors.gold,
+  },
+  reelsIconCircleBookmarked: {
+    backgroundColor: 'rgba(243, 201, 105, 0.25)',
+    borderColor: Colors.gold,
+  },
+  reelsActionText: {
+    color: Colors.white,
+    fontSize: 9.5,
+    fontFamily: FontFamily.sansMedium,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  reelsDetailsOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 70,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    gap: 10,
+    zIndex: 5,
+  },
+  reelsCreatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    ...Shadow.button,
   },
-  rejectBtn: {
-    backgroundColor: 'rgba(180, 106, 116, 0.85)',
+  reelsCreatorMiniAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.white,
   },
-  selectBtn: {
-    backgroundColor: Colors.oxblood,
-    borderWidth: 1,
+  reelsCreatorHandle: {
+    color: Colors.white,
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  reelsNicheBadge: {
+    backgroundColor: 'rgba(180, 106, 116, 0.4)',
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  feedActionBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13.5,
+  reelsNicheText: {
     color: Colors.white,
+    fontSize: 9,
+    fontFamily: FontFamily.sans,
+    fontWeight: '800',
+  },
+  reelsServiceTitle: {
+    color: Colors.white,
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16.5,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  reelsServiceDesc: {
+    color: 'rgba(255, 255, 255, 0.88)',
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    lineHeight: 17,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  reelsMusicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reelsMusicText: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  reelsMetricsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  reelsMetricBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    gap: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  reelsMetricLabel: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 10,
+    fontFamily: FontFamily.sansMedium,
+    fontWeight: '600',
+  },
+  reelsMetricValue: {
+    color: Colors.white,
+    fontSize: 10.5,
+    fontFamily: FontFamily.sansMedium,
     fontWeight: '700',
   },
   feedbackOverlay: {

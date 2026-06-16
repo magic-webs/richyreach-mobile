@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   title: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 20,
     fontWeight: '600',
     letterSpacing: 0.2,
