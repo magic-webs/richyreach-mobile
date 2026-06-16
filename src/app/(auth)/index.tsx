@@ -6,11 +6,10 @@ import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -21,8 +20,6 @@ import {
   TouchableWithoutFeedback,
   View
 } from 'react-native';
-
-const { width } = Dimensions.get('window');
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   if (Platform.OS === 'web') {
@@ -55,9 +52,9 @@ export default function AuthScreen() {
   const otpInputRef = useRef<TextInput>(null);
 
   // Animations for toggles
-  const modeAnim = useRef(new Animated.Value(mode === 'login' ? 0 : 1)).current;
-  const roleAnim = useRef(new Animated.Value(role === 'influencer' ? 0 : 1)).current;
-  const methodAnim = useRef(new Animated.Value(method === 'email' ? 0 : 1)).current;
+  const modeAnim = useMemo(() => new Animated.Value(0), []);
+  const roleAnim = useMemo(() => new Animated.Value(0), []);
+  const methodAnim = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     Animated.timing(modeAnim, {
@@ -65,7 +62,7 @@ export default function AuthScreen() {
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [mode]);
+  }, [mode, modeAnim]);
 
   useEffect(() => {
     Animated.timing(roleAnim, {
@@ -73,7 +70,7 @@ export default function AuthScreen() {
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [role]);
+  }, [role, roleAnim]);
 
   useEffect(() => {
     Animated.timing(methodAnim, {
@@ -81,7 +78,7 @@ export default function AuthScreen() {
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [method]);
+  }, [method, methodAnim]);
 
   const getIdentifier = () => {
     return method === 'email' ? email.trim() : `${phone.trim()}`;
@@ -156,13 +153,20 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
-      const data = await api.auth.verifyOtp(identifier, otp, role, mode === 'signup' ? name : undefined);
+      const data = await api.auth.verifyOtp(identifier, otp, role, mode === 'signup' ? name : undefined) as any;
+
+      // Extract the actual registered user role returned from the backend (or fallback to selected local role)
+      const userRole = data?.user?.role || role;
 
       // Update local role and session
-      setRole(role);
-      await setSession(data as any);
+      setRole(userRole);
+      await setSession(data);
 
-      router.replace('/(tabs)');
+      if (userRole === 'brand') {
+        router.replace('/brand');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
       showModal({
         title: 'Verification Failed',
@@ -250,37 +254,39 @@ export default function AuthScreen() {
                 </View>
 
                 {/* Role Toggle */}
-                <View className="mb-6 bg-white rounded-full p-1.5" style={Shadow.card}>
-                  <View className="flex-row relative">
-                    <Animated.View
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        bottom: 0,
-                        left: roleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] }),
-                        width: '50%',
-                        backgroundColor: Colors.oxblood,
-                        borderRadius: 999,
-                      }}
-                    />
-                    <TouchableOpacity
-                      className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
-                      onPress={() => setLocalRole('influencer')}
-                      activeOpacity={0.8}
-                    >
-                      <Icon name="sparkle" size={16} color={role === 'influencer' ? Colors.cream : Colors.oxblood} />
-                      <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'influencer' ? Colors.cream : Colors.oxblood }}>Creator</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
-                      onPress={() => setLocalRole('brand')}
-                      activeOpacity={0.8}
-                    >
-                      <Icon name="briefcase" size={16} color={role === 'brand' ? Colors.cream : Colors.oxblood} />
-                      <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'brand' ? Colors.cream : Colors.oxblood }}>Brand</Text>
-                    </TouchableOpacity>
+                {mode === 'signup' && (
+                  <View className="mb-6 bg-white rounded-full p-1.5" style={Shadow.card}>
+                    <View className="flex-row relative">
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          bottom: 0,
+                          left: roleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '50%'] }),
+                          width: '50%',
+                          backgroundColor: Colors.oxblood,
+                          borderRadius: 999,
+                        }}
+                      />
+                      <TouchableOpacity
+                        className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                        onPress={() => setLocalRole('influencer')}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name="sparkle" size={16} color={role === 'influencer' ? Colors.cream : Colors.oxblood} />
+                        <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'influencer' ? Colors.cream : Colors.oxblood }}>Creator</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                        onPress={() => setLocalRole('brand')}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name="briefcase" size={16} color={role === 'brand' ? Colors.cream : Colors.oxblood} />
+                        <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'brand' ? Colors.cream : Colors.oxblood }}>Brand</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
+                )}
 
                 {/* Method Selector (Email vs WhatsApp) */}
                 <View className="mb-6 bg-white rounded-xl p-1" style={Shadow.card}>
@@ -401,7 +407,7 @@ export default function AuthScreen() {
 
                 <View className="items-center mt-8">
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', textAlign: 'center', lineHeight: 18 }}>
-                    By continuing, you agree to RichyReach's{'\n'}
+                    By continuing, you agree to {"RichyReach's"}{'\n'}
                     <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Terms of Service</Text> and <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Privacy Policy</Text>
                   </Text>
                 </View>
@@ -426,7 +432,7 @@ export default function AuthScreen() {
                     Verify Your Account
                   </Text>
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.rose, marginTop: 12, textAlign: 'center', lineHeight: 20, paddingHorizontal: 12 }}>
-                    We've sent a 6-digit OTP code to{'\n'}
+                    {"We've"} sent a 6-digit OTP code to{'\n'}
                     <Text style={{ fontWeight: 'bold', color: Colors.oxblood }}>{getIdentifier()}</Text>
                   </Text>
                 </View>
@@ -517,7 +523,7 @@ export default function AuthScreen() {
                 {/* Resend Actions */}
                 <View className="flex-row justify-center mt-8 items-center">
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 13, color: 'rgba(63,3,11,0.5)' }}>
-                    Didn't receive the code?
+                    {"Didn't"} receive the code?
                   </Text>
                   <TouchableOpacity onPress={handleRequestOtp} disabled={loading}>
                     <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, color: Colors.roseDeep, marginLeft: 6, fontWeight: '700' }}>

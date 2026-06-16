@@ -88,7 +88,7 @@ export default function HomeScreen() {
   const { data: rawCampaignListData, isLoading: loadingCampaigns } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
     queryFn: () => {
-      if ((role as string) === 'brand') {
+      if ((role as string) === 'brand' && activeBrandProfileId) {
         return api.campaigns.list().catch(() => []);
       } else {
         return api.influencers.marketplace().catch(() => []);

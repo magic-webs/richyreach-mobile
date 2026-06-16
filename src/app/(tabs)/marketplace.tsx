@@ -248,7 +248,7 @@ export default function MarketplaceScreen() {
   const { data: rawCampaignListData, isLoading: loading } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
     queryFn: () => {
-      if ((role as string) === 'brand') {
+      if ((role as string) === 'brand' && activeBrandProfileId) {
         return api.campaigns.list().catch(() => []);
       } else {
         return api.influencers.marketplace().catch(() => []);
