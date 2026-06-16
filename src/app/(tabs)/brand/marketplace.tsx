@@ -803,7 +803,7 @@ export default function BrandMarketplaceScreen() {
             snapToInterval={containerHeight}
             snapToAlignment="start"
             decelerationRate="fast"
-            removeClippedSubviews={true}
+            removeClippedSubviews={Platform.OS === 'android'}
             initialNumToRender={2}
             maxToRenderPerBatch={3}
             windowSize={5}

@@ -4,6 +4,9 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Icon } from '@/components/ui/icon';
 import { useIsFocused } from 'expo-router';
 
+// Module-level cache to persist the user's mute/unmute preference across item swiping/unmounting
+let isGlobalMuted = false;
+
 interface ReelVideoPlayerProps {
   videoUrl: string;
   isPlaying: boolean;
@@ -11,7 +14,7 @@ interface ReelVideoPlayerProps {
 }
 
 export function ReelVideoPlayer({ videoUrl, isPlaying, height }: ReelVideoPlayerProps) {
-  const [muted, setMuted] = useState(Platform.OS === 'web');
+  const [muted, setMuted] = useState(isGlobalMuted);
   const [userPaused, setUserPaused] = useState(false);
   const isFocused = useIsFocused();
   const [appState, setAppState] = useState(AppState.currentState);
@@ -66,7 +69,9 @@ export function ReelVideoPlayer({ videoUrl, isPlaying, height }: ReelVideoPlayer
   };
 
   const toggleMuted = () => {
-    setMuted(!muted);
+    const nextMuted = !muted;
+    setMuted(nextMuted);
+    isGlobalMuted = nextMuted;
   };
 
   return (

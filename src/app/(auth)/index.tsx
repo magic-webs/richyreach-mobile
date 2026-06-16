@@ -84,7 +84,7 @@ export default function AuthScreen() {
   }, [method]);
 
   const getIdentifier = () => {
-    return method === 'email' ? email.trim() : `91${phone.trim()}`;
+    return method === 'email' ? email.trim() : `${phone.trim()}`;
   };
 
   const handleRequestOtp = async () => {
