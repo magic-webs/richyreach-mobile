@@ -71,85 +71,9 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
     return <Text style={hero.heading}>{title}</Text>;
   };
 
-  const getStaticSlides = () => [
-    <LinearGradient
-      key="static_a"
-      colors={[Gradients.rose[0], Gradients.rose[1]]}
-      style={hero.slide}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <View style={{ flex: 1, flexDirection: 'column', marginRight: 4 }}>
-        <View style={hero.top}>
-          <Text style={hero.eyebrow}>This week</Text>
-          <Text style={hero.heading}>
-            Earn up to <Text style={{ fontStyle: 'italic' }}>₹2.5L</Text> this month
-          </Text>
-        </View>
-        <View style={hero.bottom}>
-          <TouchableOpacity onPress={onStartPress} style={hero.startBtn} activeOpacity={0.85}>
-            <Text style={hero.startBtnText}>Start applying</Text>
-          </TouchableOpacity>
-          <View style={hero.badge}>
-            <Icon name="dollar-sign" size={14} color="#fff" />
-            <Text style={hero.badgeText}>312 open</Text>
-          </View>
-        </View>
-      </View>
-    </LinearGradient>,
-    <LinearGradient
-      key="static_b"
-      colors={[Colors.oxblood2, Colors.oxblood, Colors.oxbloodDeep]}
-      style={hero.slide}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <Text style={[hero.eyebrow, { color: Colors.roseSoft }]}>Live challenge</Text>
-        <Text style={[hero.heading, { color: Colors.cream }]}>#SummerGlow brand contest</Text>
-        <TouchableOpacity
-          onPress={onArenaPress}
-          style={hero.arenaBtn}
-          activeOpacity={0.8}
-        >
-          <Text style={hero.arenaBtnText}>₹10L prize pool</Text>
-          <Icon name="arrow" size={13} color={Colors.roseSoft} />
-        </TouchableOpacity>
-      </View>
-      <Icon name="flame" size={60} color={Colors.roseSoft} />
-    </LinearGradient>,
-    <LinearGradient
-      key="static_c"
-      colors={['#8d4750', '#5a1018']}
-      style={hero.slide}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <View style={{ flex: 1, flexDirection: 'column' }}>
-        <Text style={[hero.eyebrow, { color: Colors.roseSoft }]}>Creator growth</Text>
-        <Text style={[hero.heading, { color: Colors.cream, marginTop: 'auto' }]}>
-          Grow your <Text style={{ fontStyle: 'italic' }}>reach</Text>, your way
-        </Text>
-      </View>
-    </LinearGradient>,
-  ];
-
   const renderBannerSlide = (banner: any) => {
     const isImage = banner.bannerType === 'image';
     const isColor = banner.bannerType === 'color';
-
-    let colors = banner.gradientColors;
-    if (!colors || colors.length === 0) {
-      if (banner.id === 'hero_earn') {
-        colors = [Gradients.rose[0], Gradients.rose[1]];
-      } else if (banner.id === 'hero_challenge') {
-        colors = [Colors.oxblood2, Colors.oxblood, Colors.oxbloodDeep];
-      } else if (banner.id === 'hero_growth') {
-        colors = ['#8d4750', '#5a1018'];
-      } else {
-        colors = [Colors.oxblood2, Colors.oxbloodDeep];
-      }
-    }
 
     const slideContent = () => {
       if (banner.id === 'hero_earn') {
@@ -260,7 +184,7 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
     return (
       <LinearGradient
         key={banner.id}
-        colors={colors}
+        colors={banner.gradientColors || [Gradients.rose[0], Gradients.rose[1]]}
         style={hero.slide}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -270,13 +194,11 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
     );
   };
 
-  const slides = banners.length > 0
-    ? banners.map(renderBannerSlide)
-    : getStaticSlides();
+  const slides = banners.map(renderBannerSlide);
 
   return (
     <View style={styles.container}>
-      <Carousel slides={slides} height={154} dotColor={Colors.cream} />
+      <Carousel slides={slides} height={154} dotColor={Colors.oxblood} />
     </View>
   );
 }

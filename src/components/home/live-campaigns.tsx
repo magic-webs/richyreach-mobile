@@ -1,11 +1,13 @@
 import { GradientView } from '@/components/ui/gradient-view';
-import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Briefcase01Icon, GridIcon, ListViewIcon, BadgeCheckIcon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 
 const { width: W } = Dimensions.get('window');
 
@@ -74,23 +76,38 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
       {/* Section Header */}
       <View style={styles.sectionHeaderRow}>
         <GradientView variant="rose" style={styles.sectionIcon}>
-          <Icon name="briefcase" size={16} color="#fff" />
+          <HugeiconsIcon
+            icon={Briefcase01Icon}
+            size={16}
+            color="#fff"
+            strokeWidth={2}
+          />
         </GradientView>
         <Text style={styles.sectionTitle}>Live campaigns</Text>
 
         {/* Sliding Toggle View Mode Button */}
         <View style={styles.viewToggleGroup}>
           <Animated.View style={[styles.viewToggleSlider, { width: btnWidth, transform: [{ translateX }] }]} />
-          <TouchableOpacity 
+          <TouchableOpacity
             onLayout={(e) => setBtnWidth(e.nativeEvent.layout.width)}
-            onPress={() => setViewMode('grid')} 
-            style={styles.viewToggleBtn} 
+            onPress={() => setViewMode('grid')}
+            style={styles.viewToggleBtn}
             activeOpacity={0.8}
           >
-            <Icon name="grid" size={13} color={viewMode === 'grid' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'} />
+            <HugeiconsIcon
+              icon={GridIcon}
+              size={14}
+              color={viewMode === 'grid' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'}
+              strokeWidth={2}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setViewMode('list')} style={styles.viewToggleBtn} activeOpacity={0.8}>
-            <Icon name="list" size={13} color={viewMode === 'list' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'} />
+            <HugeiconsIcon
+              icon={ListViewIcon}
+              size={14}
+              color={viewMode === 'list' ? Colors.cream : 'rgba(63, 3, 11, 0.4)'}
+              strokeWidth={2}
+            />
           </TouchableOpacity>
         </View>
 
@@ -130,17 +147,17 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
             >
               <View style={isGrid ? styles.campaignThumb : styles.campaignThumbList}>
                 {cm.imageUrl ? (
-                  <Image 
-                    source={{ uri: cm.imageUrl }} 
-                    style={isGrid ? { width: '100%', height: 92 } : { width: 80, height: 80 }} 
-                    contentFit="cover" 
+                  <Image
+                    source={{ uri: cm.imageUrl }}
+                    style={isGrid ? { width: '100%', height: 92 } : { width: 80, height: 80 }}
+                    contentFit="cover"
                   />
                 ) : (
-                  <PlaceholderImage 
-                    tone={cm.tone} 
-                    height={isGrid ? 92 : 80} 
-                    width={isGrid ? undefined : 80} 
-                    borderRadius={isGrid ? 0 : 12} 
+                  <PlaceholderImage
+                    tone={cm.tone}
+                    height={isGrid ? 92 : 80}
+                    width={isGrid ? undefined : 80}
+                    borderRadius={isGrid ? 0 : 12}
                   />
                 )}
                 {isGrid && (
@@ -150,7 +167,12 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
                 )}
                 {cm.verified && (
                   <View style={isGrid ? styles.verifiedBadge : styles.verifiedBadgeList}>
-                    <Icon name="verified" size={isGrid ? 14 : 11} color={Colors.cream} />
+                    <HugeiconsIcon
+                      icon={BadgeCheckIcon}
+                      size={isGrid ? 14 : 11}
+                      color={Colors.cream}
+                      strokeWidth={2}
+                    />
                   </View>
                 )}
               </View>
@@ -163,7 +185,7 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
                 <Text style={styles.campaignTitle} numberOfLines={1}>
                   {cm.title}
                 </Text>
-                
+
                 {!isGrid && (
                   <Text style={styles.campaignAppliedTextList}>
                     {cm.applicants} applied · {cm.cat || 'Beauty'}
@@ -173,7 +195,12 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
                 <View style={isGrid ? styles.campaignFooter : styles.campaignFooterList}>
                   <Text style={styles.campaignBudget}>{cm.budget}</Text>
                   <GradientView variant="rose" style={styles.campaignArrow}>
-                    <Icon name="arrow" size={14} color="#fff" />
+                    <HugeiconsIcon
+                      icon={ArrowRight01Icon}
+                      size={14}
+                      color="#fff"
+                      strokeWidth={2}
+                    />
                   </GradientView>
                 </View>
               </View>
@@ -191,7 +218,7 @@ const styles = StyleSheet.create({
   sectionIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontFamily: FontFamily.sansMedium, fontSize: 20, fontWeight: '700', color: Colors.ink, flex: 1 },
   seeAll: { fontSize: 13, color: Colors.rose, fontWeight: '700' },
-  
+
   // Toggle style
   viewToggleGroup: {
     flexDirection: 'row',

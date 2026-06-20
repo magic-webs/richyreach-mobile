@@ -415,15 +415,11 @@ export default function BrandMarketplaceScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
-  // Show/Hide Tab Bar triggers using directional scroll
+  // Show/Hide Tab Bar triggers using directional scroll - modified to keep visible
   const handleScroll = (event: any) => {
     const currentOffset = event.nativeEvent.contentOffset.y;
-    if (currentOffset <= 5) {
-      useUIStore.getState().setTabBarVisible(true);
-    } else if (Math.abs(currentOffset - lastOffsetY.current) > 10) {
-      const isScrollingUp = currentOffset < lastOffsetY.current;
-      useUIStore.getState().setTabBarVisible(isScrollingUp);
-    }
+    // Always keep tab bar visible
+    useUIStore.getState().setTabBarVisible(true);
     lastOffsetY.current = currentOffset;
 
     if (Platform.OS === 'web' && containerHeight > 0) {
@@ -542,7 +538,7 @@ export default function BrandMarketplaceScreen() {
   });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: 65 }]}>
       <MarketplaceHeader
         activeBrandLogo={activeBrand?.logo}
         activeBrandName={activeBrand?.companyName}

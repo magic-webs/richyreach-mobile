@@ -1,0 +1,144 @@
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { Icon } from '@/components/ui/icon';
+import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Image } from 'expo-image';
+
+export default function BrandChatListScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchRooms = async () => {
+    try {
+      const data = await api.chat.rooms();
+      // Filter out admin support rooms or format them appropriately if needed
+      setRooms(data);
+    } catch (err) {
+      console.error("Failed to load chat rooms", err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchRooms();
+  };
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity onPress={() => router.replace('/brand')} style={styles.backBtn} activeOpacity={0.8}>
+            <Icon name="back" size={22} color={Colors.oxblood} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Creator Chats</Text>
+        </View>
+      </View>
+
+      {/* Rooms List */}
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.rose} />
+        </View>
+      ) : rooms.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>No creator conversations yet.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={rooms}
+          keyExtractor={(item) => item.roomId}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          renderItem={({ item: c }) => {
+            // Under brand mode, titleName is the Creator's name / instagramHandle
+            const titleName = c.name || c.companyName || "Support Room";
+            const subTitle = c.instagramHandle ? `@${c.instagramHandle}` : "Active Chat";
+            const imageUrl = c.avatar || c.logo || null;
+            const isOnline = c.online ?? false;
+            
+            // Format creation date
+            let timeStr = "";
+            if (c.createdAt) {
+              const d = new Date(c.createdAt);
+              timeStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+
+            return (
+              <TouchableOpacity
+                onPress={() => router.push({
+                  pathname: '/chat/brand/[id]',
+                  params: {
+                    id: c.roomId,
+                    name: titleName,
+                    avatar: imageUrl || "",
+                  }
+                })}
+                activeOpacity={0.8}
+                style={styles.chatRow}
+              >
+                <View style={styles.avatarWrap}>
+                  {imageUrl ? (
+                    <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
+                  ) : (
+                    <PlaceholderImage tone="rose" height={52} width={52} borderRadius={99} />
+                  )}
+                  {isOnline && <View style={styles.onlineDot} />}
+                </View>
+                <View style={styles.chatInfo}>
+                  <View style={styles.chatTopRow}>
+                    <Text style={styles.chatName} numberOfLines={1}>{titleName}</Text>
+                    {timeStr ? <Text style={styles.chatTime}>{timeStr}</Text> : null}
+                  </View>
+                  <View style={styles.chatBottomRow}>
+                    <Text style={styles.chatLast} numberOfLines={1}>
+                      {subTitle}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: Colors.creamLite },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: 'rgba(244,236,228,0.9)', borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
+  backBtn: { width: 38, height: 38, borderRadius: 99, backgroundColor: 'rgba(63,3,11,0.06)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: FontFamily.serif, fontSize: 24, fontWeight: '700', color: Colors.ink },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: 'rgba(63,3,11,0.5)', fontSize: 14 },
+
+  chatRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 16, backgroundColor: '#fff', ...Shadow.card },
+  avatarWrap: { position: 'relative', flexShrink: 0 },
+  avatarImage: { width: 52, height: 52, borderRadius: 26 },
+  onlineDot: { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 99, backgroundColor: '#3ec97a', borderWidth: 2.5, borderColor: '#fff' },
+  chatInfo: { flex: 1, minWidth: 0 },
+  chatTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  chatName: { fontWeight: '700', fontSize: 15.5, color: Colors.ink, flex: 1, minWidth: 0 },
+  chatTime: { fontSize: 11, color: 'rgba(63,3,11,0.4)', fontWeight: '600', flexShrink: 0 },
+  chatBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  chatLast: { flex: 1, fontSize: 13, color: Colors.rose, fontWeight: '600' },
+});

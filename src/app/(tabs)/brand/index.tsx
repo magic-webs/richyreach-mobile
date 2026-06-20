@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActionGrid } from '@/components/brand/home/ActionGrid';
+import { CampaignInviteSheet } from '@/components/brand/home/CampaignInviteSheet';
 import { CampaignsSection } from '@/components/brand/home/CampaignsSection';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { CreateCampaignSheet } from '@/components/brand/home/CreateCampaignSheet';
@@ -14,7 +15,6 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { StatusBar } from 'expo-status-bar';
 
 export default function BrandHomeScreen() {
   const session = useAuthStore((s) => s.session);
@@ -23,6 +23,8 @@ export default function BrandHomeScreen() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
+  const [selectedCreator, setSelectedCreator] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: brandProfile } = useQuery({
@@ -74,7 +76,10 @@ export default function BrandHomeScreen() {
           <ActionGrid onNewCampaign={handleNewCampaign} />
           <CampaignsSection onNewCampaign={handleNewCampaign} />
           <PendingReviewsSection />
-          <SuggestedCreatorsSection />
+          <SuggestedCreatorsSection onInviteCreator={(creator) => {
+            setSelectedCreator(creator);
+            setIsInviteSheetOpen(true);
+          }} />
         </View>
       </ScrollView>
       <CreateCampaignSheet
@@ -99,6 +104,12 @@ export default function BrandHomeScreen() {
           queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
         }}
         onAddNewProfile={() => setIsProfileSheetOpen(true)}
+      />
+
+      <CampaignInviteSheet
+        isOpen={isInviteSheetOpen}
+        onClose={() => setIsInviteSheetOpen(false)}
+        creator={selectedCreator}
       />
     </>
   );

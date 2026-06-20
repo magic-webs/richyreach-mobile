@@ -197,6 +197,39 @@ export default function CampaignDetailScreen() {
     });
   };
 
+  const handleAcceptApplicant = async (app: any) => {
+    try {
+      const room = await api.chat.createRoom(app.influencerId, id);
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
+
+      showModal({
+        title: 'Application Accepted',
+        message: `You accepted ${app.name || app.instagramHandle}'s application. Navigating to the chat room...`,
+        actions: [
+          {
+            text: 'Go to Chat',
+            onPress: () => {
+              router.push({
+                pathname: '/chat/[id]',
+                params: {
+                  id: room.id || room.roomId,
+                  name: app.name || app.instagramHandle,
+                  avatar: app.avatar || '',
+                }
+              });
+            }
+          }
+        ]
+      });
+    } catch (err: any) {
+      console.error('Failed to accept applicant:', err);
+      showModal({
+        title: 'Error',
+        message: err.message || 'Failed to accept application.',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -372,6 +405,71 @@ export default function CampaignDetailScreen() {
                       <Text style={styles.detailsRowValue}>{brief.guidelines.brandKeywords.join(', ')}</Text>
                     </View>
                   )}
+                </View>
+              )}
+
+              {/* Applicants Section */}
+              {queryData?.applications && queryData.applications.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionHeading}>Applicants ({queryData.applications.length})</Text>
+                  <View style={{ gap: 16, marginTop: 8 }}>
+                    {queryData.applications.map((app: any) => {
+                      const isPending = app.status === 'pending';
+                      const isAccepted = app.status === 'accepted';
+                      
+                      let followersStr = String(app.followers || '0');
+                      const followersNum = Number(app.followers || 0);
+                      if (followersNum >= 1000000) followersStr = `${(followersNum / 1000000).toFixed(1)}M`;
+                      else if (followersNum >= 1000) followersStr = `${(followersNum / 1000).toFixed(0)}k`;
+
+                      return (
+                        <View key={app.id} style={styles.applicantCard}>
+                          <View style={styles.applicantHeader}>
+                            {app.avatar ? (
+                              <Image source={{ uri: app.avatar }} style={styles.applicantAvatar} />
+                            ) : (
+                              <PlaceholderImage tone="rose" height={40} width={40} borderRadius={20} />
+                            )}
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                              <Text style={styles.applicantName}>{app.name || app.instagramHandle}</Text>
+                              <Text style={styles.applicantHandle}>@{app.instagramHandle}</Text>
+                            </View>
+                            <View style={styles.applicantMeta}>
+                              <Text style={styles.applicantMetaVal}>{followersStr}</Text>
+                              <Text style={styles.applicantMetaLabel}>Followers</Text>
+                            </View>
+                            <View style={[styles.applicantMeta, { marginLeft: 12 }]}>
+                              <Text style={styles.applicantMetaVal}>{app.engagementRate || '4.5'}%</Text>
+                              <Text style={styles.applicantMetaLabel}>Eng. Rate</Text>
+                            </View>
+                          </View>
+                          <View style={styles.proposalContainer}>
+                            <Text style={styles.proposalLabel}>Proposal:</Text>
+                            <Text style={styles.proposalText}>"{app.proposal}"</Text>
+                          </View>
+                          
+                          <View style={styles.applicantActions}>
+                            {isPending ? (
+                              <TouchableOpacity
+                                style={styles.acceptApplicantBtn}
+                                activeOpacity={0.8}
+                                onPress={() => handleAcceptApplicant(app)}
+                              >
+                                <Icon name="check" size={14} color={Colors.white} />
+                                <Text style={styles.acceptApplicantBtnText}>Accept & Chat</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={[styles.statusBadge, isAccepted ? styles.statusAccepted : styles.statusDeclined]}>
+                                <Text style={[styles.statusBadgeText, isAccepted ? styles.statusAcceptedText : styles.statusDeclinedText]}>
+                                  {isAccepted ? 'Accepted ✓' : 'Declined ✕'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
               )}
 
@@ -946,5 +1044,111 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.cream,
     fontWeight: '700',
+  },
+  applicantCard: {
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+  },
+  applicantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  applicantAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  applicantName: {
+    fontFamily: FontFamily.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  applicantHandle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63, 3, 11, 0.45)',
+  },
+  applicantMeta: {
+    alignItems: 'flex-end',
+  },
+  applicantMetaVal: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.roseDeep,
+  },
+  applicantMetaLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 9,
+    color: 'rgba(63, 3, 11, 0.45)',
+  },
+  proposalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.05)',
+    marginBottom: 12,
+  },
+  proposalLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.rose,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  proposalText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(42, 2, 7, 0.75)',
+    fontStyle: 'italic',
+  },
+  applicantActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  acceptApplicantBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.oxblood,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  acceptApplicantBtnText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 12,
+    color: Colors.cream,
+    fontWeight: '700',
+  },
+  statusBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
+    alignItems: 'center',
+  },
+  statusBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  statusAccepted: {
+    backgroundColor: 'rgba(62,201,122,0.12)',
+  },
+  statusAcceptedText: {
+    color: '#279a55',
+  },
+  statusDeclined: {
+    backgroundColor: 'rgba(235,94,85,0.12)',
+  },
+  statusDeclinedText: {
+    color: '#d93e36',
   },
 });

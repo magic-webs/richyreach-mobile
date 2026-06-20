@@ -1,18 +1,31 @@
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
-const MOCK_CREATORS = [
-  { id: 'mira', name: 'Muskan', tone: 'rose' as const, followers: '184k', engagement: '6.2%', niche: 'Beauty' },
-  { id: 'kai', name: 'Kai Rao', tone: 'ox' as const, followers: '96k', engagement: '7.8%', niche: 'Tech' },
-  { id: 'lea', name: 'Léa Fontaine', tone: 'rose' as const, followers: '218k', engagement: '5.4%', niche: 'Fashion' }
-];
+interface SuggestedCreatorsSectionProps {
+  onInviteCreator?: (creator: any) => void;
+}
 
-export function SuggestedCreatorsSection() {
+function CreatorCardSkeleton() {
+  return (
+    <View style={styles.creatorCard}>
+      <View style={styles.creatorAvatarWrap}>
+        <Skeleton variant="circle" width={60} height={60} />
+      </View>
+      <Skeleton variant="text" width={70} style={{ marginTop: 4 }} />
+      <Skeleton variant="text" width={55} style={{ marginTop: 6 }} />
+      <Skeleton variant="rect" width={50} height={18} borderRadius={6} style={{ marginTop: 8 }} />
+      <Skeleton variant="rect" width="100%" height={28} borderRadius={99} style={{ marginTop: 12 }} />
+    </View>
+  );
+}
+
+export function SuggestedCreatorsSection({ onInviteCreator }: SuggestedCreatorsSectionProps) {
   const router = useRouter();
 
   const { data: rawCreatorsData, isLoading: loading } = useQuery<any>({
@@ -24,7 +37,7 @@ export function SuggestedCreatorsSection() {
 
   const creators = React.useMemo(() => {
     if (!Array.isArray(rawCreators) || rawCreators.length === 0) {
-      return MOCK_CREATORS;
+      return [];
     }
 
     const mapped = rawCreators
@@ -36,7 +49,6 @@ export function SuggestedCreatorsSection() {
         if (fCount >= 1000000) fStr = `${(fCount / 1000000).toFixed(1)}M`;
         else if (fCount >= 1000) fStr = `${(fCount / 1000).toFixed(0)}k`;
 
-        // Prefer influencer profile id (ip_…), fall back to userId, then index
         const rawId = c.id || c._id || c.userId || `creator-${idx}`;
 
         return {
@@ -50,7 +62,6 @@ export function SuggestedCreatorsSection() {
       })
       .filter((item): item is NonNullable<typeof item> => !!item);
 
-    // Deduplicate: keep first occurrence of each id
     const seen = new Set<string>();
     return mapped.filter((item) => {
       if (seen.has(item.id)) return false;
@@ -73,15 +84,12 @@ export function SuggestedCreatorsSection() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.suggestedScrollContent}
       >
-        {loading && creators.length === 0 ? (
-           MOCK_CREATORS.map((creator, idx) => (
-             <View key={`mock-${creator.id}-${idx}`} style={[styles.creatorCard, { opacity: 0.5 }]}>
-               <View style={styles.creatorAvatarWrap}>
-                 <PlaceholderImage tone={creator.tone} height={60} width={60} borderRadius={30} />
-               </View>
-               <Text style={styles.creatorName}>{creator.name}</Text>
-             </View>
-           ))
+        {loading ? (
+          <>
+            <CreatorCardSkeleton />
+            <CreatorCardSkeleton />
+            <CreatorCardSkeleton />
+          </>
         ) : (
           creators.map((creator: any, idx: number) => (
             <View key={`${creator.id}-${idx}`} style={styles.creatorCard}>
@@ -98,10 +106,7 @@ export function SuggestedCreatorsSection() {
               <TouchableOpacity
                 style={styles.inviteBtn}
                 activeOpacity={0.85}
-                onPress={() => router.push({
-                  pathname: '/(tabs)/marketplace',
-                  params: { inviteCreator: creator.name, followers: creator.followers, eng: creator.engagement, tone: creator.tone }
-                })}
+                onPress={() => onInviteCreator?.(creator)}
               >
                 <Text style={styles.inviteBtnText}>Invite</Text>
               </TouchableOpacity>

@@ -1,33 +1,33 @@
 import { FloatingChatButton } from '@/components/floating-chat-button';
 import { GradientView } from '@/components/ui/gradient-view';
-import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Tabs } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUIStore } from '@/store/ui';
-
 import { useAuthStore } from '@/store/auth';
-import { StatusBar } from 'expo-status-bar';
-
+import { HugeiconsIcon } from "@hugeicons/react-native"
+import { Home01FreeIcons } from '@hugeicons/core-free-icons';
+import { Store04FreeIcons } from '@hugeicons/core-free-icons';
+import { CrownIcon } from '@hugeicons/core-free-icons';
+import { User02FreeIcons } from '@hugeicons/core-free-icons';
 const CREATOR_TABS = [
-  { key: 'index', icon: 'home', label: 'Home' },
-  { key: 'marketplace', icon: 'grid', label: 'Market' },
-  { key: 'arena', icon: 'arena', label: 'Arena' },
-  { key: 'profile', icon: 'user', label: 'Profile' },
+  { key: 'index', icon: Home01FreeIcons, label: 'Home' },
+  { key: 'marketplace', icon: Store04FreeIcons, label: 'Market' },
+  { key: 'arena', icon: CrownIcon, label: 'Arena' },
+  { key: 'profile', icon: User02FreeIcons, label: 'Profile' },
 ] as const;
 
 const BRAND_TABS = [
-  { key: 'brand/index', icon: 'home', label: 'Home' },
-  { key: 'brand/marketplace', icon: 'grid', label: 'Market' },
-  { key: 'brand/arena', icon: 'arena', label: 'Arena' },
-  { key: 'brand/profile', icon: 'user', label: 'Profile' },
+  { key: 'brand/index', icon: Home01FreeIcons, label: 'Home' },
+  { key: 'brand/marketplace', icon: Store04FreeIcons, label: 'Market' },
+  { key: 'brand/arena', icon: CrownIcon, label: 'Arena' },
+  { key: 'brand/profile', icon: User02FreeIcons, label: 'Profile' },
 ] as const;
 
 interface TabBarItemProps {
-  tab: { readonly key: string; readonly icon: string; readonly label: string; };
+  tab: { readonly key: string; readonly icon: any; readonly label: string; };
   on: boolean;
   navigation: any;
 }
@@ -100,10 +100,10 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
       <View style={styles.contentContainer} pointerEvents="none">
         <View style={styles.iconWrapper}>
           <Animated.View style={[styles.absoluteIcon, animatedIconActiveStyle]}>
-            <Icon name={tab.icon} size={22} color={Colors.cream} />
+            <HugeiconsIcon icon={tab.icon} size={22} color={Colors.cream} strokeWidth={2} />
           </Animated.View>
           <Animated.View style={[styles.absoluteIcon, animatedIconInactiveStyle]}>
-            <Icon name={tab.icon} size={22} color="rgba(63, 3, 11, 0.69)" />
+            <HugeiconsIcon icon={tab.icon} size={22} color="rgba(63, 3, 11, 0.69)" strokeWidth={2} />
           </Animated.View>
         </View>
 
@@ -125,24 +125,8 @@ function CustomTabBar({ state, navigation }: any) {
   const activeRouteName = state.routes[state.index].name;
   const activeIdx = activeTabs.findIndex((tab) => tab.key === activeRouteName);
 
-  const tabBarVisible = useUIStore((s) => s.tabBarVisible);
-  const translateY = useSharedValue(0);
-
-  useEffect(() => {
-    translateY.value = withTiming(tabBarVisible ? 0 : 120, {
-      duration: 300,
-      easing: Easing.bezier(0.25, 1, 0.5, 1),
-    });
-  }, [tabBarVisible]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
-
   return (
-    <Animated.View style={[styles.tabBarContainer, animatedStyle, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBar}>
         {activeTabs.map((tab, i) => {
           const on = i === activeIdx;
@@ -156,7 +140,7 @@ function CustomTabBar({ state, navigation }: any) {
           );
         })}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 

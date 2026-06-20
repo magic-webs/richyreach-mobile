@@ -247,9 +247,9 @@ export default function HomeScreen() {
         />
 
         {/* Subscription offer */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <OfferBanner />
-        </View>
+        </View> */}
 
         <View style={{ gap: 25 }}>
 

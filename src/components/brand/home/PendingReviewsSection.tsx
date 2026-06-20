@@ -2,33 +2,52 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { useUIStore } from '@/store/ui';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useProfilesStore } from '@/store/profiles';
+import { api } from '@/lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 
 export function PendingReviewsSection() {
+  const router = useRouter();
   const showModal = useUIStore((s) => s.showModal);
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+  const queryClient = useQueryClient();
 
-  // Mock State for Review Submissions
-  const [reviews, setReviews] = useState([
-    { id: '1', name: 'Muskan', campaign: 'Summer Glow Serum', type: 'Reel', length: '28s', tone: 'ox' as const },
-    { id: '2', name: 'Kai Rao', campaign: 'Heritage Chronograph', type: 'Post', length: 'carousel', tone: 'rose' as const },
-    { id: '3', name: 'Léa Fontaine', campaign: 'Summer Glow Serum', type: 'Story', length: '3 frames', tone: 'ox' as const }
-  ]);
+  // Query actual campaign applications with status = 'pending'
+  const { data: applications = [], isLoading } = useQuery({
+    queryKey: ['brandPendingApplications', activeProfileId],
+    queryFn: () => api.brands.applications('pending').catch(() => []),
+    enabled: !!activeProfileId,
+  });
 
-  const handleAcceptReview = (name: string, id: string) => {
+  const handleAcceptReview = (name: string, id: string, influencerId: string, campaignId: string, avatar?: string) => {
     showModal({
-      title: 'Approve Deliverable',
-      message: `Are you sure you want to approve the submission from ${name}? This will release the payout.`,
+      title: 'Accept Application',
+      message: `Are you sure you want to accept the application from ${name}? This will open a chat room.`,
       actions: [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Approve & Pay',
-          onPress: () => {
-            setReviews((prev) => prev.filter((r) => r.id !== id));
-            showModal({
-              title: 'Success',
-              message: `Successfully approved and processed payment for ${name}!`,
-            });
+          text: 'Accept & Chat',
+          onPress: async () => {
+            try {
+              const room = await api.chat.createRoom(influencerId, campaignId);
+              // Invalidate query
+              queryClient.invalidateQueries({ queryKey: ['brandPendingApplications', activeProfileId] });
+              // Navigate to brand chat room
+              router.push({
+                pathname: '/chat/brand/[id]',
+                params: { id: room.id, name, avatar: avatar || '' }
+              });
+            } catch (err: any) {
+              console.error("Failed to accept application", err);
+              showModal({
+                title: 'Error',
+                message: err.message || 'Failed to accept application',
+              });
+            }
           }
         }
       ]
@@ -37,58 +56,80 @@ export function PendingReviewsSection() {
 
   const handleDeclineReview = (name: string, id: string) => {
     showModal({
-      title: 'Request Revision',
-      message: `Are you sure you want to decline this submission from ${name}? You can ask them to revise it.`,
+      title: 'Decline Application',
+      message: `Are you sure you want to decline the application from ${name}?`,
       actions: [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Request Revision',
+          text: 'Decline',
           style: 'destructive',
-          onPress: () => {
-            setReviews((prev) => prev.filter((r) => r.id !== id));
-            showModal({
-              title: 'Declined',
-              message: `Notified ${name} to request revisions.`,
-            });
+          onPress: async () => {
+            try {
+              await api.brands.rejectApplication(id);
+              queryClient.invalidateQueries({ queryKey: ['brandPendingApplications', activeProfileId] });
+              showModal({
+                title: 'Declined',
+                message: `Successfully declined ${name}'s application.`,
+              });
+            } catch (err: any) {
+              console.error("Failed to decline application", err);
+              showModal({
+                title: 'Error',
+                message: err.message || 'Failed to decline application',
+              });
+            }
           }
         }
       ]
     });
   };
 
-  if (reviews.length === 0) return null;
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Pending review</Text>
+        <ActivityIndicator style={{ marginTop: 12 }} size="small" color={Colors.rose} />
+      </View>
+    );
+  }
+
+  if (applications.length === 0) return null;
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Pending review</Text>
         <View style={styles.badgeCount}>
-          <Text style={styles.badgeCountText}>{reviews.length}</Text>
+          <Text style={styles.badgeCountText}>{applications.length}</Text>
         </View>
       </View>
 
       <View style={styles.reviewList}>
-        {reviews.map((rev) => (
+        {applications.map((rev) => (
           <View key={rev.id} style={styles.reviewCard}>
-            <PlaceholderImage tone={rev.tone} height={40} width={40} borderRadius={10} />
+            {rev.avatar ? (
+              <Image source={{ uri: rev.avatar }} style={styles.reviewAvatar} />
+            ) : (
+              <PlaceholderImage tone="rose" height={40} width={40} borderRadius={10} />
+            )}
             <View style={styles.reviewContent}>
-              <Text style={styles.reviewName}>{rev.name}</Text>
+              <Text style={styles.reviewName}>{rev.name || `@${rev.instagramHandle}`}</Text>
               <Text style={styles.reviewInfo} numberOfLines={1}>
-                {rev.campaign} · {rev.type} · {rev.length}
+                {rev.campaignTitle} · {rev.campaignType} · "{rev.proposal}"
               </Text>
             </View>
             <View style={styles.reviewActions}>
               <TouchableOpacity
                 style={[styles.reviewActionBtn, styles.acceptBtn]}
                 activeOpacity={0.8}
-                onPress={() => handleAcceptReview(rev.name, rev.id)}
+                onPress={() => handleAcceptReview(rev.name || `@${rev.instagramHandle}`, rev.id, rev.influencerId, rev.campaignId, rev.avatar)}
               >
                 <Icon name="check" size={16} color={Colors.green} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.reviewActionBtn, styles.declineBtn]}
                 activeOpacity={0.8}
-                onPress={() => handleDeclineReview(rev.name, rev.id)}
+                onPress={() => handleDeclineReview(rev.name || `@${rev.instagramHandle}`, rev.id)}
               >
                 <Icon name="x" size={16} color={Colors.rose} />
               </TouchableOpacity>
@@ -143,6 +184,11 @@ const styles = StyleSheet.create({
     ...Shadow.card,
     borderWidth: 0.5,
     borderColor: 'rgba(63, 3, 11, 0.04)',
+  },
+  reviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
   },
   reviewContent: {
     flex: 1,

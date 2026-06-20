@@ -1,5 +1,4 @@
 import { GradientView } from '@/components/ui/gradient-view';
-import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
@@ -16,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Skeleton } from '@/components/ui/skeleton';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon, Share01Icon, Bookmark02Icon, BadgeCheckIcon, Clock01Icon, InstagramIcon, Camera01Icon, UserGroupIcon, Calendar01Icon, CheckIcon, ChatIcon } from '@hugeicons/core-free-icons';
 
 function CollabDetailSkeleton() {
   const insets = useSafeAreaInsets();
@@ -28,7 +29,7 @@ function CollabDetailSkeleton() {
         {/* Top nav */}
         <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
-            <Icon name="back" size={22} color={Colors.oxblood} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <View style={StyleSheet.absoluteFill}>
@@ -233,10 +234,10 @@ export default function CollabDetail() {
   }
 
   const facts = [
-    { icon: 'reel', label: 'Platform', value: cm.platform },
-    { icon: 'camera', label: 'Deliverables', value: cm.type },
-    { icon: 'users', label: 'Min. audience', value: cm.followers },
-    { icon: 'calendar', label: 'Timeline', value: cm.deadline },
+    { icon: InstagramIcon, label: 'Platform', value: cm.platform },
+    { icon: Camera01Icon, label: 'Deliverables', value: cm.type },
+    { icon: UserGroupIcon, label: 'Min. audience', value: cm.followers },
+    { icon: Calendar01Icon, label: 'Timeline', value: cm.deadline },
   ];
 
   return (
@@ -258,14 +259,15 @@ export default function CollabDetail() {
           {/* Top nav */}
           <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
-              <Icon name="back" size={22} color={Colors.oxblood} />
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              {['share', 'bookmark'].map((ic) => (
-                <TouchableOpacity key={ic} style={styles.navBtn} activeOpacity={0.8}>
-                  <Icon name={ic} size={19} color={Colors.oxblood} />
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
+                <HugeiconsIcon icon={Share01Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
+                <HugeiconsIcon icon={Bookmark02Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
+              </TouchableOpacity>
             </View>
           </View>
           {/* Title overlay */}
@@ -277,7 +279,7 @@ export default function CollabDetail() {
                 <PlaceholderImage tone="cream" height={30} width={30} borderRadius={99} />
               )}
               <Text style={styles.brandName}>{cm.brand}</Text>
-              {cm.verified && <Icon name="verified" size={15} color={Colors.roseSoft} />}
+              {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={15} color={Colors.roseSoft} strokeWidth={2} />}
               <Text style={styles.reachText}>· {cm.followers} reach</Text>
             </View>
             <Text style={styles.campaignTitle}>{cm.title}</Text>
@@ -294,7 +296,7 @@ export default function CollabDetail() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={styles.deadlineRow}>
-                <Icon name="clock" size={14} color={Colors.roseSoft} />
+                <HugeiconsIcon icon={Clock01Icon} size={14} color={Colors.roseSoft} strokeWidth={2} />
                 <Text style={styles.deadlineText}>{cm.deadline}</Text>
               </View>
               <Text style={styles.applicantsText}>{cm.applicants} creators applied</Text>
@@ -305,7 +307,7 @@ export default function CollabDetail() {
           <View style={styles.factsWrap}>
             {facts.map((f) => (
               <View key={f.label} style={styles.factCard}>
-                <Icon name={f.icon} size={16} color={Colors.rose} />
+                <HugeiconsIcon icon={f.icon} size={16} color={Colors.rose} strokeWidth={2} />
                 <Text style={styles.factValue}>{f.value}</Text>
                 <Text style={styles.factLabel}>{f.label}</Text>
               </View>
@@ -325,7 +327,7 @@ export default function CollabDetail() {
               {cm.deliverables.map((d: string, k: number) => (
                 <View key={k} style={[styles.deliverableRow, k < cm.deliverables.length - 1 && styles.deliverableBorder]}>
                   <GradientView variant="rose" style={styles.checkCircle}>
-                    <Icon name="check" size={14} color="#fff" />
+                    <HugeiconsIcon icon={CheckIcon} size={14} color="#fff" strokeWidth={2} />
                   </GradientView>
                   <Text style={styles.deliverableText}>{d}</Text>
                 </View>
@@ -345,7 +347,7 @@ export default function CollabDetail() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <Text style={styles.brandCardName}>{cm.brand}</Text>
-                  {cm.verified && <Icon name="verified" size={14} color={Colors.rose} />}
+                  {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />}
                 </View>
                 <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
               </View>
@@ -371,7 +373,7 @@ export default function CollabDetail() {
           style={styles.chatBtn}
           activeOpacity={0.8}
         >
-          <Icon name="chat" size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ChatIcon} size={22} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
 
         <Animated.View style={{ flex: 1, height: 52, transform: [{ scale: applyScale }] }}>
@@ -411,13 +413,13 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
   brandName: { fontWeight: '700', fontSize: 14, color: Colors.cream },
   reachText: { fontSize: 12, color: 'rgba(232,216,204,0.7)' },
-  campaignTitle: { fontFamily: FontFamily.serif, fontSize: 24, fontWeight: '600', color: Colors.cream, lineHeight: 28 },
+  campaignTitle: { fontFamily: FontFamily.sansMedium, fontSize: 24, fontWeight: '600', color: Colors.cream, lineHeight: 28 },
 
   body: { paddingHorizontal: 18, paddingTop: 20 },
 
   budgetStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 18, padding: 16 },
   budgetLabel: { fontSize: 11.5, color: Colors.roseSoft, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  budgetAmount: { fontFamily: FontFamily.serif, fontSize: 28, fontWeight: '700', color: Colors.cream, marginTop: 3 },
+  budgetAmount: { fontFamily: FontFamily.sansMedium, fontSize: 28, fontWeight: '700', color: Colors.cream, marginTop: 3 },
   deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   deadlineText: { fontSize: 12, color: Colors.cream, fontWeight: '600' },
   applicantsText: { fontSize: 11.5, color: 'rgba(232,216,204,0.6)', marginTop: 3 },

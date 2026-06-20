@@ -62,6 +62,8 @@ export const api = {
     delete: (id: string) => request(`/campaigns/${id}`, {
       method: 'DELETE',
     }),
+    invite: (influencerId: string, campaignId: string) =>
+      request('/campaigns/invite', { method: 'POST', body: JSON.stringify({ influencerId, campaignId }) }),
   },
   influencers: {
     list: () => request('/influencers'),
@@ -105,6 +107,8 @@ export const api = {
     profiles: () => request<any[]>('/brands/profiles'),
     updateProfile: (data: any) => request('/brands/profile', { method: 'POST', body: JSON.stringify(data) }),
     dashboard: () => request('/brands/dashboard'),
+    applications: (status?: string) => request<any[]>(`/brands/applications${status ? `?status=${status}` : ''}`),
+    rejectApplication: (id: string) => request(`/brands/applications/${id}/reject`, { method: 'POST' }),
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),

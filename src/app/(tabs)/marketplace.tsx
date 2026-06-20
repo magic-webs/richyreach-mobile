@@ -18,6 +18,8 @@ import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProf
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { TactileButton } from '@/components/ui/tactile-button';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowRightIcon, Bookmark02FreeIcons, ChatIcon, HeartIcon, InstagramIcon, Message02FreeIcons, Navigation03FreeIcons, SendToBackIcon } from '@hugeicons/core-free-icons';
 
 const SORTS = ['Top match', 'Highest pay', 'Ending soon', 'New'];
 
@@ -54,7 +56,12 @@ function StripedBanner({ tone, budget, imageUrl }: { tone: 'rose' | 'ox' | 'crea
       {imageUrl ? (
         <>
           <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(42,2,7,0.38)' }]} />
+          <LinearGradient
+            colors={['rgba(42, 2, 7, 0.35)', 'transparent']}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
         </>
       ) : (
         <>
@@ -71,7 +78,12 @@ function StripedBanner({ tone, budget, imageUrl }: { tone: 'rose' | 'ox' | 'crea
       {/* Bottom badges */}
       <View style={styles.bannerBadges}>
         <View style={styles.platformBadge}>
-          <Icon name="instagram" size={13} color="#fff" />
+          <HugeiconsIcon
+            icon={InstagramIcon}
+            size={13}
+            color="#fff"
+            strokeWidth={2}
+          />
           <Text style={styles.platformText}>Instagram</Text>
         </View>
 
@@ -141,17 +153,37 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
       <View style={styles.actionIconRow}>
         <View style={styles.leftIcons}>
           <TouchableOpacity onPress={() => setLiked(!liked)} style={styles.iconBtn}>
-            <Icon name="heart" size={22} color={liked ? '#e74c3c' : Colors.oxblood} />
+            <HugeiconsIcon
+              icon={HeartIcon}
+              size={22}
+              strokeWidth={2}
+              color={liked ? '#e74c3c' : Colors.oxblood}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={onPress}>
-            <Icon name="chat" size={22} color={Colors.oxblood} />
+            <HugeiconsIcon
+              icon={Message02FreeIcons}
+              size={22}
+              strokeWidth={2}
+              color={Colors.oxblood}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn}>
-            <Icon name="send" size={22} color={Colors.oxblood} />
+            <HugeiconsIcon
+              icon={Navigation03FreeIcons}
+              size={22}
+              strokeWidth={2}
+              color={Colors.oxblood}
+            />
           </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={() => setBookmarked(!bookmarked)} style={styles.iconBtn}>
-          <Icon name="bookmark" size={22} color={bookmarked ? Colors.rose : Colors.oxblood} />
+          <HugeiconsIcon
+            icon={Bookmark02FreeIcons}
+            size={22}
+            strokeWidth={2}
+            color={bookmarked ? Colors.rose : Colors.oxblood}
+          />
         </TouchableOpacity>
       </View>
 
@@ -180,7 +212,11 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
           fullWidth
         />
         <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.arrowCtaBtn}>
-          <Icon name="arrow" size={18} color={Colors.oxblood} />
+          <HugeiconsIcon
+            icon={ArrowRightIcon}
+            size={18}
+            color={Colors.oxblood}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -315,7 +351,7 @@ export default function MarketplaceScreen() {
         <View style={styles.headerTop}>
           <Text style={[{ fontFamily: FontFamily.sansMedium, fontSize: 24, color: Colors.oxblood }]}>Marketplace</Text>
         </View>
-        <Text style={[styles.greetSub, { fontFamily: FontFamily.sansRegular }]}>Discover the latest collaborations and campaigns</Text>
+        {/* <Text style={[styles.greetSub, { fontFamily: FontFamily.sansRegular }]}>Discover the latest collaborations and campaigns</Text> */}
 
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
@@ -570,7 +606,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   cardCampaignTitle: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 18,
     fontWeight: '700',
     color: Colors.ink,
