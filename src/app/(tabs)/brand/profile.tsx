@@ -244,7 +244,7 @@ export default function BrandProfileScreen() {
 
   // Fetch brand profile from backend via TanStack Query
   const { data: profileData, isLoading: loadingProfile } = useQuery<any>({
-    queryKey: ['brandProfile'],
+    queryKey: ['brandProfile', activeProfileId],
     queryFn: () => api.brands.profile().catch(() => null),
   });
   const profile = profileData as any;

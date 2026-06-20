@@ -16,11 +16,14 @@ import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProf
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
+import { PremiumOfferModal } from '@/components/influencer/PremiumOfferModal';
 import { Colors } from '@/constants/brand';
 import * as mock from '@/data/mock';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
+import { useUIStore } from '@/store/ui';
+import { getPremiumOfferSeen, setPremiumOfferSeen } from '@/lib/storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 function getRelativeTime(dateStr: string) {
@@ -51,6 +54,7 @@ export default function HomeScreen() {
   const session = useAuthStore((s) => s.session);
   const userName = session?.user?.name || 'Muskan';
   const queryClient = useQueryClient();
+  const showModal = useUIStore((s) => s.showModal);
 
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
@@ -58,6 +62,29 @@ export default function HomeScreen() {
   const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
   const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isPremiumOfferOpen, setIsPremiumOfferOpen] = useState(false);
+
+  // Handle Premium Membership Offer Modal after 5 seconds
+  useEffect(() => {
+    let timer: any;
+    if (role === 'influencer') {
+      getPremiumOfferSeen().then((seen) => {
+        if (!seen) {
+          timer = setTimeout(() => {
+            setIsPremiumOfferOpen(true);
+          }, 5000);
+        }
+      });
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [role]);
+
+  const handleClosePremiumOffer = async () => {
+    setIsPremiumOfferOpen(false);
+    await setPremiumOfferSeen();
+  };
 
   const {
     influencerProfiles,
@@ -206,6 +233,7 @@ export default function HomeScreen() {
         activeProfileHandle={activeHandle}
         onNotificationPress={() => setIsNotificationsOpen(true)}
         hasUnread={hasUnread}
+        isVerified={role === 'brand' ? activeBrand?.verified : activeInfluencer?.verified}
       />
 
       <ScrollView
@@ -248,6 +276,7 @@ export default function HomeScreen() {
         isOpen={isInfluencerSwitcherOpen}
         onClose={() => setIsInfluencerSwitcherOpen(false)}
         onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
           queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
@@ -262,6 +291,7 @@ export default function HomeScreen() {
         isOpen={isBrandSwitcherOpen}
         onClose={() => setIsBrandSwitcherOpen(false)}
         onSwitchSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
           queryClient.invalidateQueries({ queryKey: ['trendingSongs'] });
@@ -299,6 +329,31 @@ export default function HomeScreen() {
       <NotificationsSheet
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
+      />
+
+      <PremiumOfferModal
+        isOpen={isPremiumOfferOpen}
+        onClose={handleClosePremiumOffer}
+        onUnlockPress={async () => {
+          try {
+            await api.influencers.verifyProfile();
+            queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+            queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
+            if (session?.user?.id) {
+              await loadInfluencerProfiles(session.user.id);
+            }
+            showModal({
+              title: 'Membership Unlocked! 👑',
+              message: 'Congratulations! You now have premium membership. Enjoy a golden sign next to your profile.',
+            });
+          } catch (err: any) {
+            console.error('Failed to unlock premium membership:', err);
+            showModal({
+              title: 'Error',
+              message: err.message || 'Failed to unlock premium membership.',
+            });
+          }
+        }}
       />
     </View>
   );

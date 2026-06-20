@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReelVideoPlayer } from '@/components/brand/marketplace/ReelVideoPlayer';
 import { InviteCreatorSheet } from '@/components/brand/marketplace/InviteCreatorSheet';
 import { LinearGradient } from 'expo-linear-gradient';
+import { api } from '@/lib/api';
 
 export default function ShortlistScreen() {
   const insets = useSafeAreaInsets();
@@ -31,11 +32,17 @@ export default function ShortlistScreen() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<any | null>(null);
   const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
 
-  // Load shortlist on mount
+  // Load shortlist & campaigns on mount
   useEffect(() => {
     if (userId) {
       loadShortlist(userId);
+      api.campaigns.list()
+        .then((data: any) => {
+          setCampaigns(data.filter((c: any) => c.status === 'active'));
+        })
+        .catch((err) => console.error("Failed to load campaigns", err));
     }
   }, [userId]);
 
@@ -88,18 +95,67 @@ export default function ShortlistScreen() {
     setInviteOpen(true);
   };
 
-  const handleSendInvite = (campaign: string) => {
+  const handleSendInvite = async (campaignId: string, campaignTitle: string) => {
+    if (!selectedCreator?.id) return;
     setInviteOpen(false);
-    showModal({
-      title: 'Invite Sent',
-      message: `Successfully invited ${selectedCreator?.name} to collaborate on the "${campaign}" campaign!`,
-    });
+
+    try {
+      const room = await api.chat.createRoom(selectedCreator.id, campaignId);
+      await api.chat.send(
+        room.id,
+        `I'd love to invite you to collaborate on our campaign "${campaignTitle}".`,
+        campaignId
+      );
+
+      showModal({
+        title: 'Invite Sent',
+        message: `Successfully invited ${selectedCreator?.name} to collaborate on the "${campaignTitle}" campaign!`,
+        actions: [
+          {
+            text: 'OK',
+            style: 'default',
+          },
+          {
+            text: 'Go to Chat',
+            style: 'default',
+            onPress: () => {
+              router.push({
+                pathname: '/chat/[id]',
+                params: {
+                  id: room.id,
+                  name: selectedCreator.name,
+                  avatar: selectedCreator.avatar || "",
+                }
+              });
+            }
+          }
+        ]
+      });
+    } catch (err: any) {
+      console.error("Failed to send invite", err);
+      showModal({
+        title: 'Invite Failed',
+        message: err.message || 'Failed to send campaign invitation. Please try again.',
+      });
+    }
   };
 
-  const handleMessageCreator = () => {
+  const handleMessageCreator = async () => {
     setInviteOpen(false);
     if (selectedCreator?.id) {
-      router.push({ pathname: '/chat/[id]', params: { id: selectedCreator.id } });
+      try {
+        const room = await api.chat.createRoom(selectedCreator.id);
+        router.push({
+          pathname: '/chat/[id]',
+          params: {
+            id: room.id,
+            name: selectedCreator.name,
+            avatar: selectedCreator.avatar || "",
+          }
+        });
+      } catch (err) {
+        console.error("Failed to start conversation with creator", err);
+      }
     }
   };
 
@@ -306,6 +362,7 @@ export default function ShortlistScreen() {
         onMessageFirst={handleMessageCreator}
         onSendInvite={handleSendInvite}
         selectedService={selectedService}
+        campaigns={campaigns}
       />
     </View>
   );

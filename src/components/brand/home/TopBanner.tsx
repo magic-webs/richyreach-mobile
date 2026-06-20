@@ -21,7 +21,7 @@ export function TopBanner({ onSwitchProfile }: TopBannerProps) {
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
 
   const { data: brandProfileData, isLoading: loadingProfile } = useQuery<any>({
-    queryKey: ['brandProfile'],
+    queryKey: ['brandProfile', activeProfileId],
     queryFn: () => api.brands.profile().catch(() => null),
   });
 

@@ -1,0 +1,28 @@
+{
+  "short_name": "RichyReach",
+  "name": "RichyReach",
+  "description": "RichyReach - Connecting Brands and Influencers",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "48x48"
+    },
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E6F4FE",
+  "theme_color": "#208AEF"
+}

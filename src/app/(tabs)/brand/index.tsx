@@ -26,7 +26,7 @@ export default function BrandHomeScreen() {
   const queryClient = useQueryClient();
 
   const { data: brandProfile } = useQuery({
-    queryKey: ['brandProfile'],
+    queryKey: ['brandProfile', activeProfileId],
     queryFn: () => api.brands.profile().catch(() => null),
   });
 

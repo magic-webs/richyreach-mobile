@@ -14,6 +14,7 @@ interface HomeHeaderProps {
   activeProfileHandle?: string | null;
   onNotificationPress?: () => void;
   hasUnread?: boolean;
+  isVerified?: boolean;
 }
 
 export function HomeHeader({
@@ -26,6 +27,7 @@ export function HomeHeader({
   activeProfileHandle,
   onNotificationPress,
   hasUnread = false,
+  isVerified,
 }: HomeHeaderProps) {
   return (
     <View style={styles.header}>
@@ -49,9 +51,12 @@ export function HomeHeader({
             )}
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.greetSub}>
-              {activeProfileHandle ? `@${activeProfileHandle}` : userName}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={styles.greetSub}>
+                {activeProfileHandle ? `@${activeProfileHandle}` : userName}
+              </Text>
+              {isVerified && <Icon name="verified" size={12} color={Colors.gold} />}
+            </View>
             <View style={styles.switchRow}>
               <Text style={styles.greetTitle}>
                 {isBrand ? 'Brand Account' : 'Creator Account'}

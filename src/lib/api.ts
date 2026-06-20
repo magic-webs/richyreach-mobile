@@ -71,6 +71,7 @@ export const api = {
     earnings: () => request<any[]>('/influencers/earnings'),
     profile: () => request('/influencers/profile'),
     profiles: () => request<any[]>('/influencers/profiles'),
+    verifyProfile: () => request<any>('/influencers/profile/verify', { method: 'POST' }),
     updateProfile: (data: FormData | any) => {
       const isFormData = data instanceof FormData;
       return request('/influencers/profile', {
@@ -106,10 +107,14 @@ export const api = {
     dashboard: () => request('/brands/dashboard'),
   },
   chat: {
-    rooms: () => request('/chat/rooms'),
-    messages: (roomId: string) => request(`/chat/messages/${roomId}`),
-    send: (roomId: string, content: string) =>
-      request(`/chat/message/${roomId}`, { method: 'POST', body: JSON.stringify({ content }) }),
+    rooms: () => request<any[]>('/chat/rooms'),
+    createRoom: (influencerId: string, campaignId?: string) =>
+      request<any>('/chat/room', { method: 'POST', body: JSON.stringify({ influencerId, campaignId }) }),
+    messages: (roomId: string) => request<any[]>(`/chat/messages/${roomId}`),
+    send: (roomId: string, content: string, campaignId?: string) =>
+      request(`/chat/message/${roomId}`, { method: 'POST', body: JSON.stringify({ content, campaignId }) }),
+    respondInvite: (inviteId: string, status: 'accepted' | 'declined') =>
+      request(`/chat/invite/${inviteId}/respond`, { method: 'POST', body: JSON.stringify({ status }) }),
   },
   arena: {
     list: () => request('/arena'),

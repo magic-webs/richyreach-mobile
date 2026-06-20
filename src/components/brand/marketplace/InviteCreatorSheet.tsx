@@ -2,8 +2,8 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Creator } from './MarketplaceCreatorCard';
 
 interface InviteCreatorSheetProps {
@@ -11,12 +11,19 @@ interface InviteCreatorSheetProps {
   onClose: () => void;
   creator: Partial<Creator> | null;
   onMessageFirst: () => void;
-  onSendInvite: (campaign: string) => void;
+  onSendInvite: (campaignId: string, campaignTitle: string) => void;
   selectedService?: any | null;
+  campaigns?: any[];
 }
 
-export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, onSendInvite, selectedService }: InviteCreatorSheetProps) {
-  const [selectedCampaign, setSelectedCampaign] = useState('Summer Glow Serum');
+export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, onSendInvite, selectedService, campaigns = [] }: InviteCreatorSheetProps) {
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
+
+  useEffect(() => {
+    if (campaigns && campaigns.length > 0) {
+      setSelectedCampaignId(campaigns[0].id);
+    }
+  }, [campaigns]);
 
   return (
     <BottomSheet
@@ -55,24 +62,30 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
         {/* Campaign Selection list */}
         <Text style={styles.sheetSelectLabel}>SELECT CAMPAIGN</Text>
         <View style={styles.campaignSelectionGroup}>
-          {['Summer Glow Serum', 'Heritage Chronograph', 'Glass-Skin Routine'].map((campaign) => {
-            const isChecked = selectedCampaign === campaign;
-            return (
-              <TouchableOpacity
-                key={campaign}
-                style={[styles.campaignRow, isChecked && styles.campaignRowChecked]}
-                activeOpacity={0.8}
-                onPress={() => setSelectedCampaign(campaign)}
-              >
-                <Text style={[styles.campaignRowText, isChecked && styles.campaignRowTextChecked]}>
-                  {campaign}
-                </Text>
-                <View style={[styles.radioCircle, isChecked && styles.radioCircleChecked]}>
-                  {isChecked && <View style={styles.radioInner} />}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+          {campaigns.length === 0 ? (
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, color: 'rgba(63,3,11,0.5)' }}>No active campaigns available.</Text>
+            </View>
+          ) : (
+            campaigns.map((campaign) => {
+              const isChecked = selectedCampaignId === campaign.id;
+              return (
+                <TouchableOpacity
+                  key={campaign.id}
+                  style={[styles.campaignRow, isChecked && styles.campaignRowChecked]}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedCampaignId(campaign.id)}
+                >
+                  <Text style={[styles.campaignRowText, isChecked && styles.campaignRowTextChecked]} numberOfLines={1}>
+                    {campaign.title}
+                  </Text>
+                  <View style={[styles.radioCircle, isChecked && styles.radioCircleChecked]}>
+                    {isChecked && <View style={styles.radioInner} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* Action Row */}
@@ -87,9 +100,13 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sheetBtnPrimary}
+            style={[styles.sheetBtnPrimary, (!selectedCampaignId || campaigns.length === 0) && { opacity: 0.5 }]}
             activeOpacity={0.85}
-            onPress={() => onSendInvite(selectedCampaign)}
+            disabled={!selectedCampaignId || campaigns.length === 0}
+            onPress={() => {
+              const campaign = campaigns.find(c => c.id === selectedCampaignId);
+              onSendInvite(selectedCampaignId, campaign?.title || '');
+            }}
           >
             <Text style={styles.sheetBtnTextPrimary}>Send invite {'->'}</Text>
           </TouchableOpacity>

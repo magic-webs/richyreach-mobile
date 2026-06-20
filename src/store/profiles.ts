@@ -11,6 +11,7 @@ export interface BrandProfile {
   logo: string | null;
   category: string;
   description: string | null;
+  verified?: boolean;
 }
 
 // ─── Influencer Profile ───────────────────────────────────────────────────────

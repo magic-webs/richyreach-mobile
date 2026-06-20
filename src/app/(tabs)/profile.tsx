@@ -62,7 +62,7 @@ export default function ProfileScreen() {
 
   // Fetch influencer profile from backend via TanStack Query
   const { data: infProfileData, isLoading: loadingProfile } = useQuery<any>({
-    queryKey: ['influencerProfile'],
+    queryKey: ['influencerProfile', activeInfluencerProfileId],
     queryFn: async () => {
       const res = await api.influencers.profile().catch(() => null);
       return res;
@@ -194,7 +194,7 @@ export default function ProfileScreen() {
             ) : (
               <PlaceholderImage tone="ox" height={38} width={38} borderRadius={99} />
             )}
-            {displayVerified && <View style={styles.verifiedDot}><Icon name="verified" size={11} color={Colors.cream} /></View>}
+            {displayVerified && <View style={[styles.verifiedDot, { backgroundColor: Colors.gold }]}><Icon name="verified" size={11} color={Colors.oxblood} /></View>}
           </View>
           <Text style={styles.handleText}>{displayHandle}</Text>
           <View style={styles.chevronWrap}><Icon name="chevDown" size={15} color={Colors.oxblood} /></View>
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
                 ) : (
                   <Text style={styles.name}>{displayName}</Text>
                 )}
-                {!loadingProfile && displayVerified && <Icon name="verified" size={18} color={Colors.rose} />}
+                {!loadingProfile && displayVerified && <Icon name="verified" size={18} color={Colors.gold} />}
               </View>
               {loadingProfile ? (
                 <Skeleton width={100} height={12} borderRadius={6} style={{ marginTop: 4 }} />
