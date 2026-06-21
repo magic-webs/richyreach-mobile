@@ -26,10 +26,11 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About';
-type SheetType = 'wallet' | 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | null;
+type SheetType = 'wallet' | 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
 
 const SETTINGS: [string, string, string, SheetType][] = [
   ['wallet', 'Wallet & payouts', '', 'wallet'],
+  ['gift', 'Refer & earn', '₹100 + Points', 'referral'],
   ['verified', 'Verification', 'Verified', 'verification'],
   ['bell', 'Notifications', '', 'notifications'],
   ['lock', 'Privacy & security', '', 'privacy'],
@@ -336,7 +337,13 @@ export default function ProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={key}
-                    onPress={() => setSheet(key)}
+                    onPress={() => {
+                      if (key === 'referral') {
+                        router.push('/referral');
+                      } else {
+                        setSheet(key);
+                      }
+                    }}
                     activeOpacity={0.8}
                     style={[styles.settingRow, k < SETTINGS.length - 1 && styles.settingBorder]}
                   >

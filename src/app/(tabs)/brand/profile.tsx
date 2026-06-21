@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Line, Pattern, Rect } from 'react-native-svg';
 
-type SheetType = 'billing' | 'team' | 'security' | 'notifications' | 'support' | 'menu' | 'edit_profile' | null;
+type SheetType = 'billing' | 'team' | 'security' | 'notifications' | 'support' | 'menu' | 'edit_profile' | 'referral' | null;
 type TabType = 'Overview' | 'Campaigns' | 'Creators';
 
 // Stripes Background Pattern
@@ -558,6 +558,7 @@ export default function BrandProfileScreen() {
           <View style={{ gap: 4 }}>
             {[
               { icon: 'edit', label: 'Edit brand profile', value: '', key: 'edit_profile' },
+              { icon: 'gift', label: 'Refer & earn', value: '₹100 + Points', key: 'referral' },
               { icon: 'wallet', label: 'Invoices & billing', value: '₹11.8L', key: 'billing' },
               { icon: 'users', label: 'Team management', value: '3 members', key: 'team' },
               { icon: 'bell', label: 'Notifications', value: '', key: 'notifications' },
@@ -570,6 +571,9 @@ export default function BrandProfileScreen() {
                   if (item.key === 'edit_profile') {
                     setSheet(null);
                     setIsEditSheetOpen(true);
+                  } else if (item.key === 'referral') {
+                    setSheet(null);
+                    router.push('/referral');
                   } else {
                     setSheet(item.key as SheetType);
                   }

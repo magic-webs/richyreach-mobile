@@ -86,6 +86,7 @@ function NavigationLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="collab" />
         <Stack.Screen name="insights" />
+        <Stack.Screen name="referral" />
       </Stack.Protected>
     </Stack>
   );

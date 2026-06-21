@@ -47,6 +47,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const otpInputRef = useRef<TextInput>(null);
@@ -153,7 +154,13 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
-      const data = await api.auth.verifyOtp(identifier, otp, role, mode === 'signup' ? name : undefined) as any;
+      const data = await api.auth.verifyOtp(
+        identifier,
+        otp,
+        role,
+        mode === 'signup' ? name : undefined,
+        mode === 'signup' ? referralCode : undefined
+      ) as any;
 
       // Extract the actual registered user role returned from the backend (or fallback to selected local role)
       const userRole = data?.user?.role || role;
@@ -373,6 +380,25 @@ export default function AuthScreen() {
                           onChangeText={setPhone}
                           keyboardType="phone-pad"
                           autoCapitalize="none"
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {mode === 'signup' && (
+                    <View>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Referral Code (Optional)</Text>
+                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                        <Icon name="gift" size={18} color={Colors.rose} />
+                        <TextInput
+                          className="flex-1 ml-3 h-full"
+                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          placeholder="e.g. RR_ALEX1234"
+                          placeholderTextColor="rgba(63,3,11,0.3)"
+                          value={referralCode}
+                          onChangeText={setReferralCode}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
                         />
                       </View>
                     </View>

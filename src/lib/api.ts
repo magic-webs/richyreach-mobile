@@ -39,8 +39,8 @@ export const api = {
   auth: {
     requestOtp: (identifier: string, method: 'email' | 'whatsapp', mode?: 'login' | 'signup') =>
       request('/auth/request-otp', { method: 'POST', body: JSON.stringify({ identifier, method, mode }) }),
-    verifyOtp: (identifier: string, code: string, role?: string, name?: string) =>
-      request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ identifier, code, role, name }) }),
+    verifyOtp: (identifier: string, code: string, role?: string, name?: string, referralCode?: string) =>
+      request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ identifier, code, role, name, referralCode }) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
     session: () => request('/auth/session'),
   },
@@ -132,5 +132,9 @@ export const api = {
   notifications: {
     list: () => request<any[]>('/notifications'),
     read: (id?: string) => request<any>(`/notifications/read${id ? `?id=${id}` : ''}`, { method: 'PUT' }),
+  },
+  referrals: {
+    getStats: () => request<any>('/referral/stats'),
+    convertPoints: (points: number) => request<any>('/referral/convert', { method: 'POST', body: JSON.stringify({ points }) }),
   },
 };
