@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FloatingChatButton } from '@/components/floating-chat-button';
 
 export default function BrandHomeScreen() {
   const session = useAuthStore((s) => s.session);
@@ -82,6 +83,8 @@ export default function BrandHomeScreen() {
           }} />
         </View>
       </ScrollView>
+      <FloatingChatButton />
+
       <CreateCampaignSheet
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}

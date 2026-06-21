@@ -5,14 +5,15 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GradientView } from './ui/gradient-view';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { useUIStore } from '@/store/ui';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Chatting01FreeIcons } from '@hugeicons/core-free-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 export function FloatingChatButton() {
   const router = useRouter();
-  const pathname = usePathname();
-
+  const { role } = useAuthStore();
   const { data: rooms } = useQuery({
     queryKey: ['chatRooms'],
     queryFn: () => api.chat.rooms().catch(() => []),
@@ -39,14 +40,10 @@ export function FloatingChatButton() {
   });
 
   const count = rooms?.length ?? 0;
-
-  // Hide on marketplace pages for both brand and influencer
-  if (pathname.includes('marketplace')) return null;
-
   return (
     <Animated.View style={[styles.wrapper, animatedStyle]}>
       <TouchableOpacity
-        onPress={() => router.push('/chat')}
+        onPress={() => router.push((role === 'brand' ? '/brand/chat' : '/chat') as any)}
         activeOpacity={0.85}
       >
         <GradientView variant="rose" style={styles.btn}>

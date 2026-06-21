@@ -1,4 +1,3 @@
-import { FloatingChatButton } from '@/components/floating-chat-button';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Tabs } from 'expo-router';
@@ -120,16 +119,41 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
 function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
+
   const activeTabs = role === 'brand' ? BRAND_TABS : CREATOR_TABS;
 
   const activeRouteName = state.routes[state.index].name;
-  const activeIdx = activeTabs.findIndex((tab) => tab.key === activeRouteName);
+
+  // hide the tab bar from these routs 
+  const hiddenRoutes = [
+    'brand/shortlist',
+    'brand/campaign/[id]',
+    'brand/marketplace/creator/[id]',
+    'brand/chat',
+    'brand/chat/[id]',
+    'chat',
+    'chat/[id]'
+  ];
+
+  if (hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {
+    return null;
+  }
+
+  const activeIdx = activeTabs.findIndex(
+    (tab) => tab.key === activeRouteName
+  );
 
   return (
-    <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 8 }]}>
+    <View
+      style={[
+        styles.tabBarContainer,
+        { paddingBottom: insets.bottom + 8 },
+      ]}
+    >
       <View style={styles.tabBar}>
         {activeTabs.map((tab, i) => {
           const on = i === activeIdx;
+
           return (
             <TabBarItem
               key={tab.key}
@@ -165,6 +189,7 @@ export default function TabLayout() {
           <Tabs.Screen name="marketplace" />
           <Tabs.Screen name="arena" />
           <Tabs.Screen name="profile" />
+          <Tabs.Screen name="chat/[id]" options={{ href: null }} />
         </Tabs.Protected>
 
         <Tabs.Protected guard={role === 'brand'}>
@@ -175,9 +200,9 @@ export default function TabLayout() {
           <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
           <Tabs.Screen name="brand/campaign/[id]" options={{ href: null }} />
           <Tabs.Screen name="brand/marketplace/creator/[id]" options={{ href: null }} />
+          <Tabs.Screen name="brand/chat/[id]" options={{ href: null }} />
         </Tabs.Protected>
       </Tabs>
-      <FloatingChatButton />
     </View>
   );
 }

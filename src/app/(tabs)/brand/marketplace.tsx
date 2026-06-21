@@ -12,7 +12,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Bookmark02Icon, SentIcon, BadgeCheckIcon, MusicNote01Icon } from '@hugeicons/core-free-icons';
 import { SelectedServicesSheet } from '@/components/brand/marketplace/SelectedServicesSheet';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -67,6 +69,7 @@ function SwipeableServiceCard({
 
   const gesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
+    .failOffsetY([-5, 5])
     .onUpdate((event) => {
       translateX.value = event.translationX;
     })
@@ -108,12 +111,16 @@ function SwipeableServiceCard({
 
   const cardRef = React.useRef<any>(null);
 
-  // Custom Web Touch/Mouse Handling removed.
-  // Using react-native-gesture-handler's Pan gesture which supports web nicely.
+  const webStyle = Platform.OS === 'web' ? {
+    touchAction: 'pan-y',
+    scrollSnapAlign: 'start',
+    scrollSnapStop: 'always',
+    WebkitScrollSnapAlign: 'start',
+  } as any : undefined;
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }]}>
+      <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }, webStyle]}>
         {/* Media Cover (using ReelVideoPlayer) */}
         <View style={styles.mediaContainer}>
           {/* <StatusBar style='dark' /> */}
@@ -133,7 +140,7 @@ function SwipeableServiceCard({
             style={styles.reelsActionBtn}
           >
             <View style={[styles.reelsIconCircle, isBookmarked && styles.reelsIconCircleBookmarked]}>
-              <Icon name="bookmark" size={20} color={isBookmarked ? Colors.gold : Colors.white} />
+              <HugeiconsIcon icon={Bookmark02Icon} size={20} color={isBookmarked ? Colors.gold : Colors.white} />
             </View>
             <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
           </TouchableOpacity>
@@ -145,7 +152,7 @@ function SwipeableServiceCard({
             style={styles.reelsActionBtn}
           >
             <View style={styles.reelsIconCircle}>
-              <Icon name="send" size={18} color={Colors.white} />
+              <HugeiconsIcon icon={SentIcon} size={18} color={Colors.white} />
             </View>
             <Text style={styles.reelsActionText}>Invite</Text>
           </TouchableOpacity>
@@ -165,7 +172,7 @@ function SwipeableServiceCard({
               <PlaceholderImage tone={item.creator?.tone} height={28} width={28} borderRadius={14} />
             )}
             <Text style={styles.reelsCreatorHandle}>{item.creator?.handle}</Text>
-            <Icon name="verified" size={14} color={Colors.rose} />
+            <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />
             {item.creator?.niche?.[0] && (
               <View style={styles.reelsNicheBadge}>
                 <Text style={styles.reelsNicheText}>{item.creator.niche[0]}</Text>
@@ -189,7 +196,7 @@ function SwipeableServiceCard({
 
           {/* Music ticker */}
           <View style={styles.reelsMusicRow}>
-            <Icon name="music" size={12} color="rgba(255, 255, 255, 0.7)" />
+            <HugeiconsIcon icon={MusicNote01Icon} size={12} color="rgba(255, 255, 255, 0.7)" />
             <Text style={styles.reelsMusicText} numberOfLines={1}>
               Original Audio · {item.creator?.name || 'Creator'}
             </Text>
@@ -256,7 +263,8 @@ export default function BrandMarketplaceScreen() {
 
   // Invite sheet state
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [selectedCreator, setSelectedCreator] = useState<Partial<Creator> | null>(null);
+  const [selectedCreator, setSelectedCreator] = useState<any | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
 
   // Switcher and creation sheets state
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
@@ -278,6 +286,17 @@ export default function BrandMarketplaceScreen() {
       loadShortlist(session.user.id).catch(() => { });
     }
   }, [session?.user?.id, activeBrandProfileId]);
+
+  // Load campaigns for invitation
+  useEffect(() => {
+    if (session?.user?.id) {
+      api.campaigns.list()
+        .then((data: any) => {
+          setCampaigns(data.filter((c: any) => c.status === 'active'));
+        })
+        .catch((err) => console.error("Failed to load campaigns in marketplace", err));
+    }
+  }, [session?.user?.id]);
 
   const { data: rawCreatorsData, isLoading: loading } = useQuery<any>({
     queryKey: ['influencersList'],
@@ -395,7 +414,9 @@ export default function BrandMarketplaceScreen() {
     return generatedServices;
   }, [rawServicesData, creators]);
 
-  const [containerHeight, setContainerHeight] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(
+    Platform.OS === 'web' ? (typeof window !== 'undefined' ? window.innerHeight - 180 : 600) : 0
+  );
   const flatListRef = React.useRef<any>(null);
   const lastOffsetY = React.useRef(0);
   const [actionFeedback, setActionFeedback] = useState<{ index: number | null; type: 'select' | 'reject' | null }>({
@@ -493,20 +514,68 @@ export default function BrandMarketplaceScreen() {
     setInviteOpen(true);
   };
 
-  const handleSendInvite = (campaign: string) => {
+  const handleSendInvite = async (campaignId: string, campaignTitle: string) => {
+    if (!selectedCreator?.id) return;
     setInviteOpen(false);
-    showModal({
-      title: 'Invite Sent',
-      message: `Successfully invited ${selectedCreator?.name} to collaborate on the "${campaign}" campaign!`,
-    });
+
+    try {
+      const room = await api.chat.createRoom(selectedCreator.id, campaignId);
+      await api.chat.send(
+        room.id,
+        `I'd love to invite you to collaborate on our campaign "${campaignTitle}".`,
+        campaignId
+      );
+
+      showModal({
+        title: 'Invite Sent',
+        message: `Successfully invited ${selectedCreator?.name} to collaborate on the "${campaignTitle}" campaign!`,
+        actions: [
+          {
+            text: 'OK',
+            style: 'default',
+          },
+          {
+            text: 'Go to Chat',
+            style: 'default',
+            onPress: () => {
+              router.push({
+                pathname: '/brand/chat/[id]' as any,
+                params: {
+                  id: room.id,
+                  name: selectedCreator.name || '',
+                  avatar: selectedCreator.avatar || '',
+                }
+              });
+            }
+          }
+        ]
+      });
+    } catch (err: any) {
+      console.error("Failed to send invite", err);
+      showModal({
+        title: 'Invite Failed',
+        message: err.message || 'Failed to send campaign invitation. Please try again.',
+      });
+    }
   };
 
-  const handleMessageCreator = () => {
+  const handleMessageCreator = async () => {
     setInviteOpen(false);
-    showModal({
-      title: 'Message Center',
-      message: `Opening direct messaging channel with ${selectedCreator?.name}. You can discuss campaign briefs and pricing details here.`,
-    });
+    if (selectedCreator?.id) {
+      try {
+        const room = await api.chat.createRoom(selectedCreator.id);
+        router.push({
+          pathname: '/brand/chat/[id]' as any,
+          params: {
+            id: room.id,
+            name: selectedCreator.name || '',
+            avatar: selectedCreator.avatar || '',
+          }
+        });
+      } catch (err) {
+        console.error("Failed to start conversation with creator", err);
+      }
+    }
   };
 
   const handleToggleBookmark = async (service: any) => {
@@ -549,7 +618,12 @@ export default function BrandMarketplaceScreen() {
 
       <View
         style={styles.feedWrapper}
-        onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0) {
+            setContainerHeight(h);
+          }
+        }}
       >
         {containerHeight > 0 && (
           <FlatList
@@ -569,6 +643,7 @@ export default function BrandMarketplaceScreen() {
             viewabilityConfig={viewabilityConfig}
             onScroll={handleScroll}
             scrollEventThrottle={16}
+            style={Platform.OS === 'web' ? { scrollSnapType: 'y mandatory' } as any : undefined}
             renderItem={({ item, index }) => (
               <SwipeableServiceCard
                 item={item}
@@ -596,6 +671,7 @@ export default function BrandMarketplaceScreen() {
         creator={selectedCreator}
         onMessageFirst={handleMessageCreator}
         onSendInvite={handleSendInvite}
+        campaigns={campaigns}
       />
 
       <CreateBrandProfileSheet
@@ -697,6 +773,7 @@ const styles = StyleSheet.create({
     ...Shadow.card,
     borderWidth: 1,
     borderColor: 'rgba(63, 3, 11, 0.05)',
+    ...(Platform.OS === 'web' ? { height: 'calc(100vh - 180px)' as any } : {}),
   },
   cardItem: {
     width: '100%',

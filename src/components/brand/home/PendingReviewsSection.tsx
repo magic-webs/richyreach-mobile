@@ -38,7 +38,7 @@ export function PendingReviewsSection() {
               queryClient.invalidateQueries({ queryKey: ['brandPendingApplications', activeProfileId] });
               // Navigate to brand chat room
               router.push({
-                pathname: '/chat/brand/[id]',
+                pathname: '/brand/chat/[id]' as any,
                 params: { id: room.id, name, avatar: avatar || '' }
               });
             } catch (err: any) {

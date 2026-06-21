@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
+import { useUIStore } from '@/store/ui';
 import { api } from '@/lib/api';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
@@ -28,13 +29,14 @@ export default function InfluencerChatConversationScreen() {
   const { session } = useAuthStore();
   const currentUserId = session?.user?.id;
 
+
   const [roomId, setRoomId] = useState<string | null>(routeId.startsWith('bp_') ? null : routeId);
   const [roomName, setRoomName] = useState<string | null>(routeName || null);
   const [roomAvatar, setRoomAvatar] = useState<string | null>(routeAvatar || null);
   const [msgs, setMsgs] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const listRef = useRef<FlatList>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -45,9 +47,9 @@ export default function InfluencerChatConversationScreen() {
       try {
         setIsLoading(true);
         let resolvedId = routeId;
-        
+
         const allRooms = await api.chat.rooms();
-        
+
         if (routeId.startsWith('bp_')) {
           const foundRoom = allRooms.find((r: any) => r.brandId === routeId);
           if (foundRoom) {
@@ -116,7 +118,7 @@ export default function InfluencerChatConversationScreen() {
 
         const rawApiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
         const wsBaseUrl = rawApiUrl.replace(/^http/, 'ws');
-        
+
         const activeProfileId = useProfilesStore.getState().activeInfluencerProfileId;
         const wsUrl = `${wsBaseUrl}/chat/ws/${currentRoomId}?token=${token}&activeProfileId=${activeProfileId || ''}`;
 
@@ -214,7 +216,7 @@ export default function InfluencerChatConversationScreen() {
   const respondToInvite = async (inviteId: string, status: 'accepted' | 'declined') => {
     try {
       await api.chat.respondInvite(inviteId, status);
-      
+
       setMsgs((prev) =>
         prev.map((msg) =>
           msg.inviteId === inviteId ? { ...msg, inviteStatus: status } : msg
@@ -251,7 +253,7 @@ export default function InfluencerChatConversationScreen() {
     <KeyboardAvoidingView style={[styles.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/chat/influencer')} style={styles.backBtn} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.backBtn} activeOpacity={0.8}>
           <Icon name="back" size={22} color={Colors.oxblood} />
         </TouchableOpacity>
         <View style={{ position: 'relative' }}>
@@ -285,7 +287,7 @@ export default function InfluencerChatConversationScreen() {
 
             return (
               <View style={[
-                styles.msgRow, 
+                styles.msgRow,
                 isMe && styles.msgRowMe,
                 { marginTop: m.isGroupContinuation ? 2 : 12 }
               ]}>
@@ -318,7 +320,7 @@ export default function InfluencerChatConversationScreen() {
                             {m.campaignDescription}
                           </Text>
                         )}
-                        
+
                         <View style={styles.campaignMetaRow}>
                           <View>
                             <Text style={styles.metaLabel}>Budget</Text>
@@ -406,15 +408,15 @@ export default function InfluencerChatConversationScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10, 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    backgroundColor: 'rgba(244,236,228,0.92)', 
-    borderBottomWidth: 0.5, 
-    borderBottomColor: 'rgba(63,3,11,0.08)' 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(244,236,228,0.92)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.08)'
   },
   backBtn: { width: 36, height: 36, borderRadius: 99, alignItems: 'center', justifyContent: 'center' },
   headerAvatar: { width: 40, height: 40, borderRadius: 20 },
@@ -433,28 +435,28 @@ const styles = StyleSheet.create({
   senderLabel: { fontSize: 11, color: 'rgba(63,3,11,0.5)', fontWeight: '600', marginBottom: 2, marginLeft: 4 },
 
   bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, ...Shadow.card, position: 'relative' },
-  bubbleMe: { 
-    backgroundColor: Colors.oxblood, 
-    borderBottomRightRadius: 4, 
+  bubbleMe: {
+    backgroundColor: Colors.oxblood,
+    borderBottomRightRadius: 4,
     shadowColor: Colors.oxblood,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 1 
+    elevation: 1
   },
-  bubbleThem: { 
-    backgroundColor: '#fff', 
-    borderBottomLeftRadius: 4, 
-    borderWidth: 1, 
-    borderColor: 'rgba(63,3,11,0.06)' 
+  bubbleThem: {
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.06)'
   },
-  campaignBubble: { 
-    width: 280, 
-    backgroundColor: '#fff', 
-    borderRadius: 16, 
-    borderBottomLeftRadius: 4, 
-    borderBottomRightRadius: 4, 
-    borderLeftWidth: 4, 
+  campaignBubble: {
+    width: 280,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+    borderLeftWidth: 4,
     borderLeftColor: Colors.rose,
     padding: 12
   },
@@ -471,7 +473,7 @@ const styles = StyleSheet.create({
   campaignMetaRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: 'rgba(63,3,11,0.08)', paddingTop: 8, marginTop: 4 },
   metaLabel: { fontSize: 10, color: 'rgba(63,3,11,0.4)', textTransform: 'uppercase', fontWeight: '600' },
   metaValue: { fontSize: 13.5, fontWeight: '700', color: Colors.oxblood, marginTop: 1 },
-  
+
   actionContainer: { marginTop: 12, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: 'rgba(63,3,11,0.08)' },
   btnRow: { flexDirection: 'row', gap: 10 },
   actionBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
   declineBtnText: { color: Colors.ink, fontSize: 13, fontWeight: '600' },
   acceptBtn: { backgroundColor: Colors.oxblood },
   acceptBtnText: { color: Colors.cream, fontSize: 13, fontWeight: '700' },
-  
+
   statusBadge: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: 'rgba(63,3,11,0.05)', alignItems: 'center' },
   statusBadgeText: { fontSize: 12, fontWeight: '600', color: 'rgba(63,3,11,0.5)' },
   statusAccepted: { backgroundColor: 'rgba(62,201,122,0.12)' },
@@ -489,11 +491,11 @@ const styles = StyleSheet.create({
 
   inputBar: { flexShrink: 0, paddingHorizontal: 14, paddingTop: 8, backgroundColor: 'rgba(244,236,228,0.95)', flexDirection: 'row', alignItems: 'center', gap: 9 },
   inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingLeft: 16, paddingRight: 4, paddingVertical: 4, ...Shadow.card, borderWidth: 1, borderColor: 'rgba(63,3,11,0.05)' },
-  input: { 
-    flex: 1, 
-    fontSize: 14.5, 
-    color: Colors.ink, 
-    fontFamily: FontFamily.sansMedium, 
+  input: {
+    flex: 1,
+    fontSize: 14.5,
+    color: Colors.ink,
+    fontFamily: FontFamily.sansMedium,
     maxHeight: 100,
     ...Platform.select({
       web: {

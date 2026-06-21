@@ -1,15 +1,39 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Image } from 'expo-image';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function BrandChatListScreen() {
+function ChatListSkeleton() {
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      {[1, 2, 3, 4].map((key) => (
+        <View key={key} style={styles.chatRow}>
+          <View style={styles.avatarWrap}>
+            <Skeleton width={52} height={52} borderRadius={26} variant="circle" />
+          </View>
+          <View style={styles.chatInfo}>
+            <View style={styles.chatTopRow}>
+              <Skeleton width="45%" height={16} borderRadius={4} />
+              <View style={{ flex: 1 }} />
+              <Skeleton width={45} height={12} borderRadius={4} />
+            </View>
+            <View style={styles.chatBottomRow}>
+              <Skeleton width="70%" height={13} borderRadius={4} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export default function InfluencerChatListScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -20,7 +44,6 @@ export default function BrandChatListScreen() {
   const fetchRooms = async () => {
     try {
       const data = await api.chat.rooms();
-      // Filter out admin support rooms or format them appropriately if needed
       setRooms(data);
     } catch (err) {
       console.error("Failed to load chat rooms", err);
@@ -44,21 +67,19 @@ export default function BrandChatListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity onPress={() => router.replace('/brand')} style={styles.backBtn} activeOpacity={0.8}>
+          <TouchableOpacity onPress={() => router.replace('/')} style={styles.backBtn} activeOpacity={0.8}>
             <Icon name="back" size={22} color={Colors.oxblood} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Creator Chats</Text>
+          <Text style={styles.headerTitle}>Brand Messages</Text>
         </View>
       </View>
 
       {/* Rooms List */}
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.rose} />
-        </View>
+        <ChatListSkeleton />
       ) : rooms.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>No creator conversations yet.</Text>
+          <Text style={styles.emptyText}>No brand conversations yet.</Text>
         </View>
       ) : (
         <FlatList
@@ -69,10 +90,9 @@ export default function BrandChatListScreen() {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           renderItem={({ item: c }) => {
-            // Under brand mode, titleName is the Creator's name / instagramHandle
-            const titleName = c.name || c.companyName || "Support Room";
-            const subTitle = c.instagramHandle ? `@${c.instagramHandle}` : "Active Chat";
-            const imageUrl = c.avatar || c.logo || null;
+            // Under influencer mode, titleName is the Brand's companyName
+            const titleName = c.companyName || c.name || "RichyReach Team";
+            const imageUrl = c.logo || c.avatar || null;
             const isOnline = c.online ?? false;
             
             // Format creation date
@@ -85,7 +105,7 @@ export default function BrandChatListScreen() {
             return (
               <TouchableOpacity
                 onPress={() => router.push({
-                  pathname: '/chat/brand/[id]',
+                  pathname: '/chat/[id]',
                   params: {
                     id: c.roomId,
                     name: titleName,
@@ -110,7 +130,7 @@ export default function BrandChatListScreen() {
                   </View>
                   <View style={styles.chatBottomRow}>
                     <Text style={styles.chatLast} numberOfLines={1}>
-                      {subTitle}
+                      Click to open brand conversation
                     </Text>
                   </View>
                 </View>
@@ -140,5 +160,5 @@ const styles = StyleSheet.create({
   chatName: { fontWeight: '700', fontSize: 15.5, color: Colors.ink, flex: 1, minWidth: 0 },
   chatTime: { fontSize: 11, color: 'rgba(63,3,11,0.4)', fontWeight: '600', flexShrink: 0 },
   chatBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  chatLast: { flex: 1, fontSize: 13, color: Colors.rose, fontWeight: '600' },
+  chatLast: { flex: 1, fontSize: 13, color: 'rgba(63,3,11,0.45)', fontWeight: '400' },
 });

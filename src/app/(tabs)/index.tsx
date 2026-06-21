@@ -25,6 +25,7 @@ import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { getPremiumOfferSeen, setPremiumOfferSeen } from '@/lib/storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FloatingChatButton } from '@/components/floating-chat-button';
 
 function getRelativeTime(dateStr: string) {
   if (!dateStr) return 'now';
@@ -269,8 +270,10 @@ export default function HomeScreen() {
 
           {/* Tagline footer */}
           <HomeFooter />
+
         </View>
       </ScrollView>
+      <FloatingChatButton />
 
       <SwitchInfluencerProfileSheet
         isOpen={isInfluencerSwitcherOpen}

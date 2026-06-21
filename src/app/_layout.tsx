@@ -84,7 +84,6 @@ function NavigationLayout() {
 
       <Stack.Protected guard={isLoggedIn}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="chat" />
         <Stack.Screen name="collab" />
         <Stack.Screen name="insights" />
       </Stack.Protected>

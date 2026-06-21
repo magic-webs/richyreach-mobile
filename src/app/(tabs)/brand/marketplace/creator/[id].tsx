@@ -1,4 +1,3 @@
-import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,10 +5,13 @@ import { Image } from 'expo-image';
 import { Colors, FontFamily, Shadow, Radius } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
+import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon, Share01Icon, ChatIcon, UserGroupIcon, FlashIcon, StarIcon, Dollar01Icon, Clock01Icon, PlayIcon, Cancel01Icon, BadgeCheckIcon, CheckIcon, Camera01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { InviteCreatorSheet } from '@/components/brand/marketplace/InviteCreatorSheet';
@@ -118,27 +120,92 @@ export default function CreatorProfileDetail() {
   }, [creatorDetail]);
 
   const stats = [
-    { label: 'Followers', value: creator.followers, icon: 'users' },
-    { label: 'Engagement', value: creator.engagement, icon: 'bolt' },
-    { label: 'Rating', value: `${creator.rating} ★`, icon: 'star' },
-    { label: 'Pricing', value: creator.rate, icon: 'dollar' },
+    { label: 'Followers', value: creator.followers, icon: UserGroupIcon },
+    { label: 'Engagement', value: creator.engagement, icon: FlashIcon },
+    { label: 'Rating', value: `${creator.rating} ★`, icon: StarIcon },
+    { label: 'Pricing', value: creator.rate, icon: Dollar01Icon },
   ];
+
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const session = useAuthStore((s) => s.session);
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (userId) {
+      api.campaigns.list()
+        .then((data: any) => {
+          setCampaigns(data.filter((c: any) => c.status === 'active'));
+        })
+        .catch((err) => console.error("Failed to load campaigns in creator detail page", err));
+    }
+  }, [userId]);
 
   const handleOpenInvite = () => {
     setInviteOpen(true);
   };
 
-  const handleSendInvite = (campaign: string) => {
+  const handleSendInvite = async (campaignId: string, campaignTitle: string) => {
+    if (!creator?.id) return;
     setInviteOpen(false);
-    showModal({
-      title: 'Invite Sent',
-      message: `Successfully invited ${creator.name} to collaborate on the "${campaign}" campaign!`,
-    });
+
+    try {
+      const room = await api.chat.createRoom(creator.id, campaignId);
+      await api.chat.send(
+        room.id,
+        `I'd love to invite you to collaborate on our campaign "${campaignTitle}".`,
+        campaignId
+      );
+
+      showModal({
+        title: 'Invite Sent',
+        message: `Successfully invited ${creator.name} to collaborate on the "${campaignTitle}" campaign!`,
+        actions: [
+          {
+            text: 'OK',
+            style: 'default',
+          },
+          {
+            text: 'Go to Chat',
+            style: 'default',
+            onPress: () => {
+              router.push({
+                pathname: '/brand/chat/[id]' as any,
+                params: {
+                  id: room.id,
+                  name: creator.name || '',
+                  avatar: creator.avatar || '',
+                }
+              });
+            }
+          }
+        ]
+      });
+    } catch (err: any) {
+      console.error("Failed to send invite", err);
+      showModal({
+        title: 'Invite Failed',
+        message: err.message || 'Failed to send campaign invitation. Please try again.',
+      });
+    }
   };
 
-  const handleMessageCreator = () => {
+  const handleMessageCreator = async () => {
     setInviteOpen(false);
-    router.push({ pathname: '/chat/[id]', params: { id: creator.id } });
+    if (creator?.id) {
+      try {
+        const room = await api.chat.createRoom(creator.id);
+        router.push({
+          pathname: '/brand/chat/[id]' as any,
+          params: {
+            id: room.id,
+            name: creator.name || '',
+            avatar: creator.avatar || '',
+          }
+        });
+      } catch (err) {
+        console.error("Failed to start conversation with creator", err);
+      }
+    }
   };
 
   return (
@@ -147,10 +214,10 @@ export default function CreatorProfileDetail() {
       <View style={[styles.navHeaderFixed, { top: Math.max(insets.top, 16) }]}>
         <TouchableOpacity onPress={() => router.back()}
           style={styles.navBtn} activeOpacity={0.8}>
-          <Icon name="back" size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
-          <Icon name="share" size={19} color={Colors.oxblood} />
+          <HugeiconsIcon icon={Share01Icon} size={19} color={Colors.oxblood} />
         </TouchableOpacity>
       </View>
 
@@ -217,7 +284,7 @@ export default function CreatorProfileDetail() {
             <>
               <View style={styles.nameRow}>
                 <Text style={styles.nameText}>{creator.name}</Text>
-                <Icon name="verified" size={18} color={Colors.rose} />
+                <HugeiconsIcon icon={BadgeCheckIcon} size={18} color={Colors.rose} strokeWidth={2} />
               </View>
               <Text style={styles.handleText}>{creator.handle}</Text>
 
@@ -237,7 +304,7 @@ export default function CreatorProfileDetail() {
               <View style={styles.statsGrid}>
                 {stats.map((s) => (
                   <View key={s.label} style={styles.statCard}>
-                    <Icon name={s.icon} size={16} color={Colors.rose} />
+                    <HugeiconsIcon icon={s.icon as any} size={16} color={Colors.rose} />
                     <Text style={styles.statValue}>{s.value}</Text>
                     <Text style={styles.statLabel}>{s.label}</Text>
                   </View>
@@ -289,7 +356,7 @@ export default function CreatorProfileDetail() {
                                     activeOpacity={0.8}
                                     onPress={() => setPlayingServiceId(null)}
                                   >
-                                    <Icon name="x" size={14} color={Colors.white} />
+                                    <HugeiconsIcon icon={Cancel01Icon} size={14} color={Colors.white} />
                                   </TouchableOpacity>
                                 </View>
                               ) : (
@@ -321,7 +388,7 @@ export default function CreatorProfileDetail() {
                                   />
                                   {hasVideo && (
                                     <View style={styles.cardPlayBtnWrapper}>
-                                      <Icon name="play" size={24} color={Colors.white} />
+                                      <HugeiconsIcon icon={PlayIcon} size={24} color={Colors.white} />
                                     </View>
                                   )}
                                   {hasVideo && (
@@ -341,8 +408,8 @@ export default function CreatorProfileDetail() {
                               <View style={styles.cardTagsRow}>
                                 {service.category && (
                                   <View style={styles.platformBadge}>
-                                    <Icon
-                                      name={service.category.toLowerCase() === 'youtube' ? 'play' : 'camera'}
+                                    <HugeiconsIcon
+                                      icon={service.category.toLowerCase() === 'youtube' ? PlayIcon : Camera01Icon}
                                       size={10}
                                       color={Colors.roseDeep}
                                     />
@@ -371,7 +438,7 @@ export default function CreatorProfileDetail() {
                                 <Text style={styles.deliverablesTitle}>What's Included:</Text>
                                 {service.deliverables.map((item: string, idx: number) => (
                                   <View key={idx} style={styles.deliverableRow}>
-                                    <Icon name="check" size={11} color={Colors.green} />
+                                    <HugeiconsIcon icon={CheckIcon} size={11} color={Colors.green} />
                                     <Text style={styles.deliverableText}>{item}</Text>
                                   </View>
                                 ))}
@@ -399,7 +466,7 @@ export default function CreatorProfileDetail() {
                                   ₹{service.price.toLocaleString()}
                                 </Text>
                                 <Text style={styles.footerDelivery}>
-                                  <Icon name="clock" size={10} color="rgba(63,3,11,0.45)" />{' '}
+                                  <HugeiconsIcon icon={Clock01Icon} size={10} color="rgba(63,3,11,0.45)" />{' '}
                                   {service.deliveryTime}
                                 </Text>
                               </View>
@@ -413,7 +480,7 @@ export default function CreatorProfileDetail() {
                                 }}
                               >
                                 <Text style={styles.cardActionBtnText}>Order Service</Text>
-                                <Icon name="arrow" size={12} color={Colors.white} />
+                                <HugeiconsIcon icon={ArrowRight01Icon} size={12} color={Colors.white} />
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -439,7 +506,7 @@ export default function CreatorProfileDetail() {
           activeOpacity={0.8}
           disabled={loadingCreator}
         >
-          <Icon name="chat" size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ChatIcon} size={22} color={Colors.oxblood} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -462,6 +529,7 @@ export default function CreatorProfileDetail() {
         onMessageFirst={handleMessageCreator}
         onSendInvite={handleSendInvite}
         selectedService={selectedService}
+        campaigns={campaigns}
       />
     </View>
   );

@@ -210,7 +210,7 @@ export default function CampaignDetailScreen() {
             text: 'Go to Chat',
             onPress: () => {
               router.push({
-                pathname: '/chat/[id]',
+                pathname: '/brand/chat/[id]' as any,
                 params: {
                   id: room.id || room.roomId,
                   name: app.name || app.instagramHandle,
@@ -416,7 +416,7 @@ export default function CampaignDetailScreen() {
                     {queryData.applications.map((app: any) => {
                       const isPending = app.status === 'pending';
                       const isAccepted = app.status === 'accepted';
-                      
+
                       let followersStr = String(app.followers || '0');
                       const followersNum = Number(app.followers || 0);
                       if (followersNum >= 1000000) followersStr = `${(followersNum / 1000000).toFixed(1)}M`;
@@ -447,7 +447,7 @@ export default function CampaignDetailScreen() {
                             <Text style={styles.proposalLabel}>Proposal:</Text>
                             <Text style={styles.proposalText}>"{app.proposal}"</Text>
                           </View>
-                          
+
                           <View style={styles.applicantActions}>
                             {isPending ? (
                               <TouchableOpacity

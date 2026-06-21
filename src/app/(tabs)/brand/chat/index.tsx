@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Image } from 'expo-image';
 
-export default function InfluencerChatListScreen() {
+export default function BrandChatListScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -19,6 +19,7 @@ export default function InfluencerChatListScreen() {
   const fetchRooms = async () => {
     try {
       const data = await api.chat.rooms();
+      // Filter out admin support rooms or format them appropriately if needed
       setRooms(data);
     } catch (err) {
       console.error("Failed to load chat rooms", err);
@@ -42,10 +43,10 @@ export default function InfluencerChatListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity onPress={() => router.replace('/')} style={styles.backBtn} activeOpacity={0.8}>
+          <TouchableOpacity onPress={() => router.replace('/brand')} style={styles.backBtn} activeOpacity={0.8}>
             <Icon name="back" size={22} color={Colors.oxblood} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Brand Messages</Text>
+          <Text style={styles.headerTitle}>Creator Chats</Text>
         </View>
       </View>
 
@@ -56,7 +57,7 @@ export default function InfluencerChatListScreen() {
         </View>
       ) : rooms.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>No brand conversations yet.</Text>
+          <Text style={styles.emptyText}>No creator conversations yet.</Text>
         </View>
       ) : (
         <FlatList
@@ -67,11 +68,12 @@ export default function InfluencerChatListScreen() {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           renderItem={({ item: c }) => {
-            // Under influencer mode, titleName is the Brand's companyName
-            const titleName = c.companyName || c.name || "RichyReach Team";
-            const imageUrl = c.logo || c.avatar || null;
+            // Under brand mode, titleName is the Creator's name / instagramHandle
+            const titleName = c.name || c.companyName || "Support Room";
+            const subTitle = c.instagramHandle ? `@${c.instagramHandle}` : "Active Chat";
+            const imageUrl = c.avatar || c.logo || null;
             const isOnline = c.online ?? false;
-            
+
             // Format creation date
             let timeStr = "";
             if (c.createdAt) {
@@ -82,7 +84,7 @@ export default function InfluencerChatListScreen() {
             return (
               <TouchableOpacity
                 onPress={() => router.push({
-                  pathname: '/chat/influencer/[id]',
+                  pathname: '/brand/chat/[id]' as any,
                   params: {
                     id: c.roomId,
                     name: titleName,
@@ -107,7 +109,7 @@ export default function InfluencerChatListScreen() {
                   </View>
                   <View style={styles.chatBottomRow}>
                     <Text style={styles.chatLast} numberOfLines={1}>
-                      Click to open brand conversation
+                      {subTitle}
                     </Text>
                   </View>
                 </View>
@@ -137,5 +139,5 @@ const styles = StyleSheet.create({
   chatName: { fontWeight: '700', fontSize: 15.5, color: Colors.ink, flex: 1, minWidth: 0 },
   chatTime: { fontSize: 11, color: 'rgba(63,3,11,0.4)', fontWeight: '600', flexShrink: 0 },
   chatBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  chatLast: { flex: 1, fontSize: 13, color: 'rgba(63,3,11,0.45)', fontWeight: '400' },
+  chatLast: { flex: 1, fontSize: 13, color: Colors.rose, fontWeight: '600' },
 });

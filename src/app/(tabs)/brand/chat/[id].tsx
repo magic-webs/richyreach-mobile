@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
+import { useUIStore } from '@/store/ui';
 import { api } from '@/lib/api';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
@@ -28,6 +29,7 @@ export default function BrandChatConversationScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuthStore();
   const currentUserId = session?.user?.id;
+
 
   const [roomId, setRoomId] = useState<string | null>(routeId.startsWith('ip_') ? null : routeId);
   const [roomName, setRoomName] = useState<string | null>(routeName || null);
@@ -261,7 +263,7 @@ export default function BrandChatConversationScreen() {
     <KeyboardAvoidingView style={[styles.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/chat/brand')} style={styles.backBtn} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.replace('/brand/chat' as any)} style={styles.backBtn} activeOpacity={0.8}>
           <Icon name="back" size={22} color={Colors.oxblood} />
         </TouchableOpacity>
         <View style={{ position: 'relative' }}>

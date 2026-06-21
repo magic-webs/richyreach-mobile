@@ -120,7 +120,7 @@ export default function ShortlistScreen() {
             style: 'default',
             onPress: () => {
               router.push({
-                pathname: '/chat/[id]',
+                pathname: '/brand/chat/[id]' as any,
                 params: {
                   id: room.id,
                   name: selectedCreator.name,
@@ -146,7 +146,7 @@ export default function ShortlistScreen() {
       try {
         const room = await api.chat.createRoom(selectedCreator.id);
         router.push({
-          pathname: '/chat/[id]',
+          pathname: '/brand/chat/[id]' as any,
           params: {
             id: room.id,
             name: selectedCreator.name,

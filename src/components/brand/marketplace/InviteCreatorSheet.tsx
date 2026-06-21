@@ -1,7 +1,8 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Briefcase01Icon, ChatIcon } from '@hugeicons/core-free-icons';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Creator } from './MarketplaceCreatorCard';
@@ -52,7 +53,7 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
           <View style={styles.sheetServiceInfo}>
             <Text style={styles.sheetServiceLabel}>SELECTED SERVICE</Text>
             <View style={styles.sheetServiceCard}>
-              <Icon name="briefcase" size={14} color={Colors.oxblood} />
+              <HugeiconsIcon icon={Briefcase01Icon} size={14} color={Colors.oxblood} />
               <Text style={styles.sheetServiceName} numberOfLines={1}>{selectedService.name}</Text>
               <Text style={styles.sheetServicePrice}>₹{selectedService.price.toLocaleString()}</Text>
             </View>
@@ -95,7 +96,7 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
             activeOpacity={0.8}
             onPress={onMessageFirst}
           >
-            <Icon name="chat" size={16} color={Colors.oxblood} />
+            <HugeiconsIcon icon={ChatIcon} size={16} color={Colors.oxblood} />
             <Text style={styles.sheetBtnTextSecondary}>Message first</Text>
           </TouchableOpacity>
 
