@@ -1,5 +1,5 @@
 import { Colors, FontFamily } from '@/constants/brand';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
@@ -8,24 +8,14 @@ import { useUIStore } from '@/store/ui';
 export function StepTargeting() {
   const showModal = useUIStore((s) => s.showModal);
   const {
-    selectedPlatforms,
-    minFollowers,
-    minEngagementRate,
     targetGender,
     targetAgeRange,
     creatorSize,
     targetLanguage,
-    audienceGenderPct,
-    audienceAgePct,
-    togglePlatform,
     updateField,
   } = useCampaignWizardStore();
 
   const handleNext = () => {
-    if (selectedPlatforms.length === 0) {
-      showModal({ title: 'Validation Error', message: 'Please select at least 1 social platform.' });
-      return;
-    }
     updateField('createStep', 4);
   };
 
@@ -36,57 +26,8 @@ export function StepTargeting() {
   return (
     <View style={{ gap: 16 }}>
       <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Platforms (Allow Multiple) *</Text>
-        <View style={styles.gridRow}>
-          {(['Instagram', 'YouTube', 'Facebook'] as const).map((platform) => {
-            const active = selectedPlatforms.includes(platform);
-            return (
-              <TouchableOpacity
-                key={platform}
-                style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => togglePlatform(platform)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{platform}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Minimum Followers</Text>
-        <View style={styles.gridRow}>
-          {(['1K', '5K', '10K', '50K', '100K', '500K', '1M+'] as const).map((foll) => {
-            const active = minFollowers === foll;
-            return (
-              <TouchableOpacity
-                key={foll}
-                style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('minFollowers', foll)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{foll}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Engagement Rate Minimum (%)</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="e.g. 3%"
-          placeholderTextColor="rgba(63,3,11,0.35)"
-          value={minEngagementRate}
-          onChangeText={(v) => updateField('minEngagementRate', v)}
-        />
-      </View>
-
-      <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Size Preference</Text>
-        <View style={styles.gridRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['Nano (1K-10K)', 'Micro (10K-100K)', 'Mid-tier (100K-500K)', 'Macro (500K-1M)', 'Mega (1M+)'] as const).map((size) => {
             const active = creatorSize === size;
             return (
@@ -100,18 +41,18 @@ export function StepTargeting() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Gender Preference</Text>
-        <View style={styles.toggleRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['Male', 'Female', 'All'] as const).map((gender) => {
             const active = targetGender === gender;
             return (
               <TouchableOpacity
                 key={gender}
-                style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
                 onPress={() => updateField('targetGender', gender)}
                 activeOpacity={0.8}
               >
@@ -119,18 +60,18 @@ export function StepTargeting() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Age Range</Text>
-        <View style={styles.toggleRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['18–24', '25–34', '35–44', 'Custom'] as const).map((age) => {
             const active = targetAgeRange === age;
             return (
               <TouchableOpacity
                 key={age}
-                style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
                 onPress={() => updateField('targetAgeRange', age)}
                 activeOpacity={0.8}
               >
@@ -138,12 +79,12 @@ export function StepTargeting() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Language Preferred</Text>
-        <View style={styles.gridRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['English', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu', 'Any'] as const).map((lang) => {
             const active = targetLanguage === lang;
             return (
@@ -157,33 +98,7 @@ export function StepTargeting() {
               </TouchableOpacity>
             );
           })}
-        </View>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionHeader}>Audience Filters (Optional)</Text>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Audience Gender %</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. 70% Female"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={audienceGenderPct}
-            onChangeText={(v) => updateField('audienceGenderPct', v)}
-          />
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Audience Age %</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. 80% 18-24"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={audienceAgePct}
-            onChangeText={(v) => updateField('audienceAgePct', v)}
-          />
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.bottomRow}>
@@ -348,5 +263,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 13,
     color: '#ffffff',
+  },
+  horizontalScrollContent: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
   },
 });

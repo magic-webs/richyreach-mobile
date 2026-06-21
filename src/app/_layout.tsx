@@ -50,8 +50,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         if (token) {
           const data = await api.auth.session() as any;
           if (data && data.user) {
-            await setSession({ user: data.user, token });
             useAuthStore.setState({ role: data.user.role });
+            await setSession({ user: data.user, token });
           } else {
             await setSession(null);
           }

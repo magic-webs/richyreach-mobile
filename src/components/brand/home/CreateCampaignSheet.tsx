@@ -1,10 +1,9 @@
-import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Briefcase01Icon, Cancel01Icon, CheckIcon } from '@hugeicons/core-free-icons';
 
 // Step Subcomponents
 import { StepBasics } from './campaign-wizard/StepBasics';
@@ -33,6 +34,8 @@ interface CreateCampaignSheetProps {
 export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampaignSheetProps) {
   const insets = useSafeAreaInsets();
   const showModal = useUIStore((s) => s.showModal);
+  const scrollViewRef = useRef<ScrollView>(null);
+
   const {
     createStep,
     campName,
@@ -129,6 +132,11 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       }
     }
   }, [isOpen, resetStore]);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }, [createStep]);
 
   const handleLaunchCampaign = async () => {
     if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
@@ -349,8 +357,8 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
     'Step 1: Campaign Basics',
     'Step 2: Deliverables & Budget',
     'Step 3: Creator Targeting',
-    "Step 4: Guidelines & Do's/Don'ts",
-    'Step 5: Media & Final Review',
+    "Step 4: Guidelines & Tone",
+    'Step 5: Media & Timeline Review',
   ];
 
   return (
@@ -369,12 +377,12 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.iconWrap}>
-                <Icon name="briefcase" size={18} color="#fff" />
+                <HugeiconsIcon icon={Briefcase01Icon} size={18} color="#fff" strokeWidth={2} />
               </View>
               <Text style={styles.headerTitle}>Create Campaign Brief</Text>
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-              <Icon name="x" size={18} color={Colors.oxblood} />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} color={Colors.oxblood} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -387,7 +395,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
                 <React.Fragment key={step}>
                   <View style={[styles.stepDot, active && styles.stepDotActive, completed && styles.stepDotCompleted]}>
                     {completed ? (
-                      <Icon name="check" size={10} color="#ffffff" />
+                      <HugeiconsIcon icon={CheckIcon} size={10} color="#ffffff" strokeWidth={2.5} />
                     ) : (
                       <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{step}</Text>
                     )}
@@ -404,6 +412,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
 
           {/* Scrollable step content */}
           <ScrollView
+            ref={scrollViewRef}
             style={styles.flex}
             contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
             keyboardShouldPersistTaps="handled"

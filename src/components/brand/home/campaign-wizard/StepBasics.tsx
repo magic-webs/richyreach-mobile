@@ -1,6 +1,6 @@
 import { Colors, FontFamily } from '@/constants/brand';
 import { useEffect } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
@@ -19,7 +19,6 @@ export function StepBasics() {
     campLocationType,
     campLocationValue,
     campNiche,
-    campPriority,
     updateField,
     updateState,
   } = useCampaignWizardStore();
@@ -65,7 +64,7 @@ export function StepBasics() {
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Brand Profile *</Text>
-        <View style={styles.gridRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {profiles.map((p) => {
             const active = selectedBrandProfileId
               ? selectedBrandProfileId === p.id
@@ -81,12 +80,12 @@ export function StepBasics() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Objective *</Text>
-        <View style={styles.gridRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['Brand Awareness', 'Product Launch', 'App Installs', 'Website Traffic', 'Sales/Conversions', 'Lead Generation'] as const).map((obj) => {
             const active = campObjective === obj;
             return (
@@ -100,12 +99,12 @@ export function StepBasics() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Industry / Niche *</Text>
-        <View style={styles.gridRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['Fashion', 'Real Estate', 'Beauty', 'Food', 'Tech', 'Finance', 'Education', 'Gaming', 'Travel', 'Fitness'] as const).map((niche) => {
             const active = campNiche === niche;
             return (
@@ -119,7 +118,7 @@ export function StepBasics() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={styles.formGroup}>
@@ -166,25 +165,6 @@ export function StepBasics() {
           />
         </View>
       )}
-
-      <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>Campaign Priority *</Text>
-        <View style={styles.toggleRow}>
-          {(['Normal', 'High', 'Urgent'] as const).map((pri) => {
-            const active = campPriority === pri;
-            return (
-              <TouchableOpacity
-                key={pri}
-                style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                onPress={() => updateField('campPriority', pri)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{pri}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
 
       <TactileButton
         onPress={handleNext}
@@ -306,5 +286,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 13.5,
     color: '#ffffff',
+  },
+  horizontalScrollContent: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
   },
 });

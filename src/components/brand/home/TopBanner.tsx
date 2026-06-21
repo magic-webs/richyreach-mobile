@@ -31,7 +31,8 @@ export function TopBanner({ onSwitchProfile }: TopBannerProps) {
     enabled: !!activeProfileId,
   });
 
-  const loading = loadingProfile || loadingDashboard;
+  const hasProfileButNotActiveYet = !!(brandProfileData && brandProfileData.id && !activeProfileId);
+  const loading = loadingProfile || loadingDashboard || hasProfileButNotActiveYet;
 
   const stats = React.useMemo(() => {
     if (!dashRes) {

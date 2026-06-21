@@ -163,7 +163,7 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
       </View>
 
       <View style={[styles.campaignList, viewMode === 'grid' && styles.campaignListGrid]}>
-        {loading ? (
+        {(!activeProfileId || loading) ? (
           <>
             <CampaignCardSkeleton viewMode={viewMode} />
             <CampaignCardSkeleton viewMode={viewMode} />

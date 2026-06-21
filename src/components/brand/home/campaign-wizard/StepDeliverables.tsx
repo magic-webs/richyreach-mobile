@@ -1,5 +1,5 @@
 import { Colors, FontFamily } from '@/constants/brand';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
@@ -10,10 +10,6 @@ export function StepDeliverables() {
   const {
     reelCount,
     storyCount,
-    postCount,
-    carouselCount,
-    ytShortCount,
-    ytVideoCount,
     liveCount,
     paymentType,
     costPerCreator,
@@ -34,7 +30,7 @@ export function StepDeliverables() {
   const totalBudget = cost * creators;
 
   const handleNext = () => {
-    if (reelCount === 0 && storyCount === 0 && postCount === 0 && carouselCount === 0 && ytShortCount === 0 && ytVideoCount === 0 && liveCount === 0) {
+    if (reelCount === 0 && storyCount === 0 && liveCount === 0) {
       showModal({ title: 'OOps!', message: 'Please select at least 1 deliverable quantity.' });
       return;
     }
@@ -81,73 +77,17 @@ export function StepDeliverables() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Static posts count */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>Instagram Feed Post</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('postCount', Math.max(0, postCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{postCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('postCount', postCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Carousels count */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>Instagram Carousel</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('carouselCount', Math.max(0, carouselCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{carouselCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('carouselCount', carouselCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* YouTube short count */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>YouTube Short</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('ytShortCount', Math.max(0, ytShortCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{ytShortCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('ytShortCount', ytShortCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* YouTube video count */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>YouTube Video</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('ytVideoCount', Math.max(0, ytVideoCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{ytVideoCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('ytVideoCount', ytVideoCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Campaign Type *</Text>
-        <View style={styles.toggleRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {(['Paid', 'Barter', 'Hybrid'] as const).map((type) => {
             const active = paymentType === type;
             return (
               <TouchableOpacity
                 key={type}
-                style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
                 onPress={() => updateField('paymentType', type)}
                 activeOpacity={0.8}
               >
@@ -155,7 +95,7 @@ export function StepDeliverables() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Barter Product Details */}
@@ -466,5 +406,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 13,
     color: '#ffffff',
+  },
+  horizontalScrollContent: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
   },
 });
