@@ -118,12 +118,25 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
 
       {/* Grid or List Layout */}
       {loading ? (
-        <View style={isGrid ? styles.campaignGrid : styles.campaignGridList}>
-          <LiveCampaignSkeletonCard isGrid={isGrid} />
-          <LiveCampaignSkeletonCard isGrid={isGrid} />
-          <LiveCampaignSkeletonCard isGrid={isGrid} />
-          <LiveCampaignSkeletonCard isGrid={isGrid} />
-        </View>
+        isGrid ? (
+          <View style={styles.campaignGrid}>
+            <View style={styles.campaignRow}>
+              <LiveCampaignSkeletonCard isGrid={isGrid} />
+              <LiveCampaignSkeletonCard isGrid={isGrid} />
+            </View>
+            <View style={styles.campaignRow}>
+              <LiveCampaignSkeletonCard isGrid={isGrid} />
+              <LiveCampaignSkeletonCard isGrid={isGrid} />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.campaignGridList}>
+            <LiveCampaignSkeletonCard isGrid={isGrid} />
+            <LiveCampaignSkeletonCard isGrid={isGrid} />
+            <LiveCampaignSkeletonCard isGrid={isGrid} />
+            <LiveCampaignSkeletonCard isGrid={isGrid} />
+          </View>
+        )
       ) : campaignList.length === 0 ? (
         <View style={styles.emptyCard}>
           <Image
@@ -137,76 +150,147 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
           </Text>
         </View>
       ) : (
-        <View style={isGrid ? styles.campaignGrid : styles.campaignGridList}>
-          {campaignList.slice(0, 4).map((cm) => (
-            <TouchableOpacity
-              key={cm.id}
-              onPress={() => onCampaignPress(cm.id)}
-              activeOpacity={0.85}
-              style={isGrid ? styles.campaignCard : styles.campaignCardList}
-            >
-              <View style={isGrid ? styles.campaignThumb : styles.campaignThumbList}>
-                {cm.imageUrl ? (
-                  <Image
-                    source={{ uri: cm.imageUrl }}
-                    style={isGrid ? { width: '100%', height: 92 } : { width: 80, height: 80 }}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <PlaceholderImage
-                    tone={cm.tone}
-                    height={isGrid ? 92 : 80}
-                    width={isGrid ? undefined : 80}
-                    borderRadius={isGrid ? 0 : 12}
-                  />
-                )}
-                {isGrid && (
-                  <View style={styles.campaignApplied}>
-                    <Text style={styles.campaignAppliedText}>{cm.applicants} applied</Text>
-                  </View>
-                )}
-                {cm.verified && (
-                  <View style={isGrid ? styles.verifiedBadge : styles.verifiedBadgeList}>
-                    <HugeiconsIcon
-                      icon={BadgeCheckIcon}
-                      size={isGrid ? 14 : 11}
-                      color={Colors.cream}
-                      strokeWidth={2}
+        isGrid ? (
+          <View style={styles.campaignGrid}>
+            {(() => {
+              const items = campaignList.slice(0, 4);
+              const rows = [];
+              for (let i = 0; i < items.length; i += 2) {
+                rows.push(items.slice(i, i + 2));
+              }
+              return rows.map((row, rIdx) => (
+                <View key={rIdx} style={styles.campaignRow}>
+                  {row.map((cm) => (
+                    <TouchableOpacity
+                      key={cm.id}
+                      onPress={() => onCampaignPress(cm.id)}
+                      activeOpacity={0.85}
+                      style={styles.campaignCard}
+                    >
+                      <View style={styles.campaignThumb}>
+                        {cm.imageUrl ? (
+                          <Image
+                            source={{ uri: cm.imageUrl }}
+                            style={{ width: '100%', height: 92 }}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <PlaceholderImage
+                            tone={cm.tone}
+                            height={92}
+                            borderRadius={0}
+                          />
+                        )}
+                        <View style={styles.campaignApplied}>
+                          <Text style={styles.campaignAppliedText}>{cm.applicants} applied</Text>
+                        </View>
+                        {cm.verified && (
+                          <View style={styles.verifiedBadge}>
+                            <HugeiconsIcon
+                              icon={BadgeCheckIcon}
+                              size={14}
+                              color={Colors.cream}
+                              strokeWidth={2}
+                            />
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.campaignInfo}>
+                        <Text style={styles.campaignBrand} numberOfLines={1}>
+                          {cm.brand}
+                        </Text>
+
+                        <Text style={styles.campaignTitle} numberOfLines={1}>
+                          {cm.title}
+                        </Text>
+
+                        <View style={styles.campaignFooter}>
+                          <Text style={styles.campaignBudget}>{cm.budget}</Text>
+                          <GradientView variant="rose" style={styles.campaignArrow}>
+                            <HugeiconsIcon
+                              icon={ArrowRight01Icon}
+                              size={14}
+                              color="#fff"
+                              strokeWidth={2}
+                            />
+                          </GradientView>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                  {row.length === 1 && (
+                    <View style={[styles.campaignCard, { opacity: 0 }]} pointerEvents="none" />
+                  )}
+                </View>
+              ));
+            })()}
+          </View>
+        ) : (
+          <View style={styles.campaignGridList}>
+            {campaignList.slice(0, 4).map((cm) => (
+              <TouchableOpacity
+                key={cm.id}
+                onPress={() => onCampaignPress(cm.id)}
+                activeOpacity={0.85}
+                style={styles.campaignCardList}
+              >
+                <View style={styles.campaignThumbList}>
+                  {cm.imageUrl ? (
+                    <Image
+                      source={{ uri: cm.imageUrl }}
+                      style={{ width: 80, height: 80 }}
+                      contentFit="cover"
                     />
-                  </View>
-                )}
-              </View>
+                  ) : (
+                    <PlaceholderImage
+                      tone={cm.tone}
+                      height={80}
+                      width={80}
+                      borderRadius={12}
+                    />
+                  )}
+                  {cm.verified && (
+                    <View style={styles.verifiedBadgeList}>
+                      <HugeiconsIcon
+                        icon={BadgeCheckIcon}
+                        size={11}
+                        color={Colors.cream}
+                        strokeWidth={2}
+                      />
+                    </View>
+                  )}
+                </View>
 
-              <View style={isGrid ? styles.campaignInfo : styles.campaignInfoList}>
-                <Text style={styles.campaignBrand} numberOfLines={1}>
-                  {cm.brand}
-                </Text>
+                <View style={styles.campaignInfoList}>
+                  <Text style={styles.campaignBrand} numberOfLines={1}>
+                    {cm.brand}
+                  </Text>
 
-                <Text style={styles.campaignTitle} numberOfLines={1}>
-                  {cm.title}
-                </Text>
+                  <Text style={styles.campaignTitle} numberOfLines={1}>
+                    {cm.title}
+                  </Text>
 
-                {!isGrid && (
                   <Text style={styles.campaignAppliedTextList}>
                     {cm.applicants} applied · {cm.cat || 'Beauty'}
                   </Text>
-                )}
 
-                <View style={isGrid ? styles.campaignFooter : styles.campaignFooterList}>
-                  <Text style={styles.campaignBudget}>{cm.budget}</Text>
-                  <GradientView variant="rose" style={styles.campaignArrow}>
-                    <HugeiconsIcon
-                      icon={ArrowRight01Icon}
-                      size={14}
-                      color="#fff"
-                      strokeWidth={2}
-                    />
-                  </GradientView>
+                  <View style={styles.campaignFooterList}>
+                    <Text style={styles.campaignBudget}>{cm.budget}</Text>
+                    <GradientView variant="rose" style={styles.campaignArrow}>
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        size={14}
+                        color="#fff"
+                        strokeWidth={2}
+                      />
+                    </GradientView>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )
       )}
     </View>
   );
@@ -244,9 +328,10 @@ const styles = StyleSheet.create({
   },
 
   // Grid style
-  campaignGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  campaignGrid: { flexDirection: 'column', gap: 14 },
+  campaignRow: { flexDirection: 'row', gap: 14 },
   campaignCard: {
-    width: (W - 32 - 14) / 2,
+    flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.6)',
     borderRadius: 18,
     overflow: 'hidden',

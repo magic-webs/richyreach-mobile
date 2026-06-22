@@ -8,6 +8,10 @@ import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
 import { ReviewsTab } from '@/components/influencer/profile/ReviewsTab';
 import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
 import { WalletContent } from '@/components/influencer/profile/WalletContent';
+import { VerificationContent } from '@/components/influencer/profile/VerificationContent';
+import { PrivacyContent } from '@/components/influencer/profile/PrivacyContent';
+import { LanguageContent } from '@/components/influencer/profile/LanguageContent';
+import { HelpContent } from '@/components/influencer/profile/HelpContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
@@ -164,7 +168,7 @@ export default function ProfileScreen() {
 
   const displayAvailable = `₹${(clearedEarnings / 100).toLocaleString()}`;
 
-  const sheetContent: Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode }> = {
+  const sheetContent: Partial<Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode }>> = {
     wallet: {
       title: 'Wallet & payouts',
       icon: 'wallet',
@@ -177,12 +181,34 @@ export default function ProfileScreen() {
         />
       )
     },
-    verification: { title: 'Verification', icon: 'verified', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Verification status: {displayVerified ? 'Verified ✓' : 'Pending'}</Text> },
-    notifications: { title: 'Notifications', icon: 'bell', content: <NotificationsContent /> },
-    privacy: { title: 'Privacy & security', icon: 'lock', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Privacy settings coming soon.</Text> },
-    language: { title: 'Language', icon: 'globe', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>Language: English</Text> },
-    help: { title: 'Help & support', icon: 'settings', content: <Text style={{ color: Colors.ink, fontSize: 14 }}>For support, contact support@richyreach.com</Text> },
+    verification: {
+      title: 'Verification',
+      icon: 'verified',
+      content: <VerificationContent profile={infProfile} servicesCount={services.length} />
+    },
+    notifications: {
+      title: 'Notifications',
+      icon: 'bell',
+      content: <NotificationsContent />
+    },
+    privacy: {
+      title: 'Privacy & security',
+      icon: 'lock',
+      content: <PrivacyContent />
+    },
+    language: {
+      title: 'Language',
+      icon: 'globe',
+      content: <LanguageContent />
+    },
+    help: {
+      title: 'Help & support',
+      icon: 'settings',
+      content: <HelpContent />
+    },
   };
+
+  const activeSheet = sheet ? sheetContent[sheet] : null;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -376,14 +402,14 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Bottom sheets */}
-      {sheet && sheetContent[sheet] && (
+      {activeSheet && (
         <BottomSheet
           visible={!!sheet}
-          title={sheetContent[sheet].title}
-          icon={sheetContent[sheet].icon}
+          title={activeSheet.title}
+          icon={activeSheet.icon}
           onClose={() => setSheet(null)}
         >
-          {sheetContent[sheet].content}
+          {activeSheet.content}
         </BottomSheet>
       )}
 

@@ -24,6 +24,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,7 +85,7 @@ function NavigationLayout() {
 
       <Stack.Protected guard={isLoggedIn}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="collab" />
+        <Stack.Screen name="collab/[id]" />
         <Stack.Screen name="insights" />
         <Stack.Screen name="referral" />
       </Stack.Protected>
@@ -107,14 +108,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <AuthGuard>
-              <NavigationLayout />
-              <ActionModal />
-            </AuthGuard>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <BottomSheetModalProvider>
+              <AuthGuard>
+                <NavigationLayout />
+                <ActionModal />
+              </AuthGuard>
+            </BottomSheetModalProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

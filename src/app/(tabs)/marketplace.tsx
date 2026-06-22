@@ -6,8 +6,8 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import React, { useEffect, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Animated, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -252,6 +252,45 @@ export default function MarketplaceScreen() {
   const cat = 'All';
   const [sortBy, setSortBy] = useState('Top match');
 
+  const [headerHeight, setHeaderHeight] = useState(160);
+  const lastOffsetY = useRef(0);
+  const isHeaderVisible = useRef(true);
+  const headerTranslateY = useRef(new Animated.Value(0)).current;
+
+  const handleScroll = (event: any) => {
+    const currentOffsetY = event.nativeEvent.contentOffset.y;
+    if (currentOffsetY < 0) return;
+
+    const diff = currentOffsetY - lastOffsetY.current;
+
+    if (currentOffsetY <= 50) {
+      if (!isHeaderVisible.current) {
+        isHeaderVisible.current = true;
+        Animated.timing(headerTranslateY, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
+    } else if (diff > 15 && isHeaderVisible.current) {
+      isHeaderVisible.current = false;
+      Animated.timing(headerTranslateY, {
+        toValue: -headerHeight,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else if (diff < -15 && !isHeaderVisible.current) {
+      isHeaderVisible.current = true;
+      Animated.timing(headerTranslateY, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    lastOffsetY.current = currentOffsetY;
+  };
+
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
   const [isBrandSwitcherOpen, setIsBrandSwitcherOpen] = useState(false);
@@ -346,12 +385,18 @@ export default function MarketplaceScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
+      <Animated.View
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+        style={[
+          styles.header,
+          {
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
         <View style={styles.headerTop}>
           <Text style={[{ fontFamily: FontFamily.sansMedium, fontSize: 24, color: Colors.oxblood }]}>Marketplace</Text>
         </View>
-        {/* <Text style={[styles.greetSub, { fontFamily: FontFamily.sansRegular }]}>Discover the latest collaborations and campaigns</Text> */}
 
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
@@ -386,53 +431,68 @@ export default function MarketplaceScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
+      </Animated.View>
 
-      {/* Campaign list */}
-      {loading ? (
-        <View style={styles.list}>
-          <View style={styles.listHeader}>
-            <Skeleton width={80} height={16} borderRadius={4} />
-          </View>
-          <View style={{ gap: 16 }}>
-            <CampaignSkeletonCard />
-            <CampaignSkeletonCard />
-          </View>
-        </View>
-      ) : (
-        <FlatList
-          data={sortedList}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: 130 }]}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View style={{ marginBottom: 12 }}>
-              <PromoBannerCarousel position="marketplace_top" />
-              <Text style={styles.openGigsText}>{sortedList.length} open gigs</Text>
+      <FlatList
+        data={loading ? [] : sortedList}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 130 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        ListHeaderComponent={
+          <View>
+            {/* Spacer equal to header height so list items start below the header */}
+            <View style={{ height: headerHeight }} />
+
+            {/* List Header content / Loading content */}
+            <View style={{ paddingHorizontal: 18, paddingTop: 10 }}>
+              {loading ? (
+                <View>
+                  <View style={styles.listHeader}>
+                    <Skeleton width={80} height={16} borderRadius={4} />
+                  </View>
+                  <View style={{ gap: 16 }}>
+                    <CampaignSkeletonCard />
+                    <CampaignSkeletonCard />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginBottom: 12 }}>
+                  <PromoBannerCarousel position="marketplace_top" />
+                  <Text style={styles.openGigsText}>{sortedList.length} open gigs</Text>
+                </View>
+              )}
             </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyCard}>
-              <Image
-                source={require('@/assets/images/empty_campaign.png')}
-                style={styles.emptyStateImage}
-                contentFit="contain"
-              />
-              <Text style={styles.emptyStateText}>No campaigns found</Text>
-              <Text style={styles.emptyStateSub}>
-                There are currently no active campaigns in the marketplace. Check back later or adjust your category.
-              </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          loading ? null : (
+            <View style={{ paddingHorizontal: 18 }}>
+              <View style={styles.emptyCard}>
+                <Image
+                  source={require('@/assets/images/empty_campaign.png')}
+                  style={styles.emptyStateImage}
+                  contentFit="contain"
+                />
+                <Text style={styles.emptyStateText}>No campaigns found</Text>
+                <Text style={styles.emptyStateSub}>
+                  There are currently no active campaigns in the marketplace. Check back later or adjust your category.
+                </Text>
+              </View>
             </View>
-          }
-          renderItem={({ item }) => (
+          )
+        }
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: 18 }}>
             <CampaignCard
               cm={item}
               onPress={() => router.push({ pathname: '/collab/[id]', params: { id: item.id } })}
             />
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-        />
-      )}
+          </View>
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      />
 
       <SwitchInfluencerProfileSheet
         isOpen={isInfluencerSwitcherOpen}
@@ -490,6 +550,11 @@ export default function MarketplaceScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     backgroundColor: 'rgba(244,236,228,0.92)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(63,3,11,0.07)',

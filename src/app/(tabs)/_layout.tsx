@@ -84,7 +84,7 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
   return (
     <Animated.View style={[styles.tabItem, animatedItemStyle]}>
       {/* Background Pill */}
-      <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]} pointerEvents="none">
+      <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle, { pointerEvents: 'none' }]}>
         <GradientView variant="oxblood" style={styles.tabGradientAbsolute} />
       </Animated.View>
 
@@ -96,7 +96,7 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
       />
 
       {/* Content */}
-      <View style={styles.contentContainer} pointerEvents="none">
+      <View style={[styles.contentContainer, { pointerEvents: 'none' }]}>
         <View style={styles.iconWrapper}>
           <Animated.View style={[styles.absoluteIcon, animatedIconActiveStyle]}>
             <HugeiconsIcon icon={tab.icon} size={22} color={Colors.cream} strokeWidth={2} />
@@ -122,7 +122,7 @@ function CustomTabBar({ state, navigation }: any) {
 
   const activeTabs = role === 'brand' ? BRAND_TABS : CREATOR_TABS;
 
-  const activeRouteName = state.routes[state.index].name;
+  const activeRouteName = state?.routes?.[state?.index]?.name;
 
   // hide the tab bar from these routs 
   const hiddenRoutes = [
@@ -135,7 +135,7 @@ function CustomTabBar({ state, navigation }: any) {
     'chat/[id]'
   ];
 
-  if (hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {
+  if (activeRouteName && hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {
     return null;
   }
 
@@ -189,6 +189,7 @@ export default function TabLayout() {
           <Tabs.Screen name="marketplace" />
           <Tabs.Screen name="arena" />
           <Tabs.Screen name="profile" />
+          <Tabs.Screen name="chat/index" options={{ href: null }} />
           <Tabs.Screen name="chat/[id]" options={{ href: null }} />
         </Tabs.Protected>
 
@@ -200,6 +201,7 @@ export default function TabLayout() {
           <Tabs.Screen name="brand/shortlist" options={{ href: null }} />
           <Tabs.Screen name="brand/campaign/[id]" options={{ href: null }} />
           <Tabs.Screen name="brand/marketplace/creator/[id]" options={{ href: null }} />
+          <Tabs.Screen name="brand/chat/index" options={{ href: null }} />
           <Tabs.Screen name="brand/chat/[id]" options={{ href: null }} />
         </Tabs.Protected>
       </Tabs>

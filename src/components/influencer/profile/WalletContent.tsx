@@ -93,19 +93,90 @@ export function WalletContent({ dashboard, earnings, loadingDashboard, loadingEa
 }
 
 const styles = StyleSheet.create({
-  balanceCard: { borderRadius: 22, padding: 20 },
-  balanceLabel: { fontSize: 11, fontWeight: '700', color: Colors.roseSoft, textTransform: 'uppercase', letterSpacing: 1 },
-  balanceAmount: { fontFamily: FontFamily.serif, fontSize: 38, fontWeight: '700', color: Colors.cream, marginTop: 6 },
-  balanceRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  miniCard: { flex: 1, backgroundColor: 'rgba(232,216,204,0.1)', borderRadius: 12, padding: 10 },
-  miniLabel: { fontSize: 10.5, color: 'rgba(232,216,204,0.6)', fontWeight: '600' },
-  miniValue: { fontFamily: FontFamily.serif, fontSize: 18, fontWeight: '700', color: Colors.cream, marginTop: 3 },
-  withdrawBtn: { marginTop: 14, height: 44, borderRadius: 12, backgroundColor: Colors.cream, alignItems: 'center', justifyContent: 'center' },
-  withdrawText: { fontFamily: FontFamily.sans, fontWeight: '800', fontSize: 14, color: Colors.oxblood },
-  txnTitle: { fontFamily: FontFamily.serif, fontSize: 17, fontWeight: '700', color: Colors.ink, marginBottom: 12 },
-  txnRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  txnBorder: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
-  txnBrand: { fontWeight: '600', fontSize: 14, color: Colors.ink },
-  txnDate: { fontSize: 11.5, color: 'rgba(63,3,11,0.45)', marginTop: 1 },
-  txnAmount: { fontFamily: FontFamily.serif, fontSize: 15, fontWeight: '700' },
+  balanceCard: {
+    borderRadius: 22,
+    padding: 20
+  },
+  balanceLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.roseSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  balanceAmount: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 38,
+    fontWeight: '700',
+    color: Colors.cream,
+    marginTop: 6
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14
+  },
+  miniCard: {
+    flex: 1,
+    backgroundColor: 'rgba(232,216,204,0.1)',
+    borderRadius: 12,
+    padding: 10
+  },
+  miniLabel: {
+    fontSize: 10.5,
+    color: 'rgba(232,216,204,0.6)',
+    fontWeight: '600'
+  },
+  miniValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.cream, marginTop: 3
+  },
+  withdrawBtn: {
+    marginTop: 14,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  withdrawText: {
+    fontFamily: FontFamily.sans,
+    fontWeight: '800',
+    fontSize: 14,
+    color: Colors.oxblood
+  },
+  txnTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.ink, marginBottom: 12
+  },
+  txnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12
+  },
+  txnBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.07)'
+  },
+  txnBrand: {
+    fontWeight: '600',
+    fontSize: 14,
+    color: Colors.ink
+  },
+  txnDate: {
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 1
+  },
+  txnAmount: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '700'
+  },
 });

@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   convertingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: 18,
     alignItems: 'center',
