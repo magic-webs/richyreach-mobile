@@ -120,8 +120,15 @@ export const api = {
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),
-    createRoom: (influencerId: string, campaignId?: string) =>
-      request<any>('/chat/room', { method: 'POST', body: JSON.stringify({ influencerId, campaignId }) }),
+    createRoom: (targetId: string, campaignId?: string) =>
+      request<any>('/chat/room', {
+        method: 'POST',
+        body: JSON.stringify(
+          targetId.startsWith('bp_')
+            ? { brandId: targetId, campaignId }
+            : { influencerId: targetId, campaignId }
+        ),
+      }),
     messages: (roomId: string) => request<any[]>(`/chat/messages/${roomId}`),
     send: (roomId: string, content: string, campaignId?: string) =>
       request(`/chat/message/${roomId}`, { method: 'POST', body: JSON.stringify({ content, campaignId }) }),

@@ -118,128 +118,134 @@ function SwipeableServiceCard({
     WebkitScrollSnapAlign: 'start',
   } as any : undefined;
 
-  return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }, webStyle]}>
-        {/* Media Cover (using ReelVideoPlayer) */}
-        <View style={styles.mediaContainer}>
-          {/* <StatusBar style='dark' /> */}
-          <ReelVideoPlayer
-            videoUrl={item.videoUrl || item.exampleUrl || 'https://res.cloudinary.com/demo/video/upload/dog.mp4'}
-            isPlaying={index === activeVideoIndex && mode === 'services'}
-            height={containerHeight}
-          />
-        </View>
+  const cardContent = (
+    <Animated.View style={[styles.cardItem, animatedStyle, { height: containerHeight }, webStyle]}>
+      {/* Media Cover (using ReelVideoPlayer) */}
+      <View style={styles.mediaContainer}>
+        {/* <StatusBar style='dark' /> */}
+        <ReelVideoPlayer
+          videoUrl={item.videoUrl || item.exampleUrl || 'https://res.cloudinary.com/demo/video/upload/dog.mp4'}
+          isPlaying={index === activeVideoIndex && mode === 'services'}
+          height={containerHeight}
+        />
+      </View>
 
-        {/* Right Toolbar Overlay (Instagram Reels Style) */}
-        <View style={styles.reelsRightBar}>
-          {/* Bookmark Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onToggleBookmark}
-            style={styles.reelsActionBtn}
-          >
-            <View style={[styles.reelsIconCircle, isBookmarked && styles.reelsIconCircleBookmarked]}>
-              <HugeiconsIcon icon={Bookmark02Icon} size={20} color={isBookmarked ? Colors.gold : Colors.white} />
-            </View>
-            <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
-          </TouchableOpacity>
+      {/* Right Toolbar Overlay (Instagram Reels Style) */}
+      <View style={styles.reelsRightBar}>
+        {/* Bookmark Button */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onToggleBookmark}
+          style={styles.reelsActionBtn}
+        >
+          <View style={[styles.reelsIconCircle, isBookmarked && styles.reelsIconCircleBookmarked]}>
+            <HugeiconsIcon icon={Bookmark02Icon} size={20} color={isBookmarked ? Colors.gold : Colors.white} />
+          </View>
+          <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
+        </TouchableOpacity>
 
-          {/* Invite Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onInvite}
-            style={styles.reelsActionBtn}
-          >
-            <View style={styles.reelsIconCircle}>
-              <HugeiconsIcon icon={SentIcon} size={18} color={Colors.white} />
-            </View>
-            <Text style={styles.reelsActionText}>Invite</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Invite Button */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onInvite}
+          style={styles.reelsActionBtn}
+        >
+          <View style={styles.reelsIconCircle}>
+            <HugeiconsIcon icon={SentIcon} size={18} color={Colors.white} />
+          </View>
+          <Text style={styles.reelsActionText}>Invite</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Details overlay (Bottom & Left aligned) */}
-        <View style={styles.reelsDetailsOverlay}>
-          {/* Creator Identity */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => handleViewCreator(item.creator?.id)}
-            style={styles.reelsCreatorRow}
-          >
-            {item.creator?.avatar ? (
-              <Image source={{ uri: item.creator.avatar }} style={styles.reelsCreatorMiniAvatar} contentFit="cover" />
-            ) : (
-              <PlaceholderImage tone={item.creator?.tone} height={28} width={28} borderRadius={14} />
-            )}
-            <Text style={styles.reelsCreatorHandle}>{item.creator?.handle}</Text>
-            <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />
-            {item.creator?.niche?.[0] && (
-              <View style={styles.reelsNicheBadge}>
-                <Text style={styles.reelsNicheText}>{item.creator.niche[0]}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Service Title */}
-          <TouchableOpacity activeOpacity={0.85} onPress={() => setShowDesc(!showDesc)}>
-            <Text style={styles.reelsServiceTitle} numberOfLines={1}>
-              {item.name} {showDesc ? '▾' : '▸'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Service Description */}
-          {showDesc && item.description && (
-            <Text style={styles.reelsServiceDesc}>
-              {item.description}
-            </Text>
+      {/* Details overlay (Bottom & Left aligned) */}
+      <View style={styles.reelsDetailsOverlay}>
+        {/* Creator Identity */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => handleViewCreator(item.creator?.id)}
+          style={styles.reelsCreatorRow}
+        >
+          {item.creator?.avatar ? (
+            <Image source={{ uri: item.creator.avatar }} style={styles.reelsCreatorMiniAvatar} contentFit="cover" />
+          ) : (
+            <PlaceholderImage tone={item.creator?.tone} height={28} width={28} borderRadius={14} />
           )}
+          <Text style={styles.reelsCreatorHandle}>{item.creator?.handle}</Text>
+          <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />
+          {item.creator?.niche?.[0] && (
+            <View style={styles.reelsNicheBadge}>
+              <Text style={styles.reelsNicheText}>{item.creator.niche[0]}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
-          {/* Music ticker */}
-          <View style={styles.reelsMusicRow}>
-            <HugeiconsIcon icon={MusicNote01Icon} size={12} color="rgba(255, 255, 255, 0.7)" />
-            <Text style={styles.reelsMusicText} numberOfLines={1}>
-              Original Audio · {item.creator?.name || 'Creator'}
-            </Text>
-          </View>
+        {/* Service Title */}
+        <TouchableOpacity activeOpacity={0.85} onPress={() => setShowDesc(!showDesc)}>
+          <Text style={styles.reelsServiceTitle} numberOfLines={1}>
+            {item.name} {showDesc ? '▾' : '▸'}
+          </Text>
+        </TouchableOpacity>
 
-          {/* Metrics Pill Grid */}
-          <View style={styles.reelsMetricsRow}>
-            <View style={styles.reelsMetricBadge}>
-              <Text style={styles.reelsMetricLabel}>Price:</Text>
-              <Text style={styles.reelsMetricValue}>₹{item.price.toLocaleString()}</Text>
-            </View>
-            <View style={styles.reelsMetricBadge}>
-              <Text style={styles.reelsMetricLabel}>Deliv:</Text>
-              <Text style={styles.reelsMetricValue}>{item.deliveryTime}</Text>
-            </View>
-            <View style={styles.reelsMetricBadge}>
-              <Text style={styles.reelsMetricLabel}>Rating:</Text>
-              <Text style={styles.reelsMetricValue}>{item.creator.rating} ★</Text>
-            </View>
-          </View>
+        {/* Service Description */}
+        {showDesc && item.description && (
+          <Text style={styles.reelsServiceDesc}>
+            {item.description}
+          </Text>
+        )}
+
+        {/* Music ticker */}
+        <View style={styles.reelsMusicRow}>
+          <HugeiconsIcon icon={MusicNote01Icon} size={12} color="rgba(255, 255, 255, 0.7)" />
+          <Text style={styles.reelsMusicText} numberOfLines={1}>
+            Original Audio · {item.creator?.name || 'Creator'}
+          </Text>
         </View>
 
-        {/* Swipe Stamp indicators overlay */}
-        <Animated.View style={[styles.stampIndicator, styles.stampSelect, stampSelectStyle]}>
-          <Text style={styles.stampText}>SELECT</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.stampIndicator, styles.stampReject, stampRejectStyle]}>
-          <Text style={styles.stampText}>SKIP</Text>
-        </Animated.View>
-
-        {/* Feedback Badges */}
-        {actionFeedback.index === index && actionFeedback.type && (
-          <View style={[
-            styles.feedbackOverlay,
-            actionFeedback.type === 'select' ? styles.feedbackSelect : styles.feedbackReject
-          ]}>
-            <Text style={styles.feedbackText}>
-              {actionFeedback.type === 'select' ? 'SELECTED' : 'SKIPPED'}
-            </Text>
+        {/* Metrics Pill Grid */}
+        <View style={styles.reelsMetricsRow}>
+          <View style={styles.reelsMetricBadge}>
+            <Text style={styles.reelsMetricLabel}>Price:</Text>
+            <Text style={styles.reelsMetricValue}>₹{item.price.toLocaleString()}</Text>
           </View>
-        )}
+          <View style={styles.reelsMetricBadge}>
+            <Text style={styles.reelsMetricLabel}>Deliv:</Text>
+            <Text style={styles.reelsMetricValue}>{item.deliveryTime}</Text>
+          </View>
+          <View style={styles.reelsMetricBadge}>
+            <Text style={styles.reelsMetricLabel}>Rating:</Text>
+            <Text style={styles.reelsMetricValue}>{item.creator.rating} ★</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Swipe Stamp indicators overlay */}
+      <Animated.View style={[styles.stampIndicator, styles.stampSelect, stampSelectStyle]}>
+        <Text style={styles.stampText}>SELECT</Text>
       </Animated.View>
+
+      <Animated.View style={[styles.stampIndicator, styles.stampReject, stampRejectStyle]}>
+        <Text style={styles.stampText}>SKIP</Text>
+      </Animated.View>
+
+      {/* Feedback Badges */}
+      {actionFeedback.index === index && actionFeedback.type && (
+        <View style={[
+          styles.feedbackOverlay,
+          actionFeedback.type === 'select' ? styles.feedbackSelect : styles.feedbackReject
+        ]}>
+          <Text style={styles.feedbackText}>
+            {actionFeedback.type === 'select' ? 'SELECTED' : 'SKIPPED'}
+          </Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+
+  return Platform.OS === 'web' ? (
+    cardContent
+  ) : (
+    <GestureDetector gesture={gesture}>
+      {cardContent}
     </GestureDetector>
   );
 }

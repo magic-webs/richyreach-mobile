@@ -31,6 +31,7 @@ interface Step3ReviewProps {
   handleSubmit: () => void;
   setStep: (step: number) => void;
   service: any;
+  videoDuration: string;
 }
 
 export function Step3Review({
@@ -53,6 +54,7 @@ export function Step3Review({
   handleSubmit,
   setStep,
   service,
+  videoDuration,
 }: Step3ReviewProps) {
   return (
     <View style={styles.stepWrapper}>
@@ -79,9 +81,11 @@ export function Step3Review({
                 source={
                   thumbnailUrl
                     ? { uri: thumbnailUrl }
-                    : typeof getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] === 'string'
-                    ? { uri: getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] as string }
                     : getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0]
+                    ? (typeof getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] === 'string'
+                      ? { uri: getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] as string }
+                      : getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0])
+                    : null
                 }
                 style={styles.reviewThumb}
                 contentFit="cover"
@@ -90,7 +94,7 @@ export function Step3Review({
               <View style={styles.reviewThumbPlay}>
                 <Icon name="play" size={20} color={Colors.white} />
               </View>
-              <Text style={styles.reviewThumbDur}>00:34</Text>
+              {videoDuration ? <Text style={styles.reviewThumbDur}>{videoDuration}</Text> : null}
             </View>
             <View style={styles.reviewCardBody}>
               <Text style={styles.reviewCardTitle}>{name}</Text>
@@ -107,13 +111,6 @@ export function Step3Review({
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryText}>{subCategory}</Text>
                 </View>
-              </View>
-
-              <View style={styles.ratingRow}>
-                <Icon name="star" size={12} color={Colors.gold} />
-                <Text style={styles.ratingText}>
-                  <Text style={{ fontWeight: '700' }}>4.9</Text> (26 reviews)
-                </Text>
               </View>
             </View>
           </View>

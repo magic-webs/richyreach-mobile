@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { Step1Details } from './wizard/Step1Details';
 import { Step2Media } from './wizard/Step2Media';
 import { Step3Review } from './wizard/Step3Review';
@@ -29,9 +30,7 @@ interface CreateServiceSheetProps {
 
 // Preset categories and subcategories matching the platform
 export const CATEGORIES = [
-  { label: 'Instagram', value: 'Instagram', icon: 'camera' },
-  { label: 'YouTube', value: 'YouTube', icon: 'play' },
-  { label: 'TikTok', value: 'TikTok', icon: 'music' },
+  { label: 'Instagram', value: 'Instagram', icon: 'camera' }
 ];
 
 export const SUB_CATEGORIES = [
@@ -51,12 +50,7 @@ export const DELIVERY_TIMES = [
   '14 Days',
 ];
 
-const MOCK_FRAMES = [
-  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=200',
-  'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=200',
-  'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=200',
-  'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=200',
-];
+
 
 export function CreateServiceSheet({
   isOpen,
@@ -89,6 +83,7 @@ export function CreateServiceSheet({
   const [selectedFrameIdx, setSelectedFrameIdx] = useState(0);
   const [localExtractedFrames, setLocalExtractedFrames] = useState<any[]>([]);
   const [extractingFrames, setExtractingFrames] = useState(false);
+  const [videoDuration, setVideoDuration] = useState('');
   const [deliverables, setDeliverables] = useState<string[]>([
     'High quality video',
     'Script & Concept',
@@ -124,7 +119,7 @@ export function CreateServiceSheet({
         ];
       }
     }
-    return MOCK_FRAMES;
+    return [];
   };
 
   // Detect Edit Mode & Pre-populate
@@ -140,6 +135,7 @@ export function CreateServiceSheet({
         setDetailedDesc(service.description || '');
         setVideoUrl(service.videoUrl || service.exampleUrl || '');
         setThumbnailUrl(service.thumbnailUrl || '');
+        setVideoDuration('');
 
         // Parse tags if stored
         if (service.tags) {
@@ -181,6 +177,7 @@ export function CreateServiceSheet({
         setLocalExtractedFrames([]);
         setExtractingFrames(false);
         setConfirmed(false);
+        setVideoDuration('');
       }
       setStep(1);
     }
@@ -198,6 +195,7 @@ export function CreateServiceSheet({
     const extractFrames = async () => {
       if (!videoUrl) {
         setLocalExtractedFrames([]);
+        setVideoDuration('');
         return;
       }
 
@@ -225,6 +223,11 @@ export function CreateServiceSheet({
                 setExtractingFrames(false);
                 return;
               }
+
+              // Extract duration
+              const mins = Math.floor(duration / 60);
+              const secs = Math.floor(duration % 60);
+              setVideoDuration(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
 
               const times = [duration * 0.05, duration * 0.25, duration * 0.5, duration * 0.75];
               const frames: string[] = [];
@@ -305,7 +308,14 @@ export function CreateServiceSheet({
             return;
           }
 
-          const durationMs = (player.duration || 10) * 1000;
+          const durationSec = player.duration || 0;
+          if (durationSec > 0) {
+            const mins = Math.floor(durationSec / 60);
+            const secs = Math.floor(durationSec % 60);
+            setVideoDuration(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+          }
+
+          const durationMs = durationSec * 1000;
           const times = [durationMs * 0.05, durationMs * 0.25, durationMs * 0.50, durationMs * 0.75];
 
           const thumbnails = await player.generateThumbnailsAsync(times, {
@@ -339,6 +349,7 @@ export function CreateServiceSheet({
     };
 
     setLocalExtractedFrames([]);
+    setVideoDuration('');
     extractFrames();
 
     return () => {
@@ -398,37 +409,72 @@ export function CreateServiceSheet({
     setTags(tags.filter((_, i) => i !== idx));
   };
 
-  // Mock video picker for Native Simulator, real filepicker trigger for Web
-  const triggerVideoPicker = () => {
+  // Real file pickers for both Web and Native
+  const triggerVideoPicker = async () => {
     if (Platform.OS === 'web') {
       videoInputRef.current?.click();
     } else {
-      // Mock video file select on Native Simulation
-      setVideoFile({ name: 'mock_video_916.mp4', size: 18.2 * 1024 * 1024, type: 'video/mp4' });
-      setVideoUrl('https://res.cloudinary.com/demo/video/upload/dog.mp4');
-      showModal({
-        title: 'Video Selected 🎥',
-        message: 'Preselected a sample creator video for native simulation.',
-      });
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['videos'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          setVideoFile({
+            uri: asset.uri,
+            name: asset.fileName || 'video.mp4',
+            type: asset.mimeType || 'video/mp4',
+            size: asset.fileSize || 0,
+          });
+          setVideoUrl(asset.uri);
+        }
+      } catch (err: any) {
+        console.error('Failed to pick video:', err);
+        showModal({
+          title: 'Picker Failed',
+          message: 'Could not access the library to select a video.',
+        });
+      }
     }
   };
 
-  const triggerThumbnailPicker = () => {
+  const triggerThumbnailPicker = async () => {
     if (Platform.OS === 'web') {
       thumbInputRef.current?.click();
     } else {
-      setThumbnailFile({ name: 'custom_thumbnail.jpg', size: 2.1 * 1024 * 1024, type: 'image/jpeg' });
-      setThumbnailUrl('https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=600');
-      showModal({
-        title: 'Thumbnail Selected 🖼️',
-        message: 'Preselected a sample thumbnail image for native simulation.',
-      });
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          setThumbnailFile({
+            uri: asset.uri,
+            name: asset.fileName || 'image.jpg',
+            type: asset.mimeType || 'image/jpeg',
+            size: asset.fileSize || 0,
+          });
+          setThumbnailUrl(asset.uri);
+        }
+      } catch (err: any) {
+        console.error('Failed to pick thumbnail:', err);
+        showModal({
+          title: 'Picker Failed',
+          message: 'Could not access the library to select an image.',
+        });
+      }
     }
   };
 
   const handleSuggestedPoints = () => {
     const points = [
-      '• High-quality vertical format (9:16) ideal for Reels and TikTok.',
+      '• High-quality vertical format (9:16) ideal for Reels.',
       '• Product integrations showcasing benefits, usage, and real results.',
       '• Direct voiceover or trending background audio with text overlays.',
       '• Call to action (discount code/link) in caption and video.',
@@ -648,6 +694,7 @@ export function CreateServiceSheet({
                 setTagInput={setTagInput}
                 addTag={addTag}
                 handleNextStep={handleNextStep}
+                videoDuration={videoDuration}
               />
             )}
 
@@ -676,6 +723,7 @@ export function CreateServiceSheet({
                 addDeliverable={addDeliverable}
                 handleBackStep={handleBackStep}
                 handleNextStep={handleNextStep}
+                videoDuration={videoDuration}
               />
             )}
 
@@ -700,6 +748,7 @@ export function CreateServiceSheet({
                 handleSubmit={handleSubmit}
                 setStep={setStep}
                 service={service}
+                videoDuration={videoDuration}
               />
             )}
 

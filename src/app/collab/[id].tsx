@@ -140,6 +140,7 @@ export default function CollabDetail() {
     const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
     return {
       id: c.id,
+      brandId: c.brandId || c.brandProfileId,
       brand: c.brandName || c.brand?.companyName || 'Richy Brand',
       brandLogo: c.brandLogo || c.brand?.logo || null,
       cat: c.campaignType || c.category || 'General',
@@ -423,7 +424,18 @@ export default function CollabDetail() {
                 <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
               </View>
               <TouchableOpacity
-                onPress={() => router.push({ pathname: '/chat/[id]', params: { id: cm.id } })}
+                onPress={() => {
+                  if (cm?.brandId) {
+                    router.push({
+                      pathname: '/chat/[id]' as any,
+                      params: {
+                        id: cm.brandId,
+                        name: cm.brand || '',
+                        avatar: cm.brandLogo || '',
+                      }
+                    });
+                  }
+                }}
                 style={styles.messageBtn}
                 activeOpacity={0.8}
               >
@@ -442,7 +454,16 @@ export default function CollabDetail() {
         <TouchableOpacity
           onPress={() => {
             // Find or create chat room for this campaign
-            router.push({ pathname: '/chat/[id]', params: { id: cm.id } });
+            if (cm?.brandId) {
+              router.push({
+                pathname: '/chat/[id]' as any,
+                params: {
+                  id: cm.brandId,
+                  name: cm.brand || '',
+                  avatar: cm.brandLogo || '',
+                }
+              });
+            }
           }}
           style={styles.chatBtn}
           activeOpacity={0.8}

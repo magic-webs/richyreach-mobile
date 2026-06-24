@@ -272,6 +272,20 @@ export default function BrandProfileScreen() {
   });
   const campaignsList = (campaignsListData ?? []) as any[];
 
+  // Fetch real applications to list real creators
+  const { data: applicationsData = [] } = useQuery<any[]>({
+    queryKey: ['brandApplications', activeProfileId],
+    queryFn: () => api.brands.applications().catch(() => []),
+    enabled: !!activeProfileId,
+  });
+
+  // Fetch real wallet transactions/balance for billing
+  const { data: walletData } = useQuery<any>({
+    queryKey: ['brandWallet', activeProfileId],
+    queryFn: () => api.wallet.balance().catch(() => null),
+    enabled: !!activeProfileId,
+  });
+
   const stats = React.useMemo(() => {
     const dash = brandDashboard;
     if (!dash) {
@@ -316,29 +330,6 @@ export default function BrandProfileScreen() {
   const handleCreatorViewSwitch = () => {
     setRole('influencer');
   };
-
-  const months = [
-    { label: 'Jan', value: 12, isSpecial: false },
-    { label: 'Feb', value: 12, isSpecial: false },
-    { label: 'Mar', value: 12, isSpecial: false },
-    { label: 'Apr', value: 12, isSpecial: false },
-    { label: 'May', value: 12, isSpecial: true },
-    { label: 'Jun', value: 12, isSpecial: false },
-  ];
-
-  const campaignsData = [
-    { id: '1', title: 'Summer Glow Serum', subtitle: '8 creators · ₹4.8L', status: 'Active' as const },
-    { id: '2', title: 'Heritage Chronograph', subtitle: '3 creators · ₹3.6L', status: 'Active' as const },
-    { id: '3', title: 'Glass-Skin Routine', subtitle: '12 invited · ₹3.4L', status: 'In review' as const },
-    { id: '4', title: 'AW Collection', subtitle: '6 creators · ₹8.4L', status: 'Closed' as const },
-  ];
-
-  const creatorsData = [
-    { id: '1', name: 'Aanya Verma', handle: '@aanya', followers: '240k followers', tag: 'High Reach' },
-    { id: '2', name: 'Kabir Mehta', handle: '@kabirm', followers: '95k followers', tag: 'Top ROI' },
-    { id: '3', name: 'Rohan Malhotra', handle: '@rohanm', followers: '180k followers', tag: 'Active' },
-    { id: '4', name: 'Sanya Sen', handle: '@sanyasen', followers: '310k followers', tag: 'Engaged' },
-  ];
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -471,32 +462,19 @@ export default function BrandProfileScreen() {
           {/* Tabs Content */}
           {activeTab === 'Overview' && (
             <View style={styles.tabContent}>
-              <Text style={styles.sectionHeading}>Monthly spend (₹L)</Text>
-
-              {/* Spend Chart */}
-              <View style={styles.chartCard}>
-                <View style={styles.chartRow}>
-                  {months.map((m, idx) => (
-                    <View key={idx} style={styles.chartCol}>
-                      <View style={styles.chartBarContainer}>
-                        <View style={[
-                          styles.chartBar,
-                          { backgroundColor: m.isSpecial ? '#d8a7ad' : '#3f030b' }
-                        ]} />
-                      </View>
-                      <Text style={styles.chartLabel}>{m.label}</Text>
-                    </View>
-                  ))}
-                </View>
+              <View style={styles.analyticsSummaryCard}>
+                <Text style={styles.analyticsSummaryTitle}>Detailed Performance & Spend Analytics</Text>
+                <Text style={styles.analyticsSummaryText}>
+                  Analyze your total budget spent, expected audience reach, individual campaign metrics, and creator response rate.
+                </Text>
+                <TouchableOpacity
+                  style={styles.viewAnalyticsBtn}
+                  onPress={() => router.push('/brand/analytics')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.viewAnalyticsBtnText}>Open Analytics Dashboard</Text>
+                </TouchableOpacity>
               </View>
-
-              <Text style={styles.sectionHeading}>Campaign performance</Text>
-              <CampaignRow
-                id="perf-preview"
-                title="Summer Glow Serum"
-                subtitle="8 creators · ₹4.8L"
-                status="Active"
-              />
             </View>
           )}
 
@@ -523,31 +501,34 @@ export default function BrandProfileScreen() {
                   );
                 })
               ) : (
-                campaignsData.map((c) => (
-                  <CampaignRow
-                    key={c.id}
-                    id={c.id}
-                    title={c.title}
-                    subtitle={c.subtitle}
-                    status={c.status}
-                  />
-                ))
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyText}>No campaigns created yet.</Text>
+                </View>
               )}
             </View>
           )}
 
           {activeTab === 'Creators' && (
             <View style={styles.tabContent}>
-              {creatorsData.map((cr) => (
-                <CreatorRow
-                  key={cr.id}
-                  id={cr.id}
-                  name={cr.name}
-                  handle={cr.handle}
-                  followers={cr.followers}
-                  tag={cr.tag}
-                />
-              ))}
+              {applicationsData.length > 0 ? (
+                applicationsData.map((app: any) => {
+                  const followersCount = app.followers || 'N/A';
+                  return (
+                    <CreatorRow
+                      key={app.id}
+                      id={app.id}
+                      name={app.name || app.instagramHandle || 'Creator'}
+                      handle={`@${app.instagramHandle || 'creator'}`}
+                      followers={followersCount}
+                      tag={app.status.toUpperCase()}
+                    />
+                  );
+                })
+              ) : (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyText}>No creators found.</Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -613,50 +594,51 @@ export default function BrandProfileScreen() {
           <View style={{ gap: 14 }}>
             <View style={styles.sheetInfoCard}>
               <Text style={styles.sheetInfoTitle}>Billing Overview</Text>
-              <Text style={styles.sheetInfoText}>All invoices are generated monthly. Available credits: ₹45,000.</Text>
+              <Text style={styles.sheetInfoText}>
+                Wallet Balance: {walletData ? `₹${walletData.rupeeValue.toLocaleString()}` : '₹0'} ({walletData ? walletData.coinBalance.toLocaleString() : 0} coins)
+              </Text>
             </View>
-            <View style={styles.invoiceItem}>
-              <View>
-                <Text style={styles.invoiceTitle}>Invoice #INV-2026-003</Text>
-                <Text style={styles.invoiceDate}>June 2026</Text>
-              </View>
-              <Text style={styles.invoiceAmount}>₹4,80,000</Text>
-            </View>
-            <View style={styles.invoiceItem}>
-              <View>
-                <Text style={styles.invoiceTitle}>Invoice #INV-2026-002</Text>
-                <Text style={styles.invoiceDate}>May 2026</Text>
-              </View>
-              <Text style={styles.invoiceAmount}>₹3,60,000</Text>
-            </View>
+            <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+              {walletData?.transactions && walletData.transactions.length > 0 ? (
+                walletData.transactions.map((tx: any) => (
+                  <View key={tx.id} style={styles.invoiceItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invoiceTitle}>{tx.description || tx.type.toUpperCase()}</Text>
+                      <Text style={styles.invoiceDate}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
+                    </View>
+                    <Text style={[styles.invoiceAmount, { color: tx.type === 'credit' ? '#2a7a5a' : Colors.oxblood }]}>
+                      {tx.type === 'credit' ? '+' : '-'}₹{(tx.amount / 100).toLocaleString()}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ textAlign: 'center', color: 'rgba(63,3,11,0.45)', marginVertical: 24, fontSize: 13.5 }}>
+                  No transaction history found.
+                </Text>
+              )}
+            </ScrollView>
           </View>
         </BottomSheet>
       )}
 
       {sheet === 'team' && (
         <BottomSheet visible={true} title="Team management" icon="users" onClose={() => setSheet('menu')}>
-          <View style={{ gap: 12 }}>
-            <View style={styles.memberRow}>
-              <View style={styles.memberAvatar}>
-                <Text style={{ fontWeight: '700', color: Colors.oxblood }}>AS</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.memberName}>Abhijit Sen</Text>
-                <Text style={styles.memberRole}>Owner · abhijit@magicwebs.com</Text>
-              </View>
+          <View style={{ gap: 14 }}>
+            <View style={styles.sheetInfoCard}>
+              <Text style={styles.sheetInfoTitle}>Portal Authentication Required</Text>
+              <Text style={styles.sheetInfoText}>
+                Multi-user organization access and role delegation are managed through the web portal interface dashboard.
+              </Text>
             </View>
             <View style={styles.memberRow}>
               <View style={styles.memberAvatar}>
-                <Text style={{ fontWeight: '700', color: Colors.oxblood }}>NK</Text>
+                <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{session?.user?.name ? session.user.name.substring(0,2).toUpperCase() : 'B'}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.memberName}>Nikita Kapoor</Text>
-                <Text style={styles.memberRole}>Campaign Manager · nikita@magicwebs.com</Text>
+                <Text style={styles.memberName}>{session?.user?.name || 'Owner'}</Text>
+                <Text style={styles.memberRole}>Primary Owner · Active Account</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.addMemberBtn} activeOpacity={0.8} onPress={() => showModal({ title: 'Invite Member', message: 'Invite team member dialog...' })}>
-              <Text style={styles.addMemberText}>+ Invite Team Member</Text>
-            </TouchableOpacity>
           </View>
         </BottomSheet>
       )}
@@ -768,7 +750,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(63,3,11,0.08)'
   },
   headerTitle: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 18,
     color: Colors.ink,
     fontWeight: '700'
@@ -829,7 +811,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   brandName: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 24,
     fontWeight: '700',
     color: Colors.ink
@@ -885,7 +867,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(63,3,11,0.06)'
   },
   statValue: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 19,
     fontWeight: '700',
     color: Colors.ink
@@ -933,7 +915,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   sectionHeading: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 18,
     color: Colors.ink,
     marginTop: 20,
@@ -1009,7 +991,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: Colors.oxblood,
-    fontFamily: FontFamily.serif
+    fontFamily: FontFamily.sansMedium
   },
   campaignTitle: {
     fontFamily: FontFamily.sansMedium,
@@ -1116,7 +1098,7 @@ const styles = StyleSheet.create({
   invoiceItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
   invoiceTitle: { fontWeight: '600', fontSize: 14, color: Colors.ink },
   invoiceDate: { fontSize: 12, color: 'rgba(63,3,11,0.45)' },
-  invoiceAmount: { fontFamily: FontFamily.serif, fontSize: 15, fontWeight: '700', color: Colors.oxblood },
+  invoiceAmount: { fontFamily: FontFamily.sansMedium, fontSize: 15, fontWeight: '700', color: Colors.oxblood },
 
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   memberAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(180,106,116,0.15)', alignItems: 'center', justifyContent: 'center' },
@@ -1130,4 +1112,55 @@ const styles = StyleSheet.create({
   toggleSub: { fontSize: 12, color: 'rgba(63,3,11,0.5)', marginTop: 2 },
   saveBtn: { marginTop: 16, height: 48, borderRadius: 12, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { fontFamily: FontFamily.sans, fontWeight: '800', fontSize: 14, color: Colors.cream },
+
+  emptyCard: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13.5,
+    color: 'rgba(63,3,11,0.4)',
+    textAlign: 'center',
+  },
+  analyticsSummaryCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 20,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.03)',
+    ...Shadow.card,
+    alignItems: 'center',
+  },
+  analyticsSummaryTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.ink,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  analyticsSummaryText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: 'rgba(63,3,11,0.55)',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  viewAnalyticsBtn: {
+    backgroundColor: Colors.oxblood,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+    ...Shadow.button,
+  },
+  viewAnalyticsBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.cream,
+  },
 });

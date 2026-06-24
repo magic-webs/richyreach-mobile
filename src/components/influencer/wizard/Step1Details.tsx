@@ -44,6 +44,7 @@ interface Step1DetailsProps {
   setTagInput: (val: string) => void;
   addTag: () => void;
   handleNextStep: () => void;
+  videoDuration: string;
 }
 
 export function Step1Details({
@@ -71,6 +72,7 @@ export function Step1Details({
   setTagInput,
   addTag,
   handleNextStep,
+  videoDuration,
 }: Step1DetailsProps) {
   return (
     <View style={styles.stepWrapper}>
@@ -106,7 +108,7 @@ export function Step1Details({
             <View style={[styles.inputWrap, { flex: 1 }]}>
               <Text style={styles.inputLabel}>Category <Text style={{ color: '#FF3B30' }}>*</Text></Text>
               <View style={styles.dropdownPicker}>
-                <Icon name={category.toLowerCase() === 'youtube' ? 'play' : category.toLowerCase() === 'tiktok' ? 'music' : 'camera'} size={14} color={Colors.roseDeep} />
+                <Icon name={category.toLowerCase() === 'youtube' ? 'play' : 'camera'} size={14} color={Colors.roseDeep} />
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {CATEGORIES.map((cat) => (
@@ -203,16 +205,16 @@ export function Step1Details({
         {videoUrl ? (
           <View style={styles.videoSelectedContainer}>
             <View style={styles.videoPreviewMedia}>
-              <Image 
-                source={typeof getFrames()[0] === 'string' ? { uri: getFrames()[0] as string } : getFrames()[0]} 
-                style={styles.videoPreviewImage} 
-                contentFit="cover" 
+              <Image
+                source={getFrames()[0] ? (typeof getFrames()[0] === 'string' ? { uri: getFrames()[0] as string } : getFrames()[0]) : null}
+                style={styles.videoPreviewImage}
+                contentFit="cover"
               />
               <View style={styles.videoPreviewOverlay} />
               <View style={styles.videoPreviewPlayCircle}>
                 <Icon name="play" size={20} color={Colors.white} />
               </View>
-              <Text style={styles.videoDurationLabel}>00:34</Text>
+              {videoDuration ? <Text style={styles.videoDurationLabel}>{videoDuration}</Text> : null}
               <TouchableOpacity onPress={triggerVideoPicker} style={styles.replaceVideoBtn}>
                 <Icon name="swap" size={12} color={Colors.oxblood} />
                 <Text style={styles.replaceVideoText}>Replace</Text>

@@ -365,22 +365,6 @@ export function CreateInfluencerProfileSheet({
             editable={!submitting}
           />
         </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>TikTok Profile URL (Optional)</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. https://tiktok.com/@username"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={tiktok}
-            onChangeText={setTiktok}
-            keyboardType="url"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!submitting}
-          />
-        </View>
-
         {/* ACTION BUTTON */}
         <TouchableOpacity
           style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
@@ -462,7 +446,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   sectionTitle: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '700',
     color: Colors.ink,
@@ -518,7 +502,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cream,
   },
   avatarPreviewText: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 22,
     fontWeight: '700',
     color: Colors.oxblood,

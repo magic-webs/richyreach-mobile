@@ -37,10 +37,12 @@ interface Step2MediaProps {
   addDeliverable: () => void;
   handleBackStep: () => void;
   handleNextStep: () => void;
+  videoDuration: string;
 }
 
 export function Step2Media({
   videoFile,
+  videoUrl,
   thumbnailUrl,
   selectedFrameIdx,
   setSelectedFrameIdx,
@@ -62,6 +64,7 @@ export function Step2Media({
   addDeliverable,
   handleBackStep,
   handleNextStep,
+  videoDuration,
 }: Step2MediaProps) {
   return (
     <View style={styles.stepWrapper}>
@@ -76,9 +79,11 @@ export function Step2Media({
           <View style={styles.mediaDetailsLeft}>
             <Image
               source={
-                typeof getFrames()[0] === 'string'
-                  ? { uri: getFrames()[0] as string }
-                  : getFrames()[0]
+                getFrames()[0]
+                  ? (typeof getFrames()[0] === 'string'
+                    ? { uri: getFrames()[0] as string }
+                    : getFrames()[0])
+                  : null
               }
               style={styles.mediaThumbImage}
               contentFit="cover"
@@ -87,18 +92,20 @@ export function Step2Media({
             <View style={styles.mediaThumbPlayCircle}>
               <Icon name="play" size={16} color={Colors.white} />
             </View>
-            <Text style={styles.mediaThumbDuration}>00:34</Text>
+            {videoDuration ? <Text style={styles.mediaThumbDuration}>{videoDuration}</Text> : null}
           </View>
           <View style={styles.mediaDetailsRight}>
             <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
               <Icon name="play" size={18} color={Colors.roseDeep} />
               <Text numberOfLines={1} style={styles.mediaFilename}>
-                {videoFile ? videoFile.name : 'brand_reel_sample.mp4'}
+                {videoFile ? videoFile.name : (videoUrl ? 'Attached Preview Video' : '')}
               </Text>
             </View>
-            <Text style={styles.mediaFilesize}>
-              {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(1)} MB` : '82.4 MB'}
-            </Text>
+            {videoFile && (
+              <Text style={styles.mediaFilesize}>
+                {`${(videoFile.size / (1024 * 1024)).toFixed(1)} MB`}
+              </Text>
+            )}
             <TouchableOpacity onPress={triggerVideoPicker} style={styles.replaceVideoTextBtn}>
               <Icon name="edit" size={12} color={Colors.roseDeep} />
               <Text style={styles.replaceVideoTextBtnLabel}>Replace Video</Text>

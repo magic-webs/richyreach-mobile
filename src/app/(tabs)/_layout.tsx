@@ -137,6 +137,7 @@ function CustomTabBar({ state, navigation }: any) {
     'brand/referral',
     'referral',
     'arena/[id]',
+    'brand/analytics',
   ];
 
   if (activeRouteName && hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {
@@ -211,6 +212,7 @@ export default function TabLayout() {
           <Tabs.Screen name="brand/chat/[id]" options={{ href: null }} />
           <Tabs.Screen name="brand/referral" options={{ href: null }} />
           <Tabs.Screen name="brand/arena/[id]" options={{ href: null }} />
+          <Tabs.Screen name="brand/analytics" options={{ href: null }} />
         </Tabs.Protected>
       </Tabs>
     </View>

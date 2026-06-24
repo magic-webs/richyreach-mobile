@@ -58,19 +58,11 @@ export default function InfluencerChatConversationScreen() {
         const allRooms = await api.chat.rooms();
 
         if (typeof routeId === 'string' && routeId.startsWith('bp_')) {
-          const foundRoom = allRooms.find((r: any) => r.brandId === routeId);
-          if (foundRoom) {
-            resolvedId = foundRoom.roomId;
-            if (active) {
-              setRoomId(foundRoom.roomId);
-            }
-          } else {
-            console.warn('No chat room found for brand profile:', routeId);
-            if (active) {
-              if (routeName) setRoomName(routeName);
-              if (routeAvatar) setRoomAvatar(routeAvatar);
-            }
-            return;
+          // Create (or get existing) room between this influencer profile and the brand
+          const room = await api.chat.createRoom(routeId);
+          resolvedId = room.id;
+          if (active) {
+            setRoomId(room.id);
           }
         }
 
