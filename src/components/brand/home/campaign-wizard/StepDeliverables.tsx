@@ -1,44 +1,41 @@
 import { Colors, FontFamily } from '@/constants/brand';
+import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
-import { useUIStore } from '@/store/ui';
 
 export function StepDeliverables() {
-  const showModal = useUIStore((s) => s.showModal);
-  const {
-    reelCount,
-    storyCount,
-    liveCount,
-    paymentType,
-    costPerCreator,
-    numCreators,
-    paymentMethod,
-    paymentTimeline,
-    prodName,
-    prodValue,
-    prodDescription,
-    prodSku,
-    prodUrl,
-    prodShipping,
-    updateField,
-  } = useCampaignWizardStore();
+  "use no memo";
+  const { updateField } = useCampaignWizardStore();
+  const { control, setValue, trigger, watch, formState: { errors } } = useFormContext();
+
+  const reelCount = watch('reelCount');
+  const storyCount = watch('storyCount');
+  const paymentType = watch('paymentType');
+  const costPerCreator = watch('costPerCreator');
+  const numCreators = watch('numCreators');
 
   const cost = parseInt(costPerCreator) || 0;
   const creators = parseInt(numCreators) || 0;
   const totalBudget = cost * creators;
 
-  const handleNext = () => {
-    if (reelCount === 0 && storyCount === 0 && liveCount === 0) {
-      showModal({ title: 'OOps!', message: 'Please select at least 1 deliverable quantity.' });
-      return;
+  const isDeliverablesInvalid = reelCount === 0 && storyCount === 0;
+
+  const handleNext = async () => {
+    const fieldsToValidate = [];
+    if (paymentType === 'Paid' || paymentType === 'Hybrid') {
+      fieldsToValidate.push('costPerCreator', 'numCreators');
     }
-    if ((paymentType === 'Barter' || paymentType === 'Hybrid') && !prodName.trim()) {
-      showModal({ title: 'OOps!', message: 'Product name is required for barter campaigns.' });
-      return;
+    if (paymentType === 'Barter' || paymentType === 'Hybrid') {
+      fieldsToValidate.push('prodName', 'prodValue');
     }
-    updateField('createStep', 3);
+
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid && !isDeliverablesInvalid) {
+      updateField('createStep', 3);
+    }
   };
 
   const handleBack = () => {
@@ -47,38 +44,44 @@ export function StepDeliverables() {
 
   return (
     <View style={{ gap: 16 }}>
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionHeader}>Deliverables Quantity</Text>
+      {/* Deliverables Card */}
+      <View style={[styles.sectionCard, isDeliverablesInvalid && styles.sectionCardError]}>
+        <Text style={styles.sectionHeader}>Deliverables Quantity *</Text>
 
-        {/* Reels count */}
+        {/* Reels */}
         <View style={styles.counterRow}>
           <Text style={styles.counterLabel}>Instagram Reel</Text>
           <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('reelCount', Math.max(0, reelCount - 1))}>
+            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('reelCount', Math.max(0, reelCount - 1))}>
               <Text style={styles.counterBtnText}>-</Text>
             </TouchableOpacity>
             <Text style={styles.counterValue}>{reelCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('reelCount', reelCount + 1)}>
+            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('reelCount', reelCount + 1)}>
               <Text style={styles.counterBtnText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Stories count */}
+        {/* Stories */}
         <View style={styles.counterRow}>
           <Text style={styles.counterLabel}>Instagram Story</Text>
           <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('storyCount', Math.max(0, storyCount - 1))}>
+            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('storyCount', Math.max(0, storyCount - 1))}>
               <Text style={styles.counterBtnText}>-</Text>
             </TouchableOpacity>
             <Text style={styles.counterValue}>{storyCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateField('storyCount', storyCount + 1)}>
+            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('storyCount', storyCount + 1)}>
               <Text style={styles.counterBtnText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {isDeliverablesInvalid && (
+          <Text style={styles.errorText}>Please select at least 1 deliverable quantity</Text>
+        )}
       </View>
 
+      {/* Campaign Type Selector */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Campaign Type *</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
@@ -88,7 +91,7 @@ export function StepDeliverables() {
               <TouchableOpacity
                 key={type}
                 style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
-                onPress={() => updateField('paymentType', type)}
+                onPress={() => setValue('paymentType', type)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{type}</Text>
@@ -105,101 +108,174 @@ export function StepDeliverables() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Product Name *</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Skin Hydration Serum"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={prodName}
-              onChangeText={(v) => updateField('prodName', v)}
+            <Controller
+              control={control}
+              name="prodName"
+              rules={{ required: 'Product name is required' }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.formInput, errors.prodName && styles.formInputError]}
+                  placeholder="e.g. Skin Hydration Serum"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
+            {errors.prodName && <Text style={styles.errorText}>{errors.prodName.message as string}</Text>}
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Product Retail Value (₹)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. 1499"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              keyboardType="numeric"
-              value={prodValue}
-              onChangeText={(v) => updateField('prodValue', v)}
+            <Text style={styles.formLabel}>Product Retail Value (₹) *</Text>
+            <Controller
+              control={control}
+              name="prodValue"
+              rules={{
+                required: 'Product retail value is required',
+                pattern: { value: /^\d+$/, message: 'Must be a valid number' }
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.formInput, errors.prodValue && styles.formInputError]}
+                  placeholder="e.g. 1499"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  keyboardType="numeric"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
+            {errors.prodValue && <Text style={styles.errorText}>{errors.prodValue.message as string}</Text>}
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Product Description</Text>
-            <TextInput
-              style={[styles.formInput, styles.textArea]}
-              multiline
-              placeholder="Describe the product details..."
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={prodDescription}
-              onChangeText={(v) => updateField('prodDescription', v)}
+            <Controller
+              control={control}
+              name="prodDescription"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.formInput, styles.textArea]}
+                  multiline
+                  placeholder="Describe the product details..."
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>SKU / Product Code</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. SERUM-HYD-50"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={prodSku}
-              onChangeText={(v) => updateField('prodSku', v)}
+            <Controller
+              control={control}
+              name="prodSku"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. SERUM-HYD-50"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Product Page URL</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. https://brand.com/serum"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={prodUrl}
-              onChangeText={(v) => updateField('prodUrl', v)}
+            <Controller
+              control={control}
+              name="prodUrl"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. https://brand.com/serum"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Shipping / Delivery Details</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Shipped via BlueDart within 3 days of selection"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={prodShipping}
-              onChangeText={(v) => updateField('prodShipping', v)}
+            <Controller
+              control={control}
+              name="prodShipping"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Shipped via BlueDart within 3 days of selection"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
           </View>
         </View>
       )}
 
-      {/* Budget section for Paid & Hybrid */}
+      {/* Budget configuration for Paid & Hybrid */}
       {paymentType !== 'Barter' && (
         <View style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>Budget Configuration</Text>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Cost per Creator (₹) *</Text>
-            <TextInput
-              style={styles.formInput}
-              keyboardType="numeric"
-              placeholder="e.g. 5000"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={costPerCreator}
-              onChangeText={(v) => updateField('costPerCreator', v)}
+            <Controller
+              control={control}
+              name="costPerCreator"
+              rules={{
+                required: 'Cost per creator is required',
+                pattern: { value: /^\d+$/, message: 'Must be a valid number' }
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.formInput, errors.costPerCreator && styles.formInputError]}
+                  keyboardType="numeric"
+                  placeholder="e.g. 5000"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
+            {errors.costPerCreator && <Text style={styles.errorText}>{errors.costPerCreator.message as string}</Text>}
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Number of Creators *</Text>
-            <TextInput
-              style={styles.formInput}
-              keyboardType="numeric"
-              placeholder="e.g. 5"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={numCreators}
-              onChangeText={(v) => updateField('numCreators', v)}
+            <Controller
+              control={control}
+              name="numCreators"
+              rules={{
+                required: 'Number of creators is required',
+                pattern: { value: /^\d+$/, message: 'Must be a valid number' }
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.formInput, errors.numCreators && styles.formInputError]}
+                  keyboardType="numeric"
+                  placeholder="e.g. 5"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+              )}
             />
+            {errors.numCreators && <Text style={styles.errorText}>{errors.numCreators.message as string}</Text>}
           </View>
 
           <View style={styles.summaryCard}>
@@ -211,19 +287,10 @@ export function StepDeliverables() {
           </View>
         </View>
       )}
+
       <View style={styles.bottomRow}>
-        <TactileButton
-          text="Back"
-          onPress={handleBack}
-          icon="arrowLeft"
-          iconPosition="left"
-        />
-        <TactileButton
-          onPress={handleNext}
-          text="Next"
-          icon="arrow"
-          iconPosition="right"
-        />
+        <TactileButton text="Back" onPress={handleBack} icon="arrowLeft" iconPosition="left" variant="secondary" />
+        <TactileButton onPress={handleNext} text="Next" icon="arrow" iconPosition="right" variant="primary" />
       </View>
     </View>
   );
@@ -251,6 +318,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.ink,
     fontFamily: FontFamily.sansMedium,
+  },
+  formInputError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdf2f2',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    marginTop: 4,
+    marginBottom: 4,
   },
   textArea: {
     height: 90,
@@ -298,6 +376,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     gap: 12,
+  },
+  sectionCardError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdf2f2',
   },
   sectionHeader: {
     fontFamily: FontFamily.sans,
@@ -378,34 +460,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 10,
-  },
-  backBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.creamDk,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  backBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13,
-    color: Colors.oxblood,
-  },
-  launchBtn: {
-    flex: 2,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.oxblood,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  launchBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13,
-    color: '#ffffff',
   },
   horizontalScrollContent: {
     flexDirection: 'row',

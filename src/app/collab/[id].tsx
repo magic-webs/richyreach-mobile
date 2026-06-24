@@ -4,6 +4,8 @@ import { SectionHead } from '@/components/ui/section-head';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
+import { ApplyCampaignSheet } from '@/components/influencer/ApplyCampaignSheet';
+import { CounterOfferSheet } from '@/components/brand/CounterOfferSheet';
 import { useProfilesStore } from '@/store/profiles';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
@@ -80,7 +82,11 @@ export default function CollabDetail() {
   const role = useAuthStore((s) => s.role);
   const [applied, setApplied] = useState(false);
   const [createProfileOpen, setCreateProfileOpen] = useState(false);
+  const [applySheetOpen, setApplySheetOpen] = useState(false);
+  const [counterSheetOpen, setCounterSheetOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
 
   // Entrance animations state
   const fadeAnim = React.useMemo(() => new Animated.Value(0), []);
@@ -120,11 +126,18 @@ export default function CollabDetail() {
     enabled: !!id,
   });
 
+  const myApplication = React.useMemo(() => {
+    if (!collabData?.applications || !activeInfluencerProfileId) return null;
+    return collabData.applications.find((app: any) => app.influencerId === activeInfluencerProfileId);
+  }, [collabData?.applications, activeInfluencerProfileId]);
+
   const cm = React.useMemo(() => {
     const c = collabData?.campaign;
     if (!c) {
       return null;
     }
+    const numCreators = c.numCreators || 1;
+    const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
     return {
       id: c.id,
       brand: c.brandName || c.brand?.companyName || 'Richy Brand',
@@ -133,6 +146,7 @@ export default function CollabDetail() {
       verified: c.verified ?? c.brand?.verified ?? false,
       title: c.title,
       budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+      budgetNum: typeof c.budget === 'number' ? c.budget : 10000,
       deadline: c.deadline || '5 days left',
       applicants: c.applicants || 0,
       tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
@@ -142,6 +156,8 @@ export default function CollabDetail() {
       type: c.campaignType || 'Reel',
       followers: c.followers || '10k+',
       imageUrl: c.imageUrl || null,
+      numCreators,
+      costPerCreator,
     };
   }, [collabData]);
 
@@ -162,7 +178,8 @@ export default function CollabDetail() {
   };
 
   const applyMutation = useMutation({
-    mutationFn: () => api.influencers.apply(id),
+    mutationFn: ({ proposal, bidAmount }: { proposal: string; bidAmount: number }) =>
+      api.influencers.apply(id, proposal, bidAmount),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['collab', id] });
       const previousCollab = queryClient.getQueryData<any>(['collab', id]);
@@ -196,6 +213,47 @@ export default function CollabDetail() {
     }
   });
 
+  const acceptCounterMutation = useMutation({
+    mutationFn: () => api.influencers.acceptCounterOffer(myApplication!.id),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      useUIStore.getState().showModal({
+        title: 'Offer Accepted! 🎉',
+        message: 'You have accepted the brand\'s counter-offer. Navigating to your chat room...',
+        actions: [
+          {
+            text: 'Go to Chat',
+            onPress: () => {
+              router.push({
+                pathname: '/chat/[id]' as any,
+                params: {
+                  id: res.roomId,
+                  name: cm?.brand || 'Brand',
+                  avatar: cm?.brandLogo || '',
+                }
+              });
+            }
+          }
+        ]
+      });
+    },
+    onError: (err: any) => {
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to accept counter-offer' });
+    }
+  });
+
+  const counterMutation = useMutation({
+    mutationFn: (amount: number) => api.influencers.counterOffer(myApplication!.id, amount),
+    onSuccess: () => {
+      setCounterSheetOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      useUIStore.getState().showModal({ title: 'Counter Offer Sent', message: 'Your counter-offer has been sent to the brand.' });
+    },
+    onError: (err: any) => {
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to send counter-offer' });
+    }
+  });
+
   const loading = applyMutation.isPending;
 
   const handleApply = async () => {
@@ -203,7 +261,7 @@ export default function CollabDetail() {
       useUIStore.getState().showModal({ title: 'Info', message: 'Only influencers can apply to campaigns' });
       return;
     }
-    if (applied) return;
+    if (applied || !!myApplication) return;
 
     let profiles = useProfilesStore.getState().influencerProfiles;
     if (profiles.length === 0) {
@@ -226,7 +284,12 @@ export default function CollabDetail() {
       return;
     }
 
-    applyMutation.mutate();
+    setApplySheetOpen(true);
+  };
+
+  const handleApplySubmit = (proposal: string, bidAmount: number) => {
+    setApplySheetOpen(false);
+    applyMutation.mutate({ proposal, bidAmount });
   };
 
   if (isLoading || !cm) {
@@ -290,11 +353,19 @@ export default function CollabDetail() {
         <Animated.View style={[styles.body, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
           {/* Budget strip (Thematic background matched dynamically) */}
           <View style={[styles.budgetStrip, { backgroundColor: cm.tone === 'rose' ? Colors.roseDeep : Colors.oxblood }]}>
-            <View>
-              <Text style={styles.budgetLabel}>Paid collaboration</Text>
-              <Text style={styles.budgetAmount}>{cm.budget}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.budgetLabel}>
+                {cm.numCreators > 1 ? `Paid Collaboration · ${cm.numCreators} spots` : 'Paid collaboration'}
+              </Text>
+              <Text style={styles.budgetAmount}>
+                {cm.numCreators > 1 ? `₹${cm.costPerCreator.toLocaleString('en-IN')}` : cm.budget}
+                {cm.numCreators > 1 && <Text style={styles.budgetPerSpotLabel}> / spot</Text>}
+              </Text>
+              {cm.numCreators > 1 && (
+                <Text style={styles.budgetTotalSubText}>Total Budget: {cm.budget}</Text>
+              )}
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
               <View style={styles.deadlineRow}>
                 <HugeiconsIcon icon={Clock01Icon} size={14} color={Colors.roseSoft} strokeWidth={2} />
                 <Text style={styles.deadlineText}>{cm.deadline}</Text>
@@ -369,25 +440,69 @@ export default function CollabDetail() {
         style={[styles.applyBar, { paddingBottom: insets.bottom + 14 }]}
       >
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/chat/[id]', params: { id: cm.id } })}
+          onPress={() => {
+            // Find or create chat room for this campaign
+            router.push({ pathname: '/chat/[id]', params: { id: cm.id } });
+          }}
           style={styles.chatBtn}
           activeOpacity={0.8}
         >
           <HugeiconsIcon icon={ChatIcon} size={22} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
 
-        <Animated.View style={{ flex: 1, height: 52, transform: [{ scale: applyScale }] }}>
-          <TouchableOpacity
-            onPress={handleApply}
-            activeOpacity={0.85}
-            disabled={loading || applied}
-            style={[styles.applyBtn, applied && styles.applyBtnDone, loading && { opacity: 0.6 }]}
-          >
-            <Text style={styles.applyBtnText}>
-              {loading ? 'Submitting…' : (applied ? '✓ Application sent' : `Apply now · ${cm.budget}`)}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
+        {myApplication && myApplication.status === 'negotiating' && myApplication.lastActionBy === 'brand' ? (
+          <View style={{ flex: 1, flexDirection: 'row', gap: 10, height: 52 }}>
+            <TouchableOpacity
+              onPress={() => setCounterSheetOpen(true)}
+              style={[styles.applyBtn, { flex: 1, backgroundColor: Colors.oxblood }]}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.applyBtnText}>Counter Bid</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => acceptCounterMutation.mutate()}
+              style={[styles.applyBtn, { flex: 1.4, backgroundColor: Colors.green }]}
+              activeOpacity={0.8}
+              disabled={acceptCounterMutation.isPending}
+            >
+              <Text style={styles.applyBtnText}>
+                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: ₹${(myApplication.counterAmount / 100).toLocaleString()}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <Animated.View style={{ flex: 1, height: 52, transform: [{ scale: applyScale }] }}>
+            <TouchableOpacity
+              onPress={handleApply}
+              activeOpacity={0.85}
+              disabled={loading || !!myApplication}
+              style={[
+                styles.applyBtn,
+                myApplication && myApplication.status === 'accepted' && { backgroundColor: Colors.green },
+                myApplication && myApplication.status === 'rejected' && { backgroundColor: 'rgba(63,3,11,0.4)' },
+                myApplication && myApplication.status === 'pending' && styles.applyBtnDone,
+                myApplication && myApplication.status === 'negotiating' && { backgroundColor: Colors.roseDeep },
+                loading && { opacity: 0.6 }
+              ]}
+            >
+              <Text style={styles.applyBtnText}>
+                {loading ? 'Submitting…' : (
+                  myApplication ? (
+                    myApplication.status === 'accepted' ? `✓ Accepted · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : (
+                      myApplication.status === 'rejected' ? '✕ Application Declined' : (
+                        myApplication.status === 'negotiating' ? `Awaiting Brand · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : `Applied · ₹${(myApplication.bidAmount / 100).toLocaleString()}`
+                      )
+                    )
+                  ) : (
+                    cm.numCreators > 1
+                      ? `Apply now · ₹${cm.costPerCreator.toLocaleString('en-IN')} / spot`
+                      : `Apply now · ${cm.budget}`
+                  )
+                )}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </LinearGradient>
 
       <CreateInfluencerProfileSheet
@@ -399,6 +514,27 @@ export default function CollabDetail() {
         }}
         initialData={null}
       />
+
+      <ApplyCampaignSheet
+        isOpen={applySheetOpen}
+        onClose={() => setApplySheetOpen(false)}
+        onSubmit={handleApplySubmit}
+        submitting={loading}
+        campaignTitle={cm.title}
+        suggestedBudget={cm.budgetNum}
+      />
+
+      {myApplication && (
+        <CounterOfferSheet
+          isOpen={counterSheetOpen}
+          onClose={() => setCounterSheetOpen(false)}
+          onSubmit={(amount) => counterMutation.mutate(amount)}
+          submitting={counterMutation.isPending}
+          originalBidAmount={myApplication.counterAmount || myApplication.bidAmount}
+          campaignTitle={cm.title}
+          influencerName="Propose Counter Bid"
+        />
+      )}
     </View>
   );
 }
@@ -420,6 +556,19 @@ const styles = StyleSheet.create({
   budgetStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 18, padding: 16 },
   budgetLabel: { fontSize: 11.5, color: Colors.roseSoft, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   budgetAmount: { fontFamily: FontFamily.sansMedium, fontSize: 28, fontWeight: '700', color: Colors.cream, marginTop: 3 },
+  budgetPerSpotLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.roseSoft,
+  },
+  budgetTotalSubText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.roseSoft,
+    marginTop: 2,
+    opacity: 0.9,
+  },
   deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   deadlineText: { fontSize: 12, color: Colors.cream, fontWeight: '600' },
   applicantsText: { fontSize: 11.5, color: 'rgba(232,216,204,0.6)', marginTop: 3 },

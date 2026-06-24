@@ -1,79 +1,84 @@
 import { Colors, FontFamily } from '@/constants/brand';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 import { useProfilesStore } from '@/store/profiles';
-import { useUIStore } from '@/store/ui';
 
 export function StepBasics() {
-  const showModal = useUIStore((s) => s.showModal);
+  "use no memo";
   const { profiles, activeBrandProfileId } = useProfilesStore();
-  const {
-    campName,
-    brandName,
-    selectedBrandProfileId,
-    campObjective,
-    campDescription,
-    campLocationType,
-    campLocationValue,
-    campNiche,
-    updateField,
-    updateState,
-  } = useCampaignWizardStore();
+  const { updateField } = useCampaignWizardStore();
+  const { control, setValue, trigger, watch, formState: { errors } } = useFormContext();
 
-  // Always sync the active brand profile into the wizard state when the wizard opens
-  // or when the active profile changes (e.g. user switched profiles mid-session).
+  const campObjective = watch('campObjective');
+  const campNiche = watch('campNiche');
+  const campLocationType = watch('campLocationType');
+  const selectedBrandProfileId = watch('selectedBrandProfileId');
+  const brandName = watch('brandName');
+
   useEffect(() => {
     if (profiles.length === 0) return;
 
-    // Determine which profile should be active
     const resolvedId = selectedBrandProfileId || activeBrandProfileId || profiles[0]?.id;
     const activeProfile = profiles.find((p) => p.id === resolvedId) || profiles[0];
 
     if (activeProfile && (activeProfile.id !== selectedBrandProfileId || !brandName)) {
-      updateState({
-        brandName: activeProfile.companyName,
-        selectedBrandProfileId: activeProfile.id,
-      });
+      setValue('brandName', activeProfile.companyName);
+      setValue('selectedBrandProfileId', activeProfile.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profiles, activeBrandProfileId]);
+  }, [profiles, activeBrandProfileId, selectedBrandProfileId, brandName, setValue]);
 
-  const handleNext = () => {
-    if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
-      showModal({ title: 'Information Required', message: 'Name, Brand, and Description are required.' });
-      return;
+  const handleNext = async () => {
+    const fieldsToValidate = ['campName', 'campDescription'];
+    if (campLocationType !== 'Pan India') {
+      fieldsToValidate.push('campLocationValue');
     }
-    updateField('createStep', 2);
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      updateField('createStep', 2);
+    }
   };
 
   return (
     <View style={{ gap: 16 }}>
+      {/* Campaign Name */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Campaign Name *</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="e.g. Summer Glow Launch"
-          placeholderTextColor="rgba(63,3,11,0.35)"
-          value={campName}
-          onChangeText={(v) => updateField('campName', v)}
+        <Controller
+          control={control}
+          name="campName"
+          rules={{ required: 'Campaign name is required' }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={[styles.formInput, errors.campName && styles.formInputError]}
+              placeholder="e.g. Summer Glow Launch"
+              placeholderTextColor="rgba(63,3,11,0.35)"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+            />
+          )}
         />
+        {errors.campName && <Text style={styles.errorText}>{errors.campName.message as string}</Text>}
       </View>
 
+      {/* Brand Profiles selection */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Brand Profile *</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
           {profiles.map((p) => {
-            const active = selectedBrandProfileId
-              ? selectedBrandProfileId === p.id
-              : activeBrandProfileId === p.id || brandName === p.companyName;
+            const active = selectedBrandProfileId === p.id;
             return (
               <TouchableOpacity
                 key={p.id}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateState({ brandName: p.companyName, selectedBrandProfileId: p.id })}
+                onPress={() => {
+                  setValue('brandName', p.companyName);
+                  setValue('selectedBrandProfileId', p.id);
+                }}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{p.companyName}</Text>
@@ -83,6 +88,7 @@ export function StepBasics() {
         </ScrollView>
       </View>
 
+      {/* Objectives */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Objective *</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
@@ -92,7 +98,7 @@ export function StepBasics() {
               <TouchableOpacity
                 key={obj}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('campObjective', obj)}
+                onPress={() => setValue('campObjective', obj)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{obj}</Text>
@@ -102,6 +108,7 @@ export function StepBasics() {
         </ScrollView>
       </View>
 
+      {/* Niches */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Industry / Niche *</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
@@ -111,7 +118,7 @@ export function StepBasics() {
               <TouchableOpacity
                 key={niche}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('campNiche', niche)}
+                onPress={() => setValue('campNiche', niche)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{niche}</Text>
@@ -121,19 +128,30 @@ export function StepBasics() {
         </ScrollView>
       </View>
 
+      {/* Campaign Description */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Campaign Description *</Text>
-        <TextInput
-          style={[styles.formInput, styles.textArea]}
-          multiline
-          numberOfLines={4}
-          placeholder="Provide details about what creators should do..."
-          placeholderTextColor="rgba(63,3,11,0.35)"
-          value={campDescription}
-          onChangeText={(v) => updateField('campDescription', v)}
+        <Controller
+          control={control}
+          name="campDescription"
+          rules={{ required: 'Campaign description is required' }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={[styles.formInput, styles.textArea, errors.campDescription && styles.formInputError]}
+              multiline
+              numberOfLines={4}
+              placeholder="Provide details about what creators should do..."
+              placeholderTextColor="rgba(63,3,11,0.35)"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+            />
+          )}
         />
+        {errors.campDescription && <Text style={styles.errorText}>{errors.campDescription.message as string}</Text>}
       </View>
 
+      {/* Location Type */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Location Type *</Text>
         <View style={styles.toggleRow}>
@@ -143,7 +161,7 @@ export function StepBasics() {
               <TouchableOpacity
                 key={locType}
                 style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                onPress={() => updateField('campLocationType', locType)}
+                onPress={() => setValue('campLocationType', locType)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{locType}</Text>
@@ -153,16 +171,26 @@ export function StepBasics() {
         </View>
       </View>
 
+      {/* Location Value */}
       {campLocationType !== 'Pan India' && (
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>{campLocationType} Details</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder={`e.g. Maharashtra, Mumbai, or 400001`}
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={campLocationValue}
-            onChangeText={(v) => updateField('campLocationValue', v)}
+          <Text style={styles.formLabel}>{campLocationType} Details *</Text>
+          <Controller
+            control={control}
+            name="campLocationValue"
+            rules={{ required: `${campLocationType} value is required` }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={[styles.formInput, errors.campLocationValue && styles.formInputError]}
+                placeholder={`e.g. Maharashtra, Mumbai, or 400001`}
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+              />
+            )}
           />
+          {errors.campLocationValue && <Text style={styles.errorText}>{errors.campLocationValue.message as string}</Text>}
         </View>
       )}
 
@@ -199,6 +227,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.ink,
     fontFamily: FontFamily.sansMedium,
+  },
+  formInputError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdf2f2',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    marginTop: -4,
+    marginBottom: 4,
   },
   textArea: {
     height: 90,
@@ -239,11 +278,6 @@ const styles = StyleSheet.create({
     color: Colors.oxblood,
     fontWeight: '700',
   },
-  gridRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
   gridBtn: {
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -273,19 +307,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     color: Colors.oxblood,
     fontWeight: '700',
-  },
-  primaryActionBtn: {
-    backgroundColor: Colors.oxblood,
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  primaryActionBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13.5,
-    color: '#ffffff',
   },
   horizontalScrollContent: {
     flexDirection: 'row',

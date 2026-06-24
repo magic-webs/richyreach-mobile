@@ -1,9 +1,9 @@
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
+import { CounterOfferSheet } from '@/components/brand/CounterOfferSheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -16,11 +16,21 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useProfilesStore } from '@/store/profiles';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+
+const OBJECTIVES = ['Brand Awareness', 'Product Launch', 'App Installs', 'Website Traffic', 'Sales/Conversions', 'Lead Generation'];
+const PRIORITIES = ['normal', 'high', 'urgent'] as const;
+const TONES = ['Fun', 'Professional', 'Luxury', 'Casual'];
+const NICHES = ['Fashion', 'Real Estate', 'Beauty', 'Food', 'Tech', 'Finance', 'Education', 'Gaming', 'Travel', 'Fitness'];
+const GENDERS = ['All', 'Male', 'Female'];
+const PAYMENT_TYPES = ['Paid', 'Barter', 'Hybrid'];
 
 export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,28 +51,62 @@ export default function CampaignDetailScreen() {
     enabled: !!id,
   });
 
-  const campaign = queryData?.campaign || queryData; // Fallback in case the API directly returns the campaign object
 
-
+  const campaign = queryData?.campaign || queryData;
+  console.log(JSON.stringify(campaign, null, 2));
   // Local Form State for editing
   const [title, setTitle] = useState('');
-  const [image, setImage] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [expectedReach, setExpectedReach] = useState('');
+  const [category, setCategory] = useState('Fashion');
+  const [objective, setObjective] = useState('Brand Awareness');
+  const [location, setLocation] = useState('Pan India');
+  const [priority, setPriority] = useState('normal');
 
-  // Brief Details fields
+  // Deliverables
+  const [reelCount, setReelCount] = useState('0');
+  const [storyCount, setStoryCount] = useState('0');
+  const [postCount, setPostCount] = useState('0');
+  const [liveCount, setLiveCount] = useState('0');
+
+  // Budget
+  const [paymentType, setPaymentType] = useState('Paid');
+  const [costPerCreator, setCostPerCreator] = useState('5000');
+  const [numCreators, setNumCreators] = useState('5');
+  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
+  const [paymentTimeline, setPaymentTimeline] = useState('After Approval');
+
+  // Barter Details
+  const [prodName, setProdName] = useState('');
+  const [prodValue, setProdValue] = useState('');
+  const [prodDescription, setProdDescription] = useState('');
+  const [prodSku, setProdSku] = useState('');
+  const [prodUrl, setProdUrl] = useState('');
+  const [prodShipping, setProdShipping] = useState('');
+
+  // Targeting
+  const [minFollowers, setMinFollowers] = useState('10000');
+  const [targetGender, setTargetGender] = useState('All');
+  const [targetAgeRange, setTargetAgeRange] = useState('25-34');
+  const [customAgeRange, setCustomAgeRange] = useState('');
+  const [creatorSize, setCreatorSize] = useState('Micro (10K-100K)');
+  const [targetLanguage, setTargetLanguage] = useState('English');
+
+  // Guidelines
+  const [mustMention, setMustMention] = useState('');
+  const [cta, setCta] = useState('Visit Website');
+  const [hashtags, setHashtags] = useState('');
+  const [brandTone, setBrandTone] = useState('Fun');
+
+  // Media & Dates
+  const [startDate, setStartDate] = useState('2026-07-01');
+  const [endDate, setEndDate] = useState('2026-07-30');
+  const [applicationDeadline, setApplicationDeadline] = useState('2026-06-25');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [referenceLinks, setReferenceLinks] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
+
+  // Brand Name
   const [brandName, setBrandName] = useState('');
-  const [objective, setObjective] = useState('');
-  const [priority, setPriority] = useState('');
-  const [location, setLocation] = useState('');
-  const [gender, setGender] = useState('');
-  const [paymentType, setPaymentType] = useState('');
-  const [minFollowers, setMinFollowers] = useState('');
-  const [costPerCreator, setCostPerCreator] = useState('');
-  const [numCreators, setNumCreators] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [paymentTimeline, setPaymentTimeline] = useState('');
 
   // Hide tab bar and floating chat when viewing campaign details
   useEffect(() => {
@@ -81,25 +125,153 @@ export default function CampaignDetailScreen() {
   useEffect(() => {
     if (campaign) {
       setTitle(campaign.title || '');
-      setImage(campaign.imageUrl || '');
       setDescription(campaign.description || '');
       setCategory(campaign.category || 'Fashion');
-      setExpectedReach(String(campaign.expectedReach || 250000));
+      setBannerUrl(campaign.bannerUrl || campaign.imageUrl);
 
       const brief = campaign.briefDetails ? (typeof campaign.briefDetails === 'string' ? JSON.parse(campaign.briefDetails) : campaign.briefDetails) : {};
-      setBrandName(brief.brandName || '');
-      setObjective(brief.objective || 'brand_awareness');
-      setPriority(brief.priority || 'normal');
-      setLocation(brief.location || 'Pan India');
-      setGender(brief.gender || 'all');
-      setPaymentType(brief.paymentType || 'paid');
-      setMinFollowers(String(brief.minFollowers || 10000));
-      setCostPerCreator(String(brief.costPerCreator || 5000));
-      setNumCreators(String(brief.numCreators || 5));
-      setPaymentMethod(brief.paymentMethod || 'Bank Transfer');
-      setPaymentTimeline(brief.paymentTimeline || 'After Approval');
+
+      setBrandName(brief.brandName || campaign.brandName || '');
+      setObjective(brief.objective || campaign.objective || 'Brand Awareness');
+      setPriority(brief.priority || campaign.priority || 'normal');
+      setLocation(brief.location || campaign.location || 'Pan India');
+
+      // Deliverables
+      const deliverables = brief.deliverables || [];
+      const reel = deliverables.find((d: any) => d.type === 'reel');
+      const story = deliverables.find((d: any) => d.type === 'story');
+      const post = deliverables.find((d: any) => d.type === 'post');
+      const live = deliverables.find((d: any) => d.type === 'live');
+      setReelCount(String(reel?.quantity ?? campaign.reelCount ?? 0));
+      setStoryCount(String(story?.quantity ?? campaign.storyCount ?? 0));
+      setPostCount(String(post?.quantity ?? campaign.postCount ?? 0));
+      setLiveCount(String(live?.quantity ?? campaign.liveCount ?? 0));
+
+      // Rewards
+      setPaymentType(brief.paymentType || campaign.paymentType || 'Paid');
+      setCostPerCreator(String(brief.costPerCreator ?? campaign.costPerCreator ?? 0));
+      setNumCreators(String(brief.numCreators ?? campaign.numCreators ?? 1));
+      setPaymentMethod(brief.paymentMethod || campaign.paymentMethod || 'Bank Transfer');
+      setPaymentTimeline(brief.paymentTimeline || campaign.paymentTimeline || 'After Approval');
+
+      // Product info (barter)
+      const prod = brief.productInfo || {};
+      setProdName(prod.name || campaign.prodName || '');
+      setProdValue(String(prod.value ?? campaign.prodValue ?? ''));
+      setProdDescription(prod.description || campaign.prodDescription || '');
+      setProdSku(prod.sku || campaign.prodSku || '');
+      setProdUrl(prod.url || campaign.prodUrl || '');
+      setProdShipping(prod.shippingDetails || campaign.prodShipping || '');
+
+      // Targeting
+      setMinFollowers(String(brief.minFollowers ?? campaign.minFollowers ?? 10000));
+      setTargetGender(brief.gender || campaign.gender || 'All');
+
+      const age = brief.ageRange || campaign.ageRange || '25–34';
+      if (['18–24', '25–34', '35–44'].includes(age)) {
+        setTargetAgeRange(age);
+        setCustomAgeRange('');
+      } else {
+        setTargetAgeRange('Custom');
+        setCustomAgeRange(age);
+      }
+
+      setCreatorSize(brief.creatorSize || campaign.creatorSize || 'Micro (10K-100K)');
+      setTargetLanguage(brief.languages?.[0] || campaign.targetLanguage || 'English');
+
+      // Guidelines
+      const guide = brief.guidelines || {};
+      setMustMention(guide.mustMention ? guide.mustMention.join(', ') : (campaign.mustMention || ''));
+      setCta(guide.cta || campaign.cta || 'Visit Website');
+      setHashtags(guide.hashtags ? guide.hashtags.join(', ') : (campaign.hashtags || ''));
+      setBrandTone(guide.brandTone || campaign.brandTone || 'Fun');
+
+      // Dates & Media
+      const time = brief.timeline || {};
+      setStartDate(time.startDate || campaign.startDate || '2026-07-01');
+      setEndDate(time.endDate || campaign.endDate || '2026-07-30');
+      setApplicationDeadline(time.applicationDeadline || campaign.applicationDeadline || '2026-06-25');
+
+      const media = brief.mediaUploads || {};
+      setReferenceLinks(media.referenceLinks ? media.referenceLinks.join(', ') : (campaign.referenceLinks || ''));
+      setAudioUrl(media.audioInstructionUrl || campaign.audioInstructionUrl || '');
     }
   }, [campaign, mode]);
+
+  // Audio Player hook
+  const player = useAudioPlayer(audioUrl || undefined);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Image Picker for Banner
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const selectedUri = result.assets[0].uri;
+      try {
+        setSaving(true);
+        showModal({
+          title: 'Uploading Image...',
+          message: 'Uploading new banner image to R2 storage...',
+        });
+
+        const formData = new FormData();
+        const extension = selectedUri.split('.').pop() || 'jpg';
+        const filename = `banner.${extension}`;
+
+        if (Platform.OS === 'web' || selectedUri.startsWith('blob:') || selectedUri.startsWith('data:')) {
+          const response = await fetch(selectedUri);
+          const blob = await response.blob();
+          formData.append('file', blob, filename);
+        } else {
+          let formattedUri = selectedUri;
+          if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+            formattedUri = `file://${formattedUri}`;
+          }
+          formData.append('file', {
+            uri: formattedUri,
+            name: filename,
+            type: `image/${extension}`,
+          } as any);
+        }
+
+        const uploadRes = await api.media.upload(formData, activeProfileId);
+        setBannerUrl(uploadRes.url);
+
+        showModal({
+          title: 'Upload Successful',
+          message: 'Campaign banner updated successfully.',
+        });
+      } catch (err: any) {
+        console.error('Failed to upload banner:', err);
+        showModal({
+          title: 'Upload Failed',
+          message: err.message || 'Failed to upload new banner image.',
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   const handleUpdate = async () => {
     if (!title.trim() || !brandName.trim() || !description.trim()) {
@@ -112,30 +284,68 @@ export default function CampaignDetailScreen() {
 
     setSaving(true);
     try {
-      // Rebuild brief details object
-      const currentBrief = campaign?.briefDetails ? (typeof campaign.briefDetails === 'string' ? JSON.parse(campaign.briefDetails) : campaign.briefDetails) : {};
+      const parsedReel = parseInt(reelCount) || 0;
+      const parsedStory = parseInt(storyCount) || 0;
+      const parsedPost = parseInt(postCount) || 0;
+      const parsedLive = parseInt(liveCount) || 0;
+
+      const deliverables = [];
+      if (parsedReel > 0) deliverables.push({ type: 'reel', quantity: parsedReel });
+      if (parsedStory > 0) deliverables.push({ type: 'story', quantity: parsedStory });
+      if (parsedPost > 0) deliverables.push({ type: 'post', quantity: parsedPost });
+      if (parsedLive > 0) deliverables.push({ type: 'live', quantity: parsedLive });
+
       const updatedBrief = {
-        ...currentBrief,
         brandName,
         objective,
         priority,
         location,
-        gender,
+        gender: targetGender,
+        ageRange: targetAgeRange === 'Custom' ? customAgeRange : targetAgeRange,
+        creatorSize,
         paymentType,
         minFollowers: parseInt(minFollowers) || 10000,
-        costPerCreator: parseInt(costPerCreator) || 0,
-        numCreators: parseInt(numCreators) || 0,
+        languages: [targetLanguage],
+        deliverables,
         paymentMethod,
         paymentTimeline,
+        costPerCreator: paymentType === 'Barter' ? 0 : (parseInt(costPerCreator) || 0),
+        numCreators: paymentType === 'Barter' ? 1 : (parseInt(numCreators) || 1),
+        productInfo: paymentType !== 'Paid' ? {
+          name: prodName,
+          value: parseInt(prodValue) || 0,
+          description: prodDescription,
+          sku: prodSku,
+          url: prodUrl,
+          shippingDetails: prodShipping
+        } : null,
+        guidelines: {
+          mustMention: mustMention ? mustMention.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          cta,
+          hashtags: hashtags ? hashtags.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          brandTone
+        },
+        timeline: {
+          startDate,
+          endDate,
+          applicationDeadline
+        },
+        mediaUploads: {
+          referenceLinks: referenceLinks ? referenceLinks.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          audioInstructionUrl: audioUrl,
+          bannerUrl: bannerUrl
+        }
       };
 
-      const budget = (parseInt(costPerCreator) || 0) * (parseInt(numCreators) || 0) * 100; // in cents
+      const finalCost = paymentType === 'Barter' ? 0 : (parseInt(costPerCreator) || 0);
+      const finalCreators = paymentType === 'Barter' ? 1 : (parseInt(numCreators) || 1);
+      const budget = finalCost * finalCreators * 100; // in cents
 
       const payload = {
         title,
         description,
         budget,
-        expectedReach: parseInt(expectedReach) || 250000,
+        expectedReach: 250000,
         category,
         briefDetails: updatedBrief,
       };
@@ -183,7 +393,7 @@ export default function CampaignDetailScreen() {
                 message: 'The campaign has been removed successfully.',
               });
               queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
-              router.replace('/brand');
+              router.replace('/brand/index' as any);
             } catch (err: any) {
               console.error('Failed to delete campaign:', err);
               showModal({
@@ -197,9 +407,12 @@ export default function CampaignDetailScreen() {
     });
   };
 
+  const [negotiatingApp, setNegotiatingApp] = useState<any>(null);
+  const [counterSubmitting, setCounterSubmitting] = useState(false);
+
   const handleAcceptApplicant = async (app: any) => {
     try {
-      const room = await api.chat.createRoom(app.influencerId, id);
+      const res: any = await api.brands.acceptApplication(app.id);
       queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
 
       showModal({
@@ -212,7 +425,7 @@ export default function CampaignDetailScreen() {
               router.push({
                 pathname: '/brand/chat/[id]' as any,
                 params: {
-                  id: room.id || room.roomId,
+                  id: res.roomId,
                   name: app.name || app.instagramHandle,
                   avatar: app.avatar || '',
                 }
@@ -227,6 +440,61 @@ export default function CampaignDetailScreen() {
         title: 'Error',
         message: err.message || 'Failed to accept application.',
       });
+    }
+  };
+
+  const handleRejectApplicant = async (app: any) => {
+    try {
+      await api.brands.rejectApplication(app.id);
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
+      showModal({
+        title: 'Application Rejected',
+        message: `Successfully rejected application from ${app.name || app.instagramHandle}.`,
+      });
+    } catch (err: any) {
+      console.error('Failed to reject applicant:', err);
+      showModal({
+        title: 'Error',
+        message: err.message || 'Failed to reject application.',
+      });
+    }
+  };
+
+  const handleNegotiateSubmit = async (counterAmount: number) => {
+    if (!negotiatingApp) return;
+    setCounterSubmitting(true);
+    try {
+      const res: any = await api.brands.negotiateApplication(negotiatingApp.id, counterAmount);
+      setNegotiatingApp(null);
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
+
+      showModal({
+        title: 'Counter Offer Proposed',
+        message: `You proposed a counter-offer of ₹${counterAmount.toLocaleString()} to ${negotiatingApp.name || negotiatingApp.instagramHandle}. Navigating to the chat room...`,
+        actions: [
+          {
+            text: 'Go to Chat',
+            onPress: () => {
+              router.push({
+                pathname: '/brand/chat/[id]' as any,
+                params: {
+                  id: res.roomId,
+                  name: negotiatingApp.name || negotiatingApp.instagramHandle,
+                  avatar: negotiatingApp.avatar || '',
+                }
+              });
+            }
+          }
+        ]
+      });
+    } catch (err: any) {
+      console.error('Failed to send counter-offer:', err);
+      showModal({
+        title: 'Error',
+        message: err.message || 'Failed to send counter-offer.',
+      });
+    } finally {
+      setCounterSubmitting(false);
     }
   };
 
@@ -253,6 +521,15 @@ export default function CampaignDetailScreen() {
 
   const brief = campaign.briefDetails ? (typeof campaign.briefDetails === 'string' ? JSON.parse(campaign.briefDetails) : campaign.briefDetails) : {};
   const toneColor = brief.priority === 'urgent' ? 'ox' : 'rose';
+
+  // Format Date for display
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'TBD';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  };
 
   return (
     <KeyboardAvoidingView
@@ -287,7 +564,11 @@ export default function CampaignDetailScreen() {
             <View style={{ gap: 20 }}>
               {/* Campaign Header Card */}
               <View style={styles.detailsCard}>
-                {!image ? <PlaceholderImage tone={toneColor} height={140} borderRadius={16} /> : <Image source={{ uri: image }} style={styles.bannerImage} />}
+                {!bannerUrl ? (
+                  <PlaceholderImage tone={toneColor} height={150} borderRadius={16} />
+                ) : (
+                  <Image source={{ uri: bannerUrl }} style={styles.bannerImage} />
+                )}
                 <View style={styles.headerMetaRow}>
                   <View style={styles.badgeRow}>
                     <View style={styles.activeBadge}>
@@ -305,108 +586,220 @@ export default function CampaignDetailScreen() {
                 <Text style={styles.brandSubtitleText}>by {brief.brandName || 'My Brand'}</Text>
               </View>
 
-              {/* Description Section */}
+              {/* Campaign Brief & Timeline */}
               <View style={styles.sectionContainer}>
-                <Text style={styles.sectionHeading}>Campaign Brief</Text>
+                <Text style={styles.sectionHeading}>Campaign Brief & Timeline</Text>
                 <Text style={styles.bodyDescription}>{description}</Text>
-              </View>
 
-              {/* Budget and Payment Section */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionHeading}>Budget & Rewards</Text>
-                <View style={styles.infoGrid}>
-                  <View style={styles.infoGridCell}>
-                    <Text style={styles.infoCellLabel}>Payment Type</Text>
-                    <Text style={[styles.infoCellVal, { textTransform: 'capitalize' }]}>{brief.paymentType || 'Paid'}</Text>
-                  </View>
-                  <View style={styles.infoGridCell}>
-                    <Text style={styles.infoCellLabel}>Cost per Creator</Text>
-                    <Text style={styles.infoCellVal}>₹{(brief.costPerCreator || 0).toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.infoGridCell}>
-                    <Text style={styles.infoCellLabel}>Target Creators</Text>
-                    <Text style={styles.infoCellVal}>{brief.numCreators || 0}</Text>
-                  </View>
-                  <View style={styles.infoGridCell}>
-                    <Text style={styles.infoCellLabel}>Total Budget</Text>
-                    <Text style={styles.infoCellValPrice}>₹{((brief.costPerCreator || 0) * (brief.numCreators || 0)).toLocaleString()}</Text>
-                  </View>
-                </View>
                 <View style={styles.dividerLight} />
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsRowLabel}>Payment Method:</Text>
-                  <Text style={styles.detailsRowValue}>{brief.paymentMethod || 'Bank Transfer'}</Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsRowLabel}>Payment Timeline:</Text>
-                  <Text style={styles.detailsRowValue}>{brief.paymentTimeline || 'After Approval'}</Text>
+
+                <View style={styles.timelineGrid}>
+                  <View style={styles.timelineCell}>
+                    <Text style={styles.timelineCellLabel}>Start Date</Text>
+                    <Text style={styles.timelineCellValue}>{formatDate(startDate)}</Text>
+                  </View>
+                  <View style={styles.timelineCell}>
+                    <Text style={styles.timelineCellLabel}>End Date</Text>
+                    <Text style={styles.timelineCellValue}>{formatDate(endDate)}</Text>
+                  </View>
+                  <View style={styles.timelineCell}>
+                    <Text style={styles.timelineCellLabel}>Apply Deadline</Text>
+                    <Text style={styles.timelineCellValueUrgent}>{formatDate(applicationDeadline)}</Text>
+                  </View>
                 </View>
               </View>
 
               {/* Deliverables Section */}
-              {brief.deliverables && brief.deliverables.length > 0 && (
+              {((parseInt(reelCount) || 0) > 0 || (parseInt(storyCount) || 0) > 0 || (parseInt(postCount) || 0) > 0 || (parseInt(liveCount) || 0) > 0) && (
                 <View style={styles.sectionContainer}>
                   <Text style={styles.sectionHeading}>Deliverables Required</Text>
                   <View style={styles.deliverablesList}>
-                    {brief.deliverables.map((d: any, idx: number) => (
-                      <View key={idx} style={styles.deliverablePill}>
+                    {parseInt(reelCount) > 0 && (
+                      <View style={styles.deliverablePill}>
                         <Icon name="check" size={12} color={Colors.green} />
-                        <Text style={styles.deliverableText}>
-                          {d.quantity}x <Text style={{ fontWeight: '700', textTransform: 'capitalize' }}>{d.type.replace('_', ' ')}</Text>
-                        </Text>
+                        <Text style={styles.deliverableText}>{reelCount}x Reel(s)</Text>
                       </View>
-                    ))}
+                    )}
+                    {parseInt(storyCount) > 0 && (
+                      <View style={styles.deliverablePill}>
+                        <Icon name="check" size={12} color={Colors.green} />
+                        <Text style={styles.deliverableText}>{storyCount}x Story(ies)</Text>
+                      </View>
+                    )}
+                    {parseInt(postCount) > 0 && (
+                      <View style={styles.deliverablePill}>
+                        <Icon name="check" size={12} color={Colors.green} />
+                        <Text style={styles.deliverableText}>{postCount}x Post(s)</Text>
+                      </View>
+                    )}
+                    {parseInt(liveCount) > 0 && (
+                      <View style={styles.deliverablePill}>
+                        <Icon name="check" size={12} color={Colors.green} />
+                        <Text style={styles.deliverableText}>{liveCount}x Live Session(s)</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
 
               {/* Targeting Section */}
               <View style={styles.sectionContainer}>
-                <Text style={styles.sectionHeading}>Target Creator Profile</Text>
+                <Text style={styles.sectionHeading}>Creator Targeting Profile</Text>
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsRowLabel}>Minimum Followers:</Text>
                   <Text style={styles.detailsRowValue}>
-                    {brief.minFollowers ? (brief.minFollowers >= 1000000 ? `${(brief.minFollowers / 1000000).toFixed(1)}M` : brief.minFollowers >= 1000 ? `${(brief.minFollowers / 1000).toFixed(0)}k` : brief.minFollowers) : '10k'}+
+                    {parseInt(minFollowers) >= 1000000
+                      ? `${(parseInt(minFollowers) / 1000000).toFixed(1)}M+`
+                      : parseInt(minFollowers) >= 1000
+                        ? `${(parseInt(minFollowers) / 1000).toFixed(0)}k+`
+                        : `${minFollowers}+`}
                   </Text>
                 </View>
                 <View style={styles.detailsRow}>
-                  <Text style={styles.detailsRowLabel}>Engagement Rate:</Text>
-                  <Text style={styles.detailsRowValue}>{brief.minEngagementRate || '3'}%+</Text>
+                  <Text style={styles.detailsRowLabel}>Creator Size Class:</Text>
+                  <Text style={styles.detailsRowValue}>{creatorSize}</Text>
                 </View>
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsRowLabel}>Target Gender:</Text>
-                  <Text style={[styles.detailsRowValue, { textTransform: 'capitalize' }]}>{brief.gender || 'All'}</Text>
+                  <Text style={[styles.detailsRowValue, { textTransform: 'capitalize' }]}>{targetGender}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.detailsRowLabel}>Target Age Range:</Text>
+                  <Text style={styles.detailsRowValue}>{targetAgeRange === 'Custom' ? customAgeRange : targetAgeRange}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.detailsRowLabel}>Target Language:</Text>
+                  <Text style={styles.detailsRowValue}>{targetLanguage}</Text>
                 </View>
                 <View style={styles.detailsRow}>
                   <Text style={styles.detailsRowLabel}>Geographic Location:</Text>
-                  <Text style={styles.detailsRowValue}>{brief.location || 'Pan India'}</Text>
+                  <Text style={styles.detailsRowValue}>{location}</Text>
                 </View>
               </View>
 
-              {/* Guidelines Section */}
-              {brief.guidelines && (
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionHeading}>Brand Guidelines</Text>
-                  {brief.guidelines.cta && (
-                    <View style={styles.detailsRow}>
-                      <Text style={styles.detailsRowLabel}>Call To Action:</Text>
-                      <Text style={styles.detailsRowValue}>{brief.guidelines.cta}</Text>
-                    </View>
-                  )}
-                  {brief.guidelines.hashtags && brief.guidelines.hashtags.length > 0 && (
-                    <View style={styles.detailsRow}>
-                      <Text style={styles.detailsRowLabel}>Hashtags:</Text>
-                      <Text style={styles.detailsRowValue}>{brief.guidelines.hashtags.join(', ')}</Text>
-                    </View>
-                  )}
-                  {brief.guidelines.brandKeywords && brief.guidelines.brandKeywords.length > 0 && (
-                    <View style={styles.detailsRow}>
-                      <Text style={styles.detailsRowLabel}>Must Mention Keywords:</Text>
-                      <Text style={styles.detailsRowValue}>{brief.guidelines.brandKeywords.join(', ')}</Text>
-                    </View>
-                  )}
+              {/* Budget and Rewards Section */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionHeading}>Rewards & Budget</Text>
+                <View style={styles.infoGrid}>
+                  <View style={styles.infoGridCell}>
+                    <Text style={styles.infoCellLabel}>Payment Type</Text>
+                    <Text style={[styles.infoCellVal, { textTransform: 'capitalize' }]}>{paymentType}</Text>
+                  </View>
+                  <View style={styles.infoGridCell}>
+                    <Text style={styles.infoCellLabel}>Cost per Creator</Text>
+                    <Text style={styles.infoCellVal}>
+                      {paymentType === 'Barter' ? 'Product Barter' : `₹${(parseInt(costPerCreator) || 0).toLocaleString()}`}
+                    </Text>
+                  </View>
+                  <View style={styles.infoGridCell}>
+                    <Text style={styles.infoCellLabel}>Target Creators</Text>
+                    <Text style={styles.infoCellVal}>{numCreators}</Text>
+                  </View>
+                  <View style={styles.infoGridCell}>
+                    <Text style={styles.infoCellLabel}>Total Budget</Text>
+                    <Text style={styles.infoCellValPrice}>
+                      {paymentType === 'Barter' ? 'Barter' : `₹${((parseInt(costPerCreator) || 0) * (parseInt(numCreators) || 0)).toLocaleString()}`}
+                    </Text>
+                  </View>
                 </View>
-              )}
+
+
+                {/* Barter Product Details */}
+                {paymentType !== 'Paid' && prodName ? (
+                  <View style={styles.barterCard}>
+                    <Text style={styles.barterHeading}>Barter Product details</Text>
+                    <View style={styles.detailsRow}>
+                      <Text style={styles.detailsRowLabel}>Product Name:</Text>
+                      <Text style={styles.detailsRowValue}>{prodName}</Text>
+                    </View>
+                    <View style={styles.detailsRow}>
+                      <Text style={styles.detailsRowLabel}>Product Value:</Text>
+                      <Text style={styles.detailsRowValue}>₹{(parseInt(prodValue) || 0).toLocaleString()}</Text>
+                    </View>
+                    {prodSku ? (
+                      <View style={styles.detailsRow}>
+                        <Text style={styles.detailsRowLabel}>SKU / Code:</Text>
+                        <Text style={styles.detailsRowValue}>{prodSku}</Text>
+                      </View>
+                    ) : null}
+                    {prodUrl ? (
+                      <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(prodUrl)}>
+                        <Text style={styles.linkText}>View Product Link ↗</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {prodDescription ? (
+                      <View style={{ marginTop: 6 }}>
+                        <Text style={styles.barterDescLabel}>Product Description:</Text>
+                        <Text style={styles.barterDescVal}>{prodDescription}</Text>
+                      </View>
+                    ) : null}
+                    {prodShipping ? (
+                      <View style={{ marginTop: 6 }}>
+                        <Text style={styles.barterDescLabel}>Shipping Instructions:</Text>
+                        <Text style={styles.barterDescVal}>{prodShipping}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Guidelines & Tone Section */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionHeading}>Guidelines & Tone</Text>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.detailsRowLabel}>Call To Action:</Text>
+                  <Text style={styles.detailsRowValue}>{cta}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.detailsRowLabel}>Brand Tone / Mood:</Text>
+                  <Text style={styles.detailsRowValue}>{brandTone}</Text>
+                </View>
+                {hashtags ? (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={styles.blockLabel}>Hashtags Required:</Text>
+                    <Text style={styles.blockValue}>{hashtags}</Text>
+                  </View>
+                ) : null}
+                {mustMention ? (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={styles.blockLabel}>Must Mention Keywords:</Text>
+                    <Text style={styles.blockValue}>{mustMention}</Text>
+                  </View>
+                ) : null}
+
+                {/* Voice Note Audio Player */}
+                {audioUrl ? (
+                  <View style={styles.audioPlayerCard}>
+                    <TouchableOpacity style={styles.playBtnSmall} onPress={handlePlayPause} activeOpacity={0.8}>
+                      <Icon name={playerStatus.playing ? 'pause' : 'play'} size={16} color={Colors.oxblood} />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.audioLabel}>
+                        {playerStatus.playing
+                          ? `Playing: ${formatDuration(playerStatus.currentTime)} / ${formatDuration(playerStatus.duration ?? 0)}`
+                          : `Listen to Voice Instructions (${formatDuration(playerStatus.duration ?? 0)})`}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Reference Links Section */}
+              {referenceLinks ? (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionHeading}>Reference Links</Text>
+                  {referenceLinks.split(',').map((link, idx) => {
+                    const cleanLink = link.trim();
+                    if (!cleanLink) return null;
+                    return (
+                      <TouchableOpacity key={idx} style={styles.linkItemRow} onPress={() => Linking.openURL(cleanLink)}>
+                        <Icon name="link" size={14} color={Colors.roseDeep} />
+                        <Text style={styles.linkItemText} numberOfLines={1}>{cleanLink}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
 
               {/* Applicants Section */}
               {queryData?.applications && queryData.applications.length > 0 && (
@@ -416,6 +809,9 @@ export default function CampaignDetailScreen() {
                     {queryData.applications.map((app: any) => {
                       const isPending = app.status === 'pending';
                       const isAccepted = app.status === 'accepted';
+                      const isRejected = app.status === 'rejected';
+                      const isNegotiating = app.status === 'negotiating';
+                      const brandNeedsToRespond = isPending || (isNegotiating && app.lastActionBy === 'influencer');
 
                       let followersStr = String(app.followers || '0');
                       const followersNum = Number(app.followers || 0);
@@ -443,25 +839,66 @@ export default function CampaignDetailScreen() {
                               <Text style={styles.applicantMetaLabel}>Eng. Rate</Text>
                             </View>
                           </View>
+
+                          <View style={styles.bidContainer}>
+                            <View style={styles.bidItem}>
+                              <Text style={styles.bidLabel}>Bid Price:</Text>
+                              <Text style={styles.bidText}>₹{((app.bidAmount || 0) / 100).toLocaleString()}</Text>
+                            </View>
+                            {app.counterAmount && app.counterAmount > 0 && (
+                              <View style={styles.counterBadge}>
+                                <Text style={styles.counterText}>Countered: ₹{((app.counterAmount || 0) / 100).toLocaleString()}</Text>
+                              </View>
+                            )}
+                          </View>
+
                           <View style={styles.proposalContainer}>
                             <Text style={styles.proposalLabel}>Proposal:</Text>
                             <Text style={styles.proposalText}>"{app.proposal}"</Text>
                           </View>
 
                           <View style={styles.applicantActions}>
-                            {isPending ? (
-                              <TouchableOpacity
-                                style={styles.acceptApplicantBtn}
-                                activeOpacity={0.8}
-                                onPress={() => handleAcceptApplicant(app)}
-                              >
-                                <Icon name="check" size={14} color={Colors.white} />
-                                <Text style={styles.acceptApplicantBtnText}>Accept & Chat</Text>
-                              </TouchableOpacity>
+                            {brandNeedsToRespond ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <TouchableOpacity
+                                  style={styles.rejectApplicantBtn}
+                                  activeOpacity={0.8}
+                                  onPress={() => handleRejectApplicant(app)}
+                                >
+                                  <Text style={styles.rejectApplicantBtnText}>Reject</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.negotiateApplicantBtn}
+                                  activeOpacity={0.8}
+                                  onPress={() => setNegotiatingApp(app)}
+                                >
+                                  <Text style={styles.negotiateApplicantBtnText}>Negotiate</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.acceptApplicantBtn}
+                                  activeOpacity={0.8}
+                                  onPress={() => handleAcceptApplicant(app)}
+                                >
+                                  <Icon name="check" size={14} color={Colors.white} />
+                                  <Text style={styles.acceptApplicantBtnText}>Accept</Text>
+                                </TouchableOpacity>
+                              </View>
                             ) : (
-                              <View style={[styles.statusBadge, isAccepted ? styles.statusAccepted : styles.statusDeclined]}>
-                                <Text style={[styles.statusBadgeText, isAccepted ? styles.statusAcceptedText : styles.statusDeclinedText]}>
-                                  {isAccepted ? 'Accepted ✓' : 'Declined ✕'}
+                              <View style={[
+                                styles.statusBadge,
+                                isAccepted && styles.statusAccepted,
+                                isRejected && styles.statusDeclined,
+                                isNegotiating && { backgroundColor: 'rgba(180, 106, 116, 0.12)' }
+                              ]}>
+                                <Text style={[
+                                  styles.statusBadgeText,
+                                  isAccepted && styles.statusAcceptedText,
+                                  isRejected && styles.statusDeclinedText,
+                                  isNegotiating && { color: Colors.roseDeep }
+                                ]}>
+                                  {isAccepted ? 'Accepted ✓' : (
+                                    isRejected ? 'Declined ✕' : `Countered: ₹${((app.counterAmount || 0) / 100).toLocaleString()} (Awaiting Creator)`
+                                  )}
                                 </Text>
                               </View>
                             )}
@@ -487,146 +924,488 @@ export default function CampaignDetailScreen() {
             // ==========================================
             // EDIT MODE
             // ==========================================
-            <View style={{ gap: 16 }}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Campaign Name *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Summer Glow Launch"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={title}
-                  onChangeText={setTitle}
-                />
-              </View>
+            <View style={{ gap: 20 }}>
+              {/* Campaign Banner Edit Picker */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>Campaign Media & Name</Text>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Brand Profile Name *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. L'Oreal Paris"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={brandName}
-                  onChangeText={setBrandName}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Campaign Category *</Text>
-                <View style={styles.gridRow}>
-                  {(['Fashion', 'Real Estate', 'Beauty', 'Food', 'Tech', 'Finance', 'Education', 'Gaming', 'Travel', 'Fitness'] as const).map((n) => {
-                    const active = category.toLowerCase() === n.toLowerCase();
-                    return (
-                      <TouchableOpacity
-                        key={n}
-                        style={[styles.gridBtn, active && styles.gridBtnActive]}
-                        onPress={() => setCategory(n)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{n}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Campaign Description *</Text>
-                <TextInput
-                  style={[styles.formInput, styles.textArea]}
-                  multiline
-                  numberOfLines={4}
-                  placeholder="Provide brief details about the campaign..."
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Priority *</Text>
-                <View style={styles.toggleRow}>
-                  {(['normal', 'high', 'urgent'] as const).map((pri) => {
-                    const active = priority === pri;
-                    return (
-                      <TouchableOpacity
-                        key={pri}
-                        style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                        onPress={() => setPriority(pri)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{pri.toUpperCase()}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Target Location</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Pan India, State, or City"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={location}
-                  onChangeText={setLocation}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Creators Budget / Pricing</Text>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={styles.inputSubLabel}>Rate per Creator (₹)</Text>
-                    <TextInput
-                      style={styles.formInput}
-                      keyboardType="numeric"
-                      value={costPerCreator}
-                      onChangeText={setCostPerCreator}
-                    />
+                <TouchableOpacity style={styles.editBannerContainer} onPress={pickImage} activeOpacity={0.9}>
+                  {bannerUrl ? (
+                    <Image source={{ uri: bannerUrl }} style={styles.editBannerImage} />
+                  ) : (
+                    <View style={styles.editBannerPlaceholder}>
+                      <Icon name="link" size={24} color={Colors.roseDeep} />
+                      <Text style={styles.editBannerPlaceholderText}>Tap to upload new banner</Text>
+                    </View>
+                  )}
+                  <View style={styles.editBannerOverlay}>
+                    <Text style={styles.editBannerOverlayText}>Change Image 📸</Text>
                   </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={styles.inputSubLabel}>No. of Creators</Text>
-                    <TextInput
-                      style={styles.formInput}
-                      keyboardType="numeric"
-                      value={numCreators}
-                      onChangeText={setNumCreators}
-                    />
+                </TouchableOpacity>
+
+                <View style={[styles.formGroup, { marginTop: 12 }]}>
+                  <Text style={styles.formLabel}>Campaign Name *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. Summer Glow Launch"
+                    placeholderTextColor="rgba(63,3,11,0.35)"
+                    value={title}
+                    onChangeText={setTitle}
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Brand Profile Name *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. L'Oreal Paris"
+                    placeholderTextColor="rgba(63,3,11,0.35)"
+                    value={brandName}
+                    onChangeText={setBrandName}
+                  />
+                </View>
+              </View>
+
+              {/* Basics Card */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>basices Details</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Campaign Category / Niche *</Text>
+                  <View style={styles.gridRow}>
+                    {NICHES.map((n) => {
+                      const active = category.toLowerCase() === n.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          style={[styles.gridBtn, active && styles.gridBtnActive]}
+                          onPress={() => setCategory(n)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{n}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Campaign Objective *</Text>
+                  <View style={styles.gridRow}>
+                    {OBJECTIVES.map((o) => {
+                      const active = objective.toLowerCase() === o.toLowerCase().replace(/[\/\s]+/g, '_');
+                      return (
+                        <TouchableOpacity
+                          key={o}
+                          style={[styles.gridBtn, active && styles.gridBtnActive]}
+                          onPress={() => setObjective(o.toLowerCase().replace(/[\/\s]+/g, '_'))}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{o}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Campaign Description *</Text>
+                  <TextInput
+                    style={[styles.formInput, styles.textArea]}
+                    multiline
+                    numberOfLines={4}
+                    placeholder="Provide details about the campaign..."
+                    placeholderTextColor="rgba(63,3,11,0.35)"
+                    value={description}
+                    onChangeText={setDescription}
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Priority *</Text>
+                  <View style={styles.toggleRow}>
+                    {PRIORITIES.map((pri) => {
+                      const active = priority === pri;
+                      return (
+                        <TouchableOpacity
+                          key={pri}
+                          style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                          onPress={() => setPriority(pri)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{pri.toUpperCase()}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Minimum Followers Required</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 10000"
-                  keyboardType="numeric"
-                  value={minFollowers}
-                  onChangeText={setMinFollowers}
-                />
+              {/* Deliverables & Timeline Card */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>Deliverables & Dates</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Deliverables Count</Text>
+                  <View style={styles.deliverablesEditRow}>
+                    <View style={styles.delivEditCell}>
+                      <Text style={styles.delivEditLabel}>Reels</Text>
+                      <TextInput
+                        style={styles.delivEditInput}
+                        keyboardType="numeric"
+                        value={reelCount}
+                        onChangeText={setReelCount}
+                      />
+                    </View>
+                    <View style={styles.delivEditCell}>
+                      <Text style={styles.delivEditLabel}>Stories</Text>
+                      <TextInput
+                        style={styles.delivEditInput}
+                        keyboardType="numeric"
+                        value={storyCount}
+                        onChangeText={setStoryCount}
+                      />
+                    </View>
+                    <View style={styles.delivEditCell}>
+                      <Text style={styles.delivEditLabel}>Posts</Text>
+                      <TextInput
+                        style={styles.delivEditInput}
+                        keyboardType="numeric"
+                        value={postCount}
+                        onChangeText={setPostCount}
+                      />
+                    </View>
+                    <View style={styles.delivEditCell}>
+                      <Text style={styles.delivEditLabel}>Live Sessions</Text>
+                      <TextInput
+                        style={styles.delivEditInput}
+                        keyboardType="numeric"
+                        value={liveCount}
+                        onChangeText={setLiveCount}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Campaign Duration Dates</Text>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={styles.inputSubLabel}>Start Date (YYYY-MM-DD)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={startDate}
+                        onChangeText={setStartDate}
+                        placeholder="2026-07-01"
+                      />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={styles.inputSubLabel}>End Date (YYYY-MM-DD)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={endDate}
+                        onChangeText={setEndDate}
+                        placeholder="2026-07-30"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Application Deadline (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={applicationDeadline}
+                    onChangeText={setApplicationDeadline}
+                    placeholder="2026-06-25"
+                  />
+                </View>
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Payment Method</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Bank Transfer, UPI, Wallet"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={paymentMethod}
-                  onChangeText={setPaymentMethod}
-                />
+              {/* Rewards & Budget Card */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>Rewards & Payment</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Payment Type</Text>
+                  <View style={styles.toggleRow}>
+                    {PAYMENT_TYPES.map((type) => {
+                      const active = paymentType.toLowerCase() === type.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={type}
+                          style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                          onPress={() => setPaymentType(type)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{type}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {paymentType !== 'Barter' && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Cash Compensation Details</Text>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={styles.inputSubLabel}>Rate per Creator (₹)</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          keyboardType="numeric"
+                          value={costPerCreator}
+                          onChangeText={setCostPerCreator}
+                        />
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={styles.inputSubLabel}>No. of Creators</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          keyboardType="numeric"
+                          value={numCreators}
+                          onChangeText={setNumCreators}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+
+                {/* Barter Product Details Form */}
+                {paymentType !== 'Paid' && (
+                  <View style={styles.barterFormCard}>
+                    <Text style={styles.barterHeading}>Product Details *</Text>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.inputSubLabel}>Product Name *</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={prodName}
+                        onChangeText={setProdName}
+                        placeholder="e.g. Lip Gloss Trio Bundle"
+                      />
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={styles.inputSubLabel}>Estimated Value (₹)</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          keyboardType="numeric"
+                          value={prodValue}
+                          onChangeText={setProdValue}
+                          placeholder="2499"
+                        />
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={styles.inputSubLabel}>SKU / Reference ID</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          value={prodSku}
+                          onChangeText={setProdSku}
+                          placeholder="LG-TRIO-01"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.formGroup, { marginTop: 8 }]}>
+                      <Text style={styles.inputSubLabel}>Product Link (URL)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={prodUrl}
+                        onChangeText={setProdUrl}
+                        placeholder="https://brand.com/products/lipgloss"
+                        autoCapitalize="none"
+                        keyboardType="url"
+                      />
+                    </View>
+
+                    <View style={[styles.formGroup, { marginTop: 8 }]}>
+                      <Text style={styles.inputSubLabel}>Product Description</Text>
+                      <TextInput
+                        style={[styles.formInput, styles.smallTextArea]}
+                        multiline
+                        numberOfLines={3}
+                        value={prodDescription}
+                        onChangeText={setProdDescription}
+                        placeholder="Briefly describe the product rewards..."
+                      />
+                    </View>
+
+                    <View style={[styles.formGroup, { marginTop: 8 }]}>
+                      <Text style={styles.inputSubLabel}>Shipping Details / Instructions</Text>
+                      <TextInput
+                        style={[styles.formInput, styles.smallTextArea]}
+                        multiline
+                        numberOfLines={3}
+                        value={prodShipping}
+                        onChangeText={setProdShipping}
+                        placeholder="Shipping timeline or region requirements..."
+                      />
+                    </View>
+                  </View>
+                )}
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Payment Timeline</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Before Posting, After Approval"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={paymentTimeline}
-                  onChangeText={setPaymentTimeline}
-                />
+              {/* Creator Targeting Card */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>Creator Targeting</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Minimum Followers Required</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    keyboardType="numeric"
+                    value={minFollowers}
+                    onChangeText={setMinFollowers}
+                    placeholder="10000"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Creator Size Class</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={creatorSize}
+                    onChangeText={setCreatorSize}
+                    placeholder="Micro (10K-100K)"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Target Creator Gender</Text>
+                  <View style={styles.toggleRow}>
+                    {GENDERS.map((g) => {
+                      const active = targetGender.toLowerCase() === g.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={g}
+                          style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                          onPress={() => setTargetGender(g)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{g}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Target Creator Age Range</Text>
+                  <View style={styles.toggleRow}>
+                    {['18–24', '25–34', '35–44', 'Custom'].map((age) => {
+                      const active = targetAgeRange === age;
+                      return (
+                        <TouchableOpacity
+                          key={age}
+                          style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                          onPress={() => setTargetAgeRange(age)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{age}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {targetAgeRange === 'Custom' && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.inputSubLabel}>Custom Age Range Input</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={customAgeRange}
+                      onChangeText={setCustomAgeRange}
+                      placeholder="e.g. 16-22 years, or 45+"
+                    />
+                  </View>
+                )}
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Target Language</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={targetLanguage}
+                    onChangeText={setTargetLanguage}
+                    placeholder="English / Hindi / Hinglish"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Target Location</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={location}
+                    onChangeText={setLocation}
+                    placeholder="Pan India, or State/City name"
+                  />
+                </View>
+              </View>
+
+              {/* Guidelines Card */}
+              <View style={styles.formSectionCard}>
+                <Text style={styles.formSectionHeader}>Guidelines & Tone</Text>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Call To Action *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={cta}
+                    onChangeText={setCta}
+                    placeholder="Visit Website / Download App"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Brand Tone / Mood</Text>
+                  <View style={styles.gridRow}>
+                    {TONES.map((t) => {
+                      const active = brandTone.toLowerCase() === t.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={t}
+                          style={[styles.gridBtn, active && styles.gridBtnActive]}
+                          onPress={() => setBrandTone(t)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{t}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Hashtags Required (comma separated)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={hashtags}
+                    onChangeText={setHashtags}
+                    placeholder="#RichyReach, #collab"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Must Mention Keywords (comma separated)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={mustMention}
+                    onChangeText={setMustMention}
+                    placeholder="Natural, Affordable, Long-lasting"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Reference Links (comma separated)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={referenceLinks}
+                    onChangeText={setReferenceLinks}
+                    placeholder="https://instagram.com/p/..."
+                  />
+                </View>
               </View>
 
               {/* Save Button */}
@@ -649,6 +1428,17 @@ export default function CampaignDetailScreen() {
           )}
         </ScrollView>
       </View>
+      {negotiatingApp && (
+        <CounterOfferSheet
+          isOpen={!!negotiatingApp}
+          onClose={() => setNegotiatingApp(null)}
+          onSubmit={handleNegotiateSubmit}
+          submitting={counterSubmitting}
+          originalBidAmount={negotiatingApp.counterAmount || negotiatingApp.bidAmount || 0}
+          campaignTitle={title}
+          influencerName={negotiatingApp.name || negotiatingApp.instagramHandle || 'Influencer'}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -678,7 +1468,7 @@ const styles = StyleSheet.create({
   },
   bannerImage: {
     width: '100%',
-    height: 140,
+    height: 150,
     borderRadius: 16,
   },
   navTitle: {
@@ -844,6 +1634,39 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: 'rgba(42, 2, 7, 0.75)',
   },
+  timelineGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  timelineCell: {
+    flex: 1,
+    backgroundColor: 'rgba(63, 3, 11, 0.015)',
+    padding: 8,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.03)',
+  },
+  timelineCellLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9,
+    color: 'rgba(63, 3, 11, 0.4)',
+    textTransform: 'uppercase',
+  },
+  timelineCellValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  timelineCellValueUrgent: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: Colors.roseDeep,
+    fontWeight: '800',
+  },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -919,6 +1742,92 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.green,
   },
+  barterCard: {
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
+    borderRadius: Radius.md,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    marginTop: 6,
+    gap: 6,
+  },
+  barterHeading: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.oxblood,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  linkRow: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  linkText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.roseDeep,
+    fontWeight: '700',
+  },
+  barterDescLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63, 3, 11, 0.45)',
+  },
+  barterDescVal: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: 'rgba(42, 2, 7, 0.75)',
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  blockLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: Colors.roseDeep,
+    marginBottom: 2,
+  },
+  blockValue: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: 'rgba(42, 2, 7, 0.75)',
+    lineHeight: 18,
+  },
+  audioPlayerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(63,3,11,0.03)',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+  },
+  playBtnSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.card,
+  },
+  audioLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
+  },
+  linkItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  linkItemText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.roseDeep,
+    flex: 1,
+  },
   deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -935,6 +1844,72 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
     color: Colors.roseDeep,
+    fontWeight: '700',
+  },
+  formSectionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: 18,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.05)',
+    ...Shadow.card,
+    gap: 12,
+  },
+  formSectionHeader: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11,
+    color: Colors.oxblood,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
+    paddingBottom: 4,
+    marginBottom: 4,
+  },
+  editBannerContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.08)',
+  },
+  editBannerImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  editBannerPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    borderColor: 'rgba(63, 3, 11, 0.15)',
+    borderRadius: 16,
+  },
+  editBannerPlaceholderText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.roseDeep,
+  },
+  editBannerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  editBannerOverlayText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.white,
     fontWeight: '700',
   },
   formGroup: {
@@ -969,24 +1944,30 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     textAlignVertical: 'top',
   },
+  smallTextArea: {
+    height: 70,
+    paddingTop: 8,
+    textAlignVertical: 'top',
+  },
   toggleRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
   },
   toggleBtn: {
     flex: 1,
+    minWidth: '22%',
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: 'rgba(63, 3, 11, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   toggleBtnActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: Colors.oxblood,
     borderColor: Colors.oxblood,
-    borderWidth: 1.5,
   },
   toggleText: {
     fontFamily: FontFamily.sansMedium,
@@ -995,7 +1976,7 @@ const styles = StyleSheet.create({
   },
   toggleTextActive: {
     fontFamily: FontFamily.sans,
-    color: Colors.oxblood,
+    color: Colors.white,
     fontWeight: '700',
   },
   gridRow: {
@@ -1007,16 +1988,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: 'rgba(63, 3, 11, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   gridBtnActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: Colors.oxblood,
     borderColor: Colors.oxblood,
-    borderWidth: 1.5,
   },
   gridBtnText: {
     fontFamily: FontFamily.sansMedium,
@@ -1025,8 +2005,42 @@ const styles = StyleSheet.create({
   },
   gridBtnTextActive: {
     fontFamily: FontFamily.sans,
-    color: Colors.oxblood,
+    color: Colors.white,
     fontWeight: '700',
+  },
+  deliverablesEditRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  delivEditCell: {
+    flex: 1,
+    gap: 4,
+  },
+  delivEditLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9.5,
+    color: 'rgba(63, 3, 11, 0.5)',
+    textAlign: 'center',
+  },
+  delivEditInput: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    height: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    fontSize: 13,
+    color: Colors.ink,
+    fontFamily: FontFamily.sansMedium,
+    textAlign: 'center',
+  },
+  barterFormCard: {
+    backgroundColor: 'rgba(63, 3, 11, 0.015)',
+    borderRadius: Radius.md,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    marginTop: 8,
+    gap: 8,
   },
   saveBtn: {
     flexDirection: 'row',
@@ -1150,5 +2164,74 @@ const styles = StyleSheet.create({
   },
   statusDeclinedText: {
     color: '#d93e36',
+  },
+  bidContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  bidItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bidLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: 'rgba(63, 3, 11, 0.55)',
+  },
+  bidText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  counterBadge: {
+    backgroundColor: 'rgba(180, 106, 116, 0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  counterText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11,
+    color: Colors.roseDeep,
+  },
+  rejectApplicantBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rejectApplicantBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: 'rgba(63, 3, 11, 0.6)',
+    fontWeight: '700',
+  },
+  negotiateApplicantBtn: {
+    backgroundColor: Colors.rose,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  negotiateApplicantBtnText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: '700',
   },
 });

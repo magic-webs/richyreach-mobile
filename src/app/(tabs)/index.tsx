@@ -141,23 +141,29 @@ export default function HomeScreen() {
     if (list.length === 0) {
       return [];
     }
-    return list.map((c: any) => ({
-      id: c.id,
-      brand: c.brandName || c.brand?.companyName || 'Richy Brand',
-      cat: c.campaignType || c.category || 'General',
-      verified: c.verified || c.brand?.verified || false,
-      title: c.title,
-      budget:
-        typeof c.budget === 'number'
-          ? `₹${(c.budget / 100).toLocaleString()}`
-          : c.budget || '₹10,000',
-      deadline: c.deadline || '5 days left',
-      applicants: c.applicants || 0,
-      tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-      about: c.description || c.about,
-      deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
-      imageUrl: c.imageUrl || null,
-    }));
+    return list.map((c: any) => {
+      const numCreators = c.numCreators || 1;
+      const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
+      return {
+        id: c.id,
+        brand: c.brandName || c.brand?.companyName || 'Richy Brand',
+        cat: c.campaignType || c.category || 'General',
+        verified: c.verified || c.brand?.verified || false,
+        title: c.title,
+        budget:
+          typeof c.budget === 'number'
+            ? `₹${(c.budget / 100).toLocaleString()}`
+            : c.budget || '₹10,000',
+        deadline: c.deadline || '5 days left',
+        applicants: c.applicants || 0,
+        tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+        about: c.description || c.about,
+        deliverables: c.requirements ? c.requirements.split('\n') : ['1 Reel'],
+        imageUrl: c.imageUrl || null,
+        numCreators,
+        costPerCreator,
+      };
+    });
   }, [rawCampaignListData]);
 
   const musicsList = React.useMemo(() => {

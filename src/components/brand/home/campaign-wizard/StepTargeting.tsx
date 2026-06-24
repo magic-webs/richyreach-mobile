@@ -1,22 +1,30 @@
 import { Colors, FontFamily } from '@/constants/brand';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
-import { useUIStore } from '@/store/ui';
 
 export function StepTargeting() {
-  const showModal = useUIStore((s) => s.showModal);
-  const {
-    targetGender,
-    targetAgeRange,
-    creatorSize,
-    targetLanguage,
-    updateField,
-  } = useCampaignWizardStore();
+  "use no memo";
+  const { updateField } = useCampaignWizardStore();
+  const { control, watch, setValue, trigger, formState: { errors } } = useFormContext();
 
-  const handleNext = () => {
-    updateField('createStep', 4);
+  const targetGender = watch('targetGender');
+  const targetAgeRange = watch('targetAgeRange');
+  const creatorSize = watch('creatorSize');
+  const targetLanguage = watch('targetLanguage');
+
+  const handleNext = async () => {
+    const fieldsToValidate = [];
+    if (targetAgeRange === 'Custom') {
+      fieldsToValidate.push('customAgeRange');
+    }
+
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      updateField('createStep', 4);
+    }
   };
 
   const handleBack = () => {
@@ -34,7 +42,7 @@ export function StepTargeting() {
               <TouchableOpacity
                 key={size}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('creatorSize', size)}
+                onPress={() => setValue('creatorSize', size)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{size}</Text>
@@ -47,13 +55,13 @@ export function StepTargeting() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Gender Preference</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['Male', 'Female', 'All'] as const).map((gender) => {
+          {(['Male', 'Female', 'Any'] as const).map((gender) => {
             const active = targetGender === gender;
             return (
               <TouchableOpacity
                 key={gender}
                 style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
-                onPress={() => updateField('targetGender', gender)}
+                onPress={() => setValue('targetGender', gender)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{gender}</Text>
@@ -66,13 +74,13 @@ export function StepTargeting() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Age Range</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['18–24', '25–34', '35–44', 'Custom'] as const).map((age) => {
+          {(['18-24', '25-34', '35-44', 'Custom'] as const).map((age) => {
             const active = targetAgeRange === age;
             return (
               <TouchableOpacity
                 key={age}
                 style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
-                onPress={() => updateField('targetAgeRange', age)}
+                onPress={() => setValue('targetAgeRange', age)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{age}</Text>
@@ -82,16 +90,38 @@ export function StepTargeting() {
         </ScrollView>
       </View>
 
+      {targetAgeRange === 'Custom' && (
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Custom Age Range *</Text>
+          <Controller
+            control={control}
+            name="customAgeRange"
+            rules={{ required: 'Custom age range is required' }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={[styles.formInput, errors.customAgeRange && styles.formInputError]}
+                placeholder="e.g. 18–45"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+              />
+            )}
+          />
+          {errors.customAgeRange && <Text style={styles.errorText}>{errors.customAgeRange.message as string}</Text>}
+        </View>
+      )}
+
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Language Preferred</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['English', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu', 'Any'] as const).map((lang) => {
+          {(['Hinglish', 'English', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu', 'Any'] as const).map((lang) => {
             const active = targetLanguage === lang;
             return (
               <TouchableOpacity
                 key={lang}
                 style={[styles.gridBtn, active && styles.gridBtnActive]}
-                onPress={() => updateField('targetLanguage', lang)}
+                onPress={() => setValue('targetLanguage', lang)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.gridBtnText, active && styles.gridBtnTextActive]}>{lang}</Text>
@@ -107,12 +137,14 @@ export function StepTargeting() {
           onPress={handleBack}
           icon="arrowLeft"
           iconPosition="left"
+          variant="secondary"
         />
         <TactileButton
           onPress={handleNext}
           text="Next"
           icon="arrow"
           iconPosition="right"
+          variant="primary"
         />
       </View>
     </View>
@@ -141,6 +173,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.ink,
     fontFamily: FontFamily.sansMedium,
+  },
+  formInputError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdf2f2',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    marginTop: 4,
+    marginBottom: 4,
   },
   toggleRow: {
     flexDirection: 'row',

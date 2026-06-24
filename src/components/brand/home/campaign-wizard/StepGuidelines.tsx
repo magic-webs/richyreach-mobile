@@ -1,17 +1,19 @@
 import { Colors, FontFamily } from '@/constants/brand';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { VoiceNoteRecorder } from './VoiceNoteRecorder';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 
 export function StepGuidelines() {
-  const {
-    mustMention,
-    hashtags,
-    brandTone,
-    updateField,
-  } = useCampaignWizardStore();
+  "use no memo";
+  const { updateField } = useCampaignWizardStore();
+  const { control, watch, setValue } = useFormContext();
+
+  const mustMention = watch('mustMention');
+  const hashtags = watch('hashtags');
+  const brandTone = watch('brandTone');
 
   const handleNext = () => {
     updateField('createStep', 5);
@@ -25,23 +27,37 @@ export function StepGuidelines() {
     <View style={{ gap: 16 }}>
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Must Mention Keywords</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="e.g. hydration, oil-free, derm-tested (comma separated)"
-          placeholderTextColor="rgba(63,3,11,0.35)"
-          value={mustMention}
-          onChangeText={(v) => updateField('mustMention', v)}
+        <Controller
+          control={control}
+          name="mustMention"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. hydration, oil-free, derm-tested (comma separated)"
+              placeholderTextColor="rgba(63,3,11,0.35)"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+            />
+          )}
         />
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Hashtags</Text>
-        <TextInput
-          style={styles.formInput}
-          placeholder="e.g. #RichyReach, #SummerGlow"
-          placeholderTextColor="rgba(63,3,11,0.35)"
-          value={hashtags}
-          onChangeText={(v) => updateField('hashtags', v)}
+        <Controller
+          control={control}
+          name="hashtags"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. #RichyReach"
+              placeholderTextColor="rgba(63,3,11,0.35)"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+            />
+          )}
         />
       </View>
 
@@ -54,7 +70,7 @@ export function StepGuidelines() {
               <TouchableOpacity
                 key={tone}
                 style={[styles.toggleBtn, active && styles.toggleBtnActive, { minWidth: 90, marginHorizontal: 4 }]}
-                onPress={() => updateField('brandTone', tone)}
+                onPress={() => setValue('brandTone', tone)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{tone}</Text>
@@ -74,12 +90,14 @@ export function StepGuidelines() {
           onPress={handleBack}
           icon="arrowLeft"
           iconPosition="left"
+          variant="secondary"
         />
         <TactileButton
           onPress={handleNext}
           text="Next"
           icon="arrow"
           iconPosition="right"
+          variant="primary"
         />
       </View>
     </View>

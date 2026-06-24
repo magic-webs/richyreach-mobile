@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FormProvider, useForm } from 'react-hook-form';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Briefcase01Icon, Cancel01Icon, CheckIcon } from '@hugeicons/core-free-icons';
 
@@ -32,315 +33,292 @@ interface CreateCampaignSheetProps {
 }
 
 export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampaignSheetProps) {
+  "use no memo";
   const insets = useSafeAreaInsets();
   const showModal = useUIStore((s) => s.showModal);
   const scrollViewRef = useRef<ScrollView>(null);
+  const { brandProfiles, activeBrandProfileId } = useProfilesStore();
 
   const {
     createStep,
-    campName,
-    brandName,
-    selectedBrandProfileId,
-    campObjective,
-    campDescription,
-    campLocationType,
-    campLocationValue,
-    campNiche,
-    campPriority,
-    reelCount,
-    storyCount,
-    postCount,
-    carouselCount,
-    ytShortCount,
-    ytVideoCount,
-    liveCount,
-    paymentType,
-    costPerCreator,
-    numCreators,
-    paymentMethod,
-    paymentTimeline,
-    prodName,
-    prodValue,
-    prodDescription,
-    prodSku,
-    prodUrl,
-    prodShipping,
-    selectedPlatforms,
-    minFollowers,
-    minEngagementRate,
-    targetGender,
-    targetAgeRange,
-    creatorSize,
-    targetLanguage,
-    audienceGenderPct,
-    audienceAgePct,
-    mustMention,
-    cta,
-    hashtags,
-    brandKeywords,
-    brandTone,
-    dos,
-    donts,
-    campaignBanner, // legacy URL
-    brandLogo, // legacy URL
-    sampleCreative, // legacy URL
-    audioInstructionUri,
-    campaignBannerUri,
-    brandLogoUri,
-    sampleCreativeUri,
-    referenceLinks,
-    startDate,
-    endDate,
-    applicationDeadline,
-    contentUsageRights,
-    whitelistingPermission,
-    paidAdsPermission,
-    exclusivityMonths,
-    ndaRequired,
-    contractRequired,
-    autoApprove,
-    revisionCount,
-    couponCode,
-    trackingLink,
-    affiliateCommType,
-    affiliateCommValue,
-    appQuestions,
     resetStore,
   } = useCampaignWizardStore();
 
-  // ==========================================
-  // Calculations
-  // ==========================================
-  const cost = parseInt(costPerCreator) || 0;
-  const creators = parseInt(numCreators) || 0;
-  const totalBudget = cost * creators;
-
-  const { brandProfiles, activeBrandProfileId } = useProfilesStore();
+  const methods = useForm({
+    mode: 'onChange',
+    defaultValues: {
+      campName: '',
+      brandName: '',
+      selectedBrandProfileId: '',
+      campObjective: 'Brand Awareness',
+      campDescription: '',
+      campLocationType: 'Pan India',
+      campLocationValue: '',
+      campNiche: 'Fashion',
+      campPriority: 'Normal',
+      reelCount: 1,
+      storyCount: 0,
+      liveCount: 0,
+      postCount: 0,
+      paymentType: 'Paid',
+      costPerCreator: '5000',
+      numCreators: '5',
+      paymentMethod: 'Bank Transfer',
+      paymentTimeline: 'After Approval',
+      prodName: '',
+      prodValue: '',
+      prodDescription: '',
+      prodSku: '',
+      prodUrl: '',
+      prodShipping: '',
+      creatorSize: 'Micro (10K-100K)',
+      targetGender: 'All',
+      targetAgeRange: '25-34',
+      customAgeRange: '',
+      targetLanguage: 'English',
+      mustMention: '',
+      hashtags: '#RichyReach',
+      brandTone: 'Fun',
+      campaignBannerUri: null,
+      referenceLinks: '',
+      startDate: '2026-07-01',
+      endDate: '2026-07-30',
+      applicationDeadline: '2026-06-25',
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
       resetStore();
-      
-      // Select the active brand profile by default when opening the wizard
-      const { brandProfiles, activeBrandProfileId } = useProfilesStore.getState();
+
       const activeProfile = brandProfiles.find((p) => p.id === activeBrandProfileId) || brandProfiles[0];
-      if (activeProfile) {
-        useCampaignWizardStore.getState().updateState({
-          brandName: activeProfile.companyName,
-          selectedBrandProfileId: activeProfile.id,
-        });
-      }
+
+      methods.reset({
+        campName: '',
+        brandName: activeProfile?.companyName || '',
+        selectedBrandProfileId: activeProfile?.id || '',
+        campObjective: 'Brand Awareness',
+        campDescription: '',
+        campLocationType: 'Pan India',
+        campLocationValue: '',
+        campNiche: 'Fashion',
+        campPriority: 'Normal',
+        reelCount: 1,
+        storyCount: 0,
+        liveCount: 0,
+        postCount: 0,
+        paymentType: 'Paid',
+        costPerCreator: '5000',
+        numCreators: '5',
+        paymentMethod: 'Bank Transfer',
+        paymentTimeline: 'After Approval',
+        prodName: '',
+        prodValue: '',
+        prodDescription: '',
+        prodSku: '',
+        prodUrl: '',
+        prodShipping: '',
+        creatorSize: 'Micro (10K-100K)',
+        targetGender: 'Any',
+        targetAgeRange: '25-34',
+        customAgeRange: '',
+        targetLanguage: 'Hinglish',
+        mustMention: '',
+        hashtags: '#RichyReach',
+        brandTone: 'Fun',
+        campaignBannerUri: null,
+        referenceLinks: '',
+        startDate: '2026-07-01',
+        endDate: '2026-07-30',
+        applicationDeadline: '2026-06-25',
+      });
     }
-  }, [isOpen, resetStore]);
+  }, [isOpen, resetStore, brandProfiles, activeBrandProfileId, methods]);
 
   // Scroll to top when step changes
   useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   }, [createStep]);
 
-  const handleLaunchCampaign = async () => {
-    if (!campName.trim() || !brandName.trim() || !campDescription.trim()) {
-      showModal({ title: 'Validation Error', message: 'Name, Brand, and Description are required.' });
-      return;
-    }
-    if (paymentType !== 'Barter' && totalBudget <= 0) {
-      showModal({ title: 'Validation Error', message: 'Total budget must be greater than 0.' });
-      return;
-    }
+  const handleLaunchCampaign = async (data: any) => {
+    const cost = parseInt(data.costPerCreator) || 0;
+    const creators = parseInt(data.numCreators) || 0;
+    const totalBudget = cost * creators;
 
     try {
       onClose();
       showModal({
         title: 'Launching Campaign...',
-        message: 'Submitting campaign parameters to backend API...',
+        message: 'Uploading attachments and launching campaign...',
       });
+
+      // Helper function to upload files to R2 bucket
+      const uploadFileToR2 = async (uri: string, prefix: string) => {
+        const formData = new FormData();
+        
+        // Resolve extension safely to avoid using full URLs/blobs as file extensions
+        let extension = prefix === 'audio' ? 'm4a' : 'jpg';
+        const cleanUri = uri.split('?')[0].split('#')[0];
+        const lastSegment = cleanUri.split('/').pop() || '';
+        const dotParts = lastSegment.split('.');
+        if (dotParts.length > 1) {
+          const possibleExt = dotParts.pop()?.toLowerCase();
+          if (possibleExt && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'm4a', 'mp3', 'wav', 'webm'].includes(possibleExt)) {
+            extension = possibleExt;
+          }
+        }
+        
+        const filename = `${prefix}.${extension}`;
+
+        if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
+          // Web/Browser flow: fetch the blob and append it
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          formData.append('file', blob, filename);
+        } else {
+          // Native App flow (iOS/Android): append React Native File object
+          let formattedUri = uri;
+          if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+            formattedUri = `file://${formattedUri}`;
+          }
+          formData.append('file', {
+            uri: formattedUri,
+            name: filename,
+            type: prefix === 'audio' ? `audio/${extension}` : `image/${extension}`,
+          } as any);
+        }
+
+        const uploadRes = await api.media.upload(formData, data.selectedBrandProfileId);
+        return uploadRes.url;
+      };
+
+      let audioUrl = null;
+      const audioUri = useCampaignWizardStore.getState().audioInstructionUri;
+      if (audioUri) {
+        audioUrl = await uploadFileToR2(audioUri, 'audio');
+      }
+
+      let bannerUrl = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1080&auto=format&fit=crop';
+      const bannerUri = data.campaignBannerUri;
+      if (bannerUri) {
+        try {
+          bannerUrl = await uploadFileToR2(bannerUri, 'banner');
+        } catch (bannerErr) {
+          console.error('Failed to upload campaign banner:', bannerErr);
+        }
+      }
 
       // Format deliverables description
       const selectedDeliverables: string[] = [];
-      if (reelCount > 0) selectedDeliverables.push(`${reelCount} Reel(s)`);
-      if (storyCount > 0) selectedDeliverables.push(`${storyCount} Story(ies)`);
-      if (postCount > 0) selectedDeliverables.push(`${postCount} Post(s)`);
-      if (carouselCount > 0) selectedDeliverables.push(`${carouselCount} Carousel(s)`);
-      if (ytShortCount > 0) selectedDeliverables.push(`${ytShortCount} YouTube Short(s)`);
-      if (ytVideoCount > 0) selectedDeliverables.push(`${ytVideoCount} YouTube Video(s)`);
-      if (liveCount > 0) selectedDeliverables.push(`${liveCount} Live Session(s)`);
+      if (data.reelCount > 0) selectedDeliverables.push(`${data.reelCount} Reel(s)`);
+      if (data.storyCount > 0) selectedDeliverables.push(`${data.storyCount} Story(ies)`);
+      if (data.postCount > 0) selectedDeliverables.push(`${data.postCount} Post(s)`);
+      if (data.liveCount > 0) selectedDeliverables.push(`${data.liveCount} Live Session(s)`);
 
       const deliverablesDesc = selectedDeliverables.join(', ') || 'General Deliverables';
 
-      // Fix: check K/M suffix BEFORE stripping non-numeric chars
-      const followerStr = minFollowers.trim();
-      const followerMultiplier = followerStr.toUpperCase().includes('M')
-        ? 1_000_000
-        : followerStr.toUpperCase().includes('K')
-          ? 1_000
-          : 1;
-      const followerNumber =
-        (parseInt(followerStr.replace(/[^0-9]/g, ''), 10) || 1) * followerMultiplier;
-
-      // Fix: use global regex so ALL spaces/slashes are replaced, not just the first
-      const objectiveSlug = campObjective
-        .toLowerCase()
-        .replace(/[\/\s]+/g, '_');
-
       const briefDetailsObj = {
-        brandName,
-        objective: objectiveSlug,
-        priority: campPriority.toLowerCase(),
-        location: campLocationValue || campLocationType,
-        gender: targetGender.toLowerCase(),
-        ageRange: targetAgeRange,
-        creatorSize,
-        paymentType: paymentType.toLowerCase(),
-        minFollowers: followerNumber,
-        tags: [campNiche.toLowerCase()],
-        targetLocationType: campLocationType,
-        targetLocationValue: campLocationValue,
-        minEngagementRate: parseFloat(minEngagementRate) || 0,
-        languages: [targetLanguage],
-        targetAudienceGenderPct: audienceGenderPct,
-        targetAudienceAgePct: audienceAgePct,
-        platforms: selectedPlatforms.map((p) => ({
-          name: p.toLowerCase(),
-          minFollowers: followerNumber,
-          minEngagement: parseFloat(minEngagementRate) || 0,
-        })),
+        brandName: data.brandName,
+        objective: data.campObjective.toLowerCase().replace(/[\/\s]+/g, '_'),
+        priority: data.campPriority.toLowerCase(),
+        location: data.campLocationValue || data.campLocationType,
+        gender: data.targetGender.toLowerCase(),
+        ageRange: data.targetAgeRange === 'Custom' ? data.customAgeRange : data.targetAgeRange,
+        creatorSize: data.creatorSize,
+        paymentType: data.paymentType.toLowerCase(),
+        minFollowers: 1000,
+        tags: [data.campNiche.toLowerCase()],
+        targetLocationType: data.campLocationType,
+        targetLocationValue: data.campLocationValue,
+        minEngagementRate: 0,
+        languages: [data.targetLanguage],
+        targetAudienceGenderPct: '',
+        targetAudienceAgePct: '',
+        platforms: ['instagram'],
         deliverables: [
-          { type: 'reel', quantity: reelCount },
-          { type: 'story', quantity: storyCount },
-          { type: 'post', quantity: postCount },
-          { type: 'carousel', quantity: carouselCount },
-          { type: 'youtube_short', quantity: ytShortCount },
-          { type: 'youtube_video', quantity: ytVideoCount },
-          { type: 'live', quantity: liveCount },
+          { type: 'reel', quantity: data.reelCount },
+          { type: 'story', quantity: data.storyCount },
+          { type: 'post', quantity: data.postCount },
+          { type: 'live', quantity: data.liveCount },
         ].filter((d) => d.quantity > 0),
-        paymentMethod,
-        paymentTimeline,
-        costPerCreator: parseInt(costPerCreator) || 0,
-        numCreators: parseInt(numCreators) || 0,
+        paymentMethod: data.paymentMethod,
+        paymentTimeline: data.paymentTimeline,
+        costPerCreator: data.paymentType === 'Paid' ? (parseInt(data.costPerCreator) || 0) : 0,
+        numCreators: data.paymentType === 'Paid' ? (parseInt(data.numCreators) || 0) : 1,
         productInfo:
-          paymentType !== 'Paid'
+          data.paymentType !== 'Paid'
             ? {
-              name: prodName,
-              value: parseInt(prodValue) || 0,
-              description: prodDescription,
-              sku: prodSku,
-              url: prodUrl,
-              shippingDetails: prodShipping,
+              name: data.prodName,
+              value: parseInt(data.prodValue) || 0,
+              description: data.prodDescription,
+              sku: data.prodSku,
+              url: data.prodUrl,
+              shippingDetails: data.prodShipping,
             }
             : null,
         guidelines: {
-          mustMention: mustMention
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          cta,
-          hashtags: hashtags
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          brandKeywords: brandKeywords
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          brandTone,
+          mustMention: data.mustMention ? data.mustMention.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+          cta: 'Visit Website',
+          hashtags: data.hashtags ? data.hashtags.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+          brandKeywords: [],
+          brandTone: data.brandTone,
         },
-        dos,
-        donts,
+        dos: [],
+        donts: [],
         timeline: {
-          startDate,
-          endDate,
-          applicationDeadline,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          applicationDeadline: data.applicationDeadline,
         },
         mediaUploads: {
-          bannerUrl: campaignBannerUri || campaignBanner,
-          brandLogoUrl: brandLogoUri || brandLogo,
-          sampleCreativeUrls: (sampleCreativeUri || sampleCreative) ? [sampleCreativeUri || sampleCreative] : [],
-          referenceLinks: referenceLinks ? [referenceLinks] : [],
-          audioInstructionUrl: audioInstructionUri || null,
+          bannerUrl,
+          brandLogoUrl: '',
+          sampleCreativeUrls: [],
+          referenceLinks: data.referenceLinks ? [data.referenceLinks] : [],
+          audioInstructionUrl: audioUrl,
         },
         legalRights: {
-          contentUsageRights,
-          whitelistingPermission,
-          paidAdsPermission,
-          exclusivityDurationMonths: parseInt(exclusivityMonths) || 0,
-          ndaRequired,
-          contractRequired,
+          contentUsageRights: true,
+          whitelistingPermission: false,
+          paidAdsPermission: false,
+          exclusivityDurationMonths: 0,
+          ndaRequired: false,
+          contractRequired: true,
         },
         approvalWorkflow: {
-          autoApprove,
-          manualReview: !autoApprove,
-          revisionCount: parseInt(revisionCount) || 2,
+          autoApprove: false,
+          manualReview: true,
+          revisionCount: 2,
           finalApprovalRequired: true,
         },
         advancedFeatures: {
-          couponCode,
-          trackingLink,
-          affiliateCommissionType: affiliateCommType.toLowerCase(),
-          affiliateCommissionValue: parseFloat(affiliateCommValue) || 0,
-          creatorApplicationQuestions: appQuestions,
+          couponCode: '',
+          trackingLink: '',
+          affiliateCommissionType: 'percentage',
+          affiliateCommissionValue: 0,
+          creatorApplicationQuestions: [],
         },
       };
 
-      // Determine if we need to send FormData (if there are local files)
-      const hasFiles = audioInstructionUri || campaignBannerUri || brandLogoUri || sampleCreativeUri;
-      
-      let finalPayload: any;
+      const finalPayload = {
+        title: data.campName,
+        description: data.campDescription || `Campaign for ${data.campName} requesting deliverables.`,
+        budget: data.paymentType === 'Barter' ? 0 : totalBudget * 100, // API expects cents
+        campaignType: 'instagram',
+        targetAudience: 'all, any, any',
+        requirements: `1. Deliverables: ${deliverablesDesc}`,
+        expectedReach: 250000,
+        allowFraction: false,
+        isArena: false,
+        category: data.campNiche,
+        briefDetails: JSON.stringify(briefDetailsObj),
+      };
 
-      if (hasFiles) {
-        const formData = new FormData();
-        formData.append('title', campName);
-        formData.append('description', campDescription || `Campaign for ${campName} requesting deliverables: ${deliverablesDesc}.`);
-        formData.append('budget', paymentType === 'Barter' ? '0' : (totalBudget * 100).toString());
-        formData.append('campaignType', selectedPlatforms.length > 0 ? selectedPlatforms[0].toLowerCase() : 'post');
-        formData.append('targetAudience', `${targetGender}, ${targetAgeRange}, ${creatorSize}`);
-        formData.append('requirements', `1. Content format: ${deliverablesDesc}\n2. Social platforms: ${selectedPlatforms.join(', ')}\n3. Timeline: ${startDate} to ${endDate}`);
-        formData.append('expectedReach', '250000');
-        formData.append('allowFraction', 'false');
-        formData.append('isArena', 'false');
-        formData.append('category', campNiche);
-        formData.append('briefDetails', JSON.stringify(briefDetailsObj));
-
-        const appendFile = (key: string, uri: string | null, defaultType: string) => {
-          if (!uri) return;
-          if (uri.startsWith('http')) return; // skip already uploaded URLs
-          const filename = uri.split('/').pop() || 'file';
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `${defaultType.split('/')[0]}/${match[1]}` : defaultType;
-          
-          formData.append(key, {
-            uri,
-            name: filename,
-            type,
-          } as any);
-        };
-
-        appendFile('audioInstruction', audioInstructionUri, 'audio/m4a');
-        appendFile('campaignBanner', campaignBannerUri, 'image/jpeg');
-        appendFile('brandLogo', brandLogoUri, 'image/jpeg');
-        appendFile('sampleCreative', sampleCreativeUri, 'image/jpeg');
-        
-        finalPayload = formData;
-      } else {
-        finalPayload = {
-          title: campName,
-          description: campDescription || `Campaign for ${campName} requesting deliverables: ${deliverablesDesc}.`,
-          budget: paymentType === 'Barter' ? 0 : totalBudget * 100, // API expects cents
-          campaignType: selectedPlatforms.length > 0 ? selectedPlatforms[0].toLowerCase() : 'post',
-          targetAudience: `${targetGender}, ${targetAgeRange}, ${creatorSize}`,
-          requirements: `1. Content format: ${deliverablesDesc}\n2. Social platforms: ${selectedPlatforms.join(', ')}\n3. Timeline: ${startDate} to ${endDate}`,
-          expectedReach: 250000,
-          allowFraction: false,
-          isArena: false,
-          category: campNiche,
-          briefDetails: JSON.stringify(briefDetailsObj),
-        };
-      }
-
-      await api.campaigns.create(finalPayload, selectedBrandProfileId);
+      await api.campaigns.create(finalPayload, data.selectedBrandProfileId);
 
       showModal({
         title: 'Campaign Launched! 🚀',
-        message: `Your campaign "${campName}" is now active on RichyReach.`,
+        message: `Your campaign "${data.campName}" is now active on RichyReach.`,
       });
 
       onSuccess();
@@ -411,19 +389,21 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
           <Text style={styles.stepTitle}>{stepTitles[createStep - 1]}</Text>
 
           {/* Scrollable step content */}
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.flex}
-            contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {createStep === 1 && <StepBasics />}
-            {createStep === 2 && <StepDeliverables />}
-            {createStep === 3 && <StepTargeting />}
-            {createStep === 4 && <StepGuidelines />}
-            {createStep === 5 && <StepMediaReview onPublish={handleLaunchCampaign} />}
-          </ScrollView>
+          <FormProvider {...methods}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.flex}
+              contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {createStep === 1 && <StepBasics />}
+              {createStep === 2 && <StepDeliverables />}
+              {createStep === 3 && <StepTargeting />}
+              {createStep === 4 && <StepGuidelines />}
+              {createStep === 5 && <StepMediaReview onPublish={methods.handleSubmit(handleLaunchCampaign)} />}
+            </ScrollView>
+          </FormProvider>
         </View>
       </KeyboardAvoidingView>
     </Modal>

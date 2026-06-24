@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Image, Modal, ScrollView, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Colors, FontFamily } from '@/constants/brand';
 import { Calendar03Icon, Image01Icon, ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { TactileButton } from '@/components/ui/tactile-button';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 
@@ -194,24 +195,62 @@ function CalendarModal({ visible, onClose, onApply, initialStart, initialEnd }: 
 }
 
 export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
-  const {
-    campaignBanner,
-    referenceLinks,
-    startDate,
-    endDate,
-    applicationDeadline,
-    brandName,
-    campName,
-    campNiche,
-    campObjective,
-    paymentType,
-    costPerCreator,
-    numCreators,
-    campLocationValue,
-    campLocationType,
-    campaignBannerUri,
-    updateField,
-  } = useCampaignWizardStore();
+  "use no memo";
+  const { updateField } = useCampaignWizardStore();
+  const { control, register, setValue, watch, formState: { errors } } = useFormContext();
+
+  useEffect(() => {
+    register('startDate', {
+      required: 'Start date is required',
+      pattern: {
+        value: /^\d{4}-\d{2}-\d{2}$/,
+        message: 'Start date must be in YYYY-MM-DD format',
+      },
+    });
+    register('endDate', {
+      required: 'End date is required',
+      pattern: {
+        value: /^\d{4}-\d{2}-\d{2}$/,
+        message: 'End date must be in YYYY-MM-DD format',
+      },
+      validate: (val) => {
+        const startVal = watch('startDate');
+        if (startVal && val && val < startVal) {
+          return 'End date must be after start date';
+        }
+        return true;
+      }
+    });
+    register('applicationDeadline', {
+      required: 'Application deadline is required',
+      pattern: {
+        value: /^\d{4}-\d{2}-\d{2}$/,
+        message: 'Application deadline must be in YYYY-MM-DD format',
+      },
+      validate: (val) => {
+        const startVal = watch('startDate');
+        if (startVal && val && val > startVal) {
+          return 'Application deadline must be before start date';
+        }
+        return true;
+      }
+    });
+  }, [register]);
+
+  const referenceLinks = watch('referenceLinks');
+  const startDate = watch('startDate');
+  const endDate = watch('endDate');
+  const applicationDeadline = watch('applicationDeadline');
+  const brandName = watch('brandName');
+  const campName = watch('campName');
+  const campNiche = watch('campNiche');
+  const campObjective = watch('campObjective');
+  const paymentType = watch('paymentType');
+  const costPerCreator = watch('costPerCreator');
+  const numCreators = watch('numCreators');
+  const campLocationValue = watch('campLocationValue');
+  const campLocationType = watch('campLocationType');
+  const campaignBannerUri = watch('campaignBannerUri');
 
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -231,23 +270,23 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      updateField(field, result.assets[0].uri);
+      setValue(field, result.assets[0].uri, { shouldValidate: true });
     }
   };
 
   const clearImage = (field: 'campaignBannerUri') => {
-    updateField(field, null);
+    setValue(field, null, { shouldValidate: true });
   };
 
   const handleApplyDates = (start: string, end: string) => {
-    updateField('startDate', start);
-    updateField('endDate', end);
+    setValue('startDate', start, { shouldValidate: true });
+    setValue('endDate', end, { shouldValidate: true });
 
     // Auto set application deadline to 2 days before the start date
     const startD = parseDateString(start);
     if (startD) {
       startD.setDate(startD.getDate() - 2);
-      updateField('applicationDeadline', formatDateString(startD));
+      setValue('applicationDeadline', formatDateString(startD), { shouldValidate: true });
     }
     setCalendarOpen(false);
   };
@@ -277,21 +316,35 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
 
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Reference Video / Post URL</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="https://instagram.com/p/..."
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={referenceLinks}
-            onChangeText={(v) => updateField('referenceLinks', v)}
+          <Controller
+            control={control}
+            name="referenceLinks"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={styles.formInput}
+                placeholder="https://instagram.com/p/..."
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+              />
+            )}
           />
         </View>
       </View>
 
       {/* Campaign Timeline section with Range Calendar select */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionHeader}>Campaign Timeline Dates</Text>
+        <Text style={styles.sectionHeader}>Campaign Timeline Dates *</Text>
         
-        <TouchableOpacity style={styles.dateRangePickerBtn} activeOpacity={0.85} onPress={() => setCalendarOpen(true)}>
+        <TouchableOpacity 
+          style={[
+            styles.dateRangePickerBtn, 
+            (errors.startDate || errors.endDate || errors.applicationDeadline) && styles.dateRangePickerBtnError
+          ]} 
+          activeOpacity={0.85} 
+          onPress={() => setCalendarOpen(true)}
+        >
           <HugeiconsIcon icon={Calendar03Icon} size={18} color={Colors.oxblood} />
           <View style={styles.dateRangeTextWrapper}>
             <Text style={styles.dateRangePlaceholder}>Start Date - End Date</Text>
@@ -301,6 +354,9 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
           </View>
         </TouchableOpacity>
 
+        {errors.startDate && <Text style={styles.errorText}>{errors.startDate.message as string}</Text>}
+        {errors.endDate && <Text style={styles.errorText}>{errors.endDate.message as string}</Text>}
+
         {startDate && (
           <View style={styles.autoDeadlineRow}>
             <Text style={styles.autoDeadlineLabel}>Application Deadline</Text>
@@ -309,6 +365,7 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
             </Text>
           </View>
         )}
+        {errors.applicationDeadline && <Text style={styles.errorText}>{errors.applicationDeadline.message as string}</Text>}
       </View>
 
       {/* Brief Summary Card */}
@@ -348,12 +405,14 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
           onPress={handleBack}
           icon="arrowLeft"
           iconPosition="left"
+          variant="secondary"
         />
         <TactileButton
           onPress={onPublish}
           text="Publish Campaign"
           icon="arrow"
           iconPosition="right"
+          variant="primary"
         />
       </View>
 
@@ -664,5 +723,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '700',
+  },
+  dateRangePickerBtnError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdf2f2',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    marginTop: 4,
+    marginBottom: 4,
   },
 });

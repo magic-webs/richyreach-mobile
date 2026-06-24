@@ -44,7 +44,7 @@ function StripeOverlay() {
   );
 }
 
-function StripedBanner({ tone, budget, imageUrl }: { tone: 'rose' | 'ox' | 'cream'; budget: string; imageUrl?: string | null }) {
+function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: { tone: 'rose' | 'ox' | 'cream'; budget: string; costPerCreator?: number; numCreators?: number; imageUrl?: string | null }) {
   const gradientColors = tone === 'rose'
     ? ['#b46a74', '#8d4750'] as [string, string]
     : tone === 'ox'
@@ -88,8 +88,14 @@ function StripedBanner({ tone, budget, imageUrl }: { tone: 'rose' | 'ox' | 'crea
         </View>
 
         <View style={styles.payBadge}>
-          <Text style={styles.payAmount}>{budget}</Text>
-          <Text style={styles.payLabel}>PAID</Text>
+          <Text style={styles.payAmount}>
+            {numCreators && numCreators > 1 && costPerCreator
+              ? `₹${costPerCreator.toLocaleString('en-IN')}`
+              : budget}
+          </Text>
+          <Text style={styles.payLabel}>
+            {numCreators && numCreators > 1 ? 'PER SPOT' : 'PAID'}
+          </Text>
         </View>
       </View>
     </View>
@@ -145,7 +151,13 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
 
       {/* Banner & Title */}
       <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-        <StripedBanner tone={cm.tone} budget={cm.budget} imageUrl={cm.imageUrl} />
+        <StripedBanner
+          tone={cm.tone}
+          budget={cm.budget}
+          costPerCreator={cm.costPerCreator}
+          numCreators={cm.numCreators}
+          imageUrl={cm.imageUrl}
+        />
         <Text style={styles.cardCampaignTitle}>{cm.title}</Text>
       </TouchableOpacity>
 
@@ -189,7 +201,14 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
 
       {/* Application Count & Description */}
       <View style={styles.cardDetails}>
-        <Text style={styles.appliedCount}>{cm.applicants} creators applied</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.appliedCount}>{cm.applicants} creators applied</Text>
+          {cm.numCreators > 1 && (
+            <Text style={styles.totalBudgetCardText}>
+              Total: <Text style={{ fontWeight: '700' }}>{cm.budget}</Text> ({cm.numCreators} spots)
+            </Text>
+          )}
+        </View>
         <Text style={styles.cardDesc} numberOfLines={2}>
           {cm.about}
         </Text>
@@ -206,7 +225,11 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
       <View style={styles.newCardFooter}>
         <TactileButton
           onPress={onPress}
-          text={`Apply Now · ${cm.budget}`}
+          text={
+            cm.numCreators > 1
+              ? `Apply Now · ₹${cm.costPerCreator.toLocaleString('en-IN')}`
+              : `Apply Now · ${cm.budget}`
+          }
           variant="primary"
           style={{ flex: 1 }}
           fullWidth
@@ -336,22 +359,28 @@ export default function MarketplaceScreen() {
     if (list.length === 0) {
       return [];
     }
-    return list.map((c: any) => ({
-      id: c.id,
-      brand: c.brandName || c.brand?.companyName || "Richy Brand",
-      cat: c.campaignType || c.category || "General",
-      verified: c.verified || c.brand?.verified || false,
-      title: c.title,
-      budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
-      budgetNum: typeof c.budget === 'number' ? c.budget : (parseInt(c.budget?.replace(/[^\d]/g, '')) || 10000),
-      deadline: c.deadline || '5 days left',
-      applicants: c.applicants || 0,
-      tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
-      about: c.description || c.about,
-      deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : ['1 Reel'],
-      imageUrl: c.imageUrl || null,
-      brandLogo: c.brandLogo || c.brand?.logo || null,
-    }));
+    return list.map((c: any) => {
+      const numCreators = c.numCreators || 1;
+      const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
+      return {
+        id: c.id,
+        brand: c.brandName || c.brand?.companyName || "Richy Brand",
+        cat: c.campaignType || c.category || "General",
+        verified: c.verified || c.brand?.verified || false,
+        title: c.title,
+        budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+        budgetNum: typeof c.budget === 'number' ? c.budget : (parseInt(c.budget?.replace(/[^\d]/g, '')) || 10000),
+        deadline: c.deadline || '5 days left',
+        applicants: c.applicants || 0,
+        tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
+        about: c.description || c.about,
+        deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : ['1 Reel'],
+        imageUrl: c.imageUrl || null,
+        brandLogo: c.brandLogo || c.brand?.logo || null,
+        numCreators,
+        costPerCreator,
+      };
+    });
   }, [rawCampaignListData]);
 
   // Search query state
@@ -771,6 +800,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: Colors.ink,
+  },
+  totalBudgetCardText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.5)',
   },
   cardDesc: {
     fontFamily: FontFamily.sansRegular,

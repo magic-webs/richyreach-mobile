@@ -206,7 +206,17 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
                         </Text>
 
                         <View style={styles.campaignFooter}>
-                          <Text style={styles.campaignBudget}>{cm.budget}</Text>
+                          <View>
+                            <Text style={styles.campaignBudget}>
+                              {cm.numCreators > 1 && cm.costPerCreator
+                                ? `₹${cm.costPerCreator.toLocaleString('en-IN')}`
+                                : cm.budget}
+                              {cm.numCreators > 1 && <Text style={styles.perCreatorLabel}> / spot</Text>}
+                            </Text>
+                            {cm.numCreators > 1 && (
+                              <Text style={styles.totalBudgetSub}>Total: {cm.budget}</Text>
+                            )}
+                          </View>
                           <GradientView variant="rose" style={styles.campaignArrow}>
                             <HugeiconsIcon
                               icon={ArrowRight01Icon}
@@ -276,7 +286,17 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
                   </Text>
 
                   <View style={styles.campaignFooterList}>
-                    <Text style={styles.campaignBudget}>{cm.budget}</Text>
+                    <View>
+                      <Text style={styles.campaignBudget}>
+                        {cm.numCreators > 1 && cm.costPerCreator
+                          ? `₹${cm.costPerCreator.toLocaleString('en-IN')}`
+                          : cm.budget}
+                        {cm.numCreators > 1 && <Text style={styles.perCreatorLabel}> / spot</Text>}
+                      </Text>
+                      {cm.numCreators > 1 && (
+                        <Text style={styles.totalBudgetSub}>Total: {cm.budget}</Text>
+                      )}
+                    </View>
                     <GradientView variant="rose" style={styles.campaignArrow}>
                       <HugeiconsIcon
                         icon={ArrowRight01Icon}
@@ -348,6 +368,19 @@ const styles = StyleSheet.create({
   campaignTitle: { fontSize: 11.5, color: 'rgba(63,3,11,0.5)', fontFamily: FontFamily.sansRegular, marginTop: 2 },
   campaignFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
   campaignBudget: { fontFamily: FontFamily.sansMedium, fontSize: 16, fontWeight: '700', color: Colors.oxblood },
+  perCreatorLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    fontWeight: '400',
+    color: 'rgba(63,3,11,0.6)',
+  },
+  totalBudgetSub: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 10,
+    fontWeight: '500',
+    color: 'rgba(63,3,11,0.4)',
+    marginTop: 1,
+  },
   campaignArrow: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
 
   // List style

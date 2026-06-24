@@ -15,7 +15,8 @@ async function request<T>(path: string, options?: RequestInit & { activeProfileI
   const headers: Record<string, string> = {
     ...(options?.headers as Record<string, string>),
   };
-  if (!(options?.body instanceof FormData)) {
+  const isFormData = options?.body instanceof FormData || (options?.body && typeof options.body === 'object' && typeof (options.body as any).append === 'function');
+  if (!isFormData) {
     headers['Content-Type'] = 'application/json';
   }
   if (token) {
@@ -81,8 +82,12 @@ export const api = {
         body: isFormData ? data : JSON.stringify(data),
       });
     },
-    apply: (campaignId: string, proposal: string = "Excited to collaborate on this campaign!") =>
-      request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal }) }),
+    apply: (campaignId: string, proposal: string, bidAmount: number) =>
+      request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal, bidAmount }) }),
+    acceptCounterOffer: (id: string) =>
+      request(`/influencers/applications/${id}/accept-counter`, { method: 'POST' }),
+    counterOffer: (id: string, bidAmount: number) =>
+      request(`/influencers/applications/${id}/counter`, { method: 'POST', body: JSON.stringify({ bidAmount }) }),
     services: {
       list: () => request<any[]>('/influencers/services'),
       create: (data: FormData | any) => {
@@ -109,6 +114,9 @@ export const api = {
     dashboard: () => request('/brands/dashboard'),
     applications: (status?: string) => request<any[]>(`/brands/applications${status ? `?status=${status}` : ''}`),
     rejectApplication: (id: string) => request(`/brands/applications/${id}/reject`, { method: 'POST' }),
+    acceptApplication: (id: string) => request(`/brands/applications/${id}/accept`, { method: 'POST' }),
+    negotiateApplication: (id: string, counterAmount: number) =>
+      request(`/brands/applications/${id}/negotiate`, { method: 'POST', body: JSON.stringify({ counterAmount }) }),
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),
@@ -136,5 +144,13 @@ export const api = {
   referrals: {
     getStats: () => request<any>('/referral/stats'),
     convertPoints: (points: number) => request<any>('/referral/convert', { method: 'POST', body: JSON.stringify({ points }) }),
+  },
+  media: {
+    upload: (fileData: FormData, activeProfileId?: string | null) =>
+      request<{ url: string; key: string }>('/media/upload', {
+        method: 'POST',
+        body: fileData,
+        activeProfileId,
+      }),
   },
 };

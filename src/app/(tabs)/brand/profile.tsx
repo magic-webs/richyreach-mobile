@@ -573,7 +573,7 @@ export default function BrandProfileScreen() {
                     setIsEditSheetOpen(true);
                   } else if (item.key === 'referral') {
                     setSheet(null);
-                    router.push('/referral');
+                    router.push('/brand/referral');
                   } else {
                     setSheet(item.key as SheetType);
                   }
