@@ -5,7 +5,16 @@ import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Platform, TextInput, TextInputProps } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+
+// Safe wrapper for BottomSheetTextInput on Web
+const FormInput = React.forwardRef<TextInput, TextInputProps>((props, ref) => {
+  if (Platform.OS === 'web') {
+    return <TextInput ref={ref} {...props} />;
+  }
+  return <BottomSheetTextInput ref={ref} {...(props as any)} />;
+});
 
 interface CreateBrandProfileSheetProps {
   isOpen: boolean;
@@ -27,7 +36,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
   const session = useAuthStore((s) => s.session);
   const saveProfile = useProfilesStore((s) => s.saveProfile);
   const setActiveProfileId = useProfilesStore((s) => s.setActiveProfileId);
-  
+
   const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [logo, setLogo] = useState('');
@@ -140,7 +149,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         {/* COMPANY NAME */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Company Name *</Text>
-          <TextInput
+          <FormInput
             style={styles.formInput}
             placeholder="e.g. Brand Inc."
             placeholderTextColor="rgba(63,3,11,0.35)"
@@ -153,7 +162,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         {/* WEBSITE */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Website URL *</Text>
-          <TextInput
+          <FormInput
             style={styles.formInput}
             placeholder="e.g. https://brand.com"
             placeholderTextColor="rgba(63,3,11,0.35)"
@@ -196,7 +205,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         {/* LOGO URL */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Logo Image URL (Optional)</Text>
-          <TextInput
+          <FormInput
             style={styles.formInput}
             placeholder="e.g. https://brand.com/logo.png"
             placeholderTextColor="rgba(63,3,11,0.35)"
@@ -212,7 +221,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         {/* DESCRIPTION / BIO */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Description / Bio (Optional)</Text>
-          <TextInput
+          <FormInput
             style={[styles.formInput, styles.multilineInput]}
             placeholder="Tell creators about your brand and products..."
             placeholderTextColor="rgba(63,3,11,0.35)"

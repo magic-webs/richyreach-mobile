@@ -17,7 +17,7 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { RoleToggle } from '@/components/ui/role-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
@@ -105,6 +105,13 @@ export default function ProfileScreen() {
     enabled: !!activeInfluencerProfileId,
   });
   const services = servicesData as any[];
+
+  // Fetch wallet balance
+  const { data: walletData, isLoading: loadingWallet } = useQuery<any>({
+    queryKey: ['walletBalance'],
+    queryFn: () => api.wallet.balance().catch(() => null),
+  });
+  const coinBalance = walletData?.coinBalance ?? 0;
 
   const stats = [
     ['Followers', infProfile?.followers ? `${(infProfile.followers / 1000).toFixed(0)}k` : '0'],
@@ -269,7 +276,18 @@ export default function ProfileScreen() {
                 <Text style={styles.handle}>{displayHandle} · {infProfile?.niche || 'Creator'}</Text>
               )}
             </View>
-            <RoleToggle role={role === 'influencer' ? 'creator' : 'brand'} onChange={(r) => setRole(r === 'creator' ? 'influencer' : 'brand')} />
+            {loadingWallet ? (
+              <Skeleton width={80} height={32} borderRadius={16} />
+            ) : (
+              <TouchableOpacity
+                onPress={() => setSheet('wallet')}
+                activeOpacity={0.8}
+                style={styles.coinPill}
+              >
+                <Text style={styles.coinEmoji}>🪙</Text>
+                <Text style={styles.coinText}>{coinBalance.toLocaleString()}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {loadingProfile ? (
@@ -546,4 +564,30 @@ const styles = StyleSheet.create({
   settingValue: { fontSize: 13, color: Colors.rose, fontWeight: '700' },
   switchAccountBtn: { marginTop: 12, height: 48, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(63,3,11,0.25)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   switchAccountText: { fontWeight: '700', fontSize: 14, color: Colors.oxblood },
+  coinPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: Radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    alignSelf: 'center',
+  },
+  coinEmoji: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  coinText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
 });

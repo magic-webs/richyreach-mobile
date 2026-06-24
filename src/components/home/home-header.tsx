@@ -90,21 +90,6 @@ export function HomeHeader({
           {hasUnread && <View style={styles.notificationBadge} />}
         </TouchableOpacity>
       </View>
-
-      {/* Search Bar */}
-      <TouchableOpacity
-        onPress={onSearchPress}
-        style={styles.searchBar}
-        activeOpacity={0.8}
-      >
-        <Icon name="search" size={18} color={Colors.rose} />
-        <Text style={styles.searchPlaceholder}>
-          {isBrand ? 'Search creators, niches…' : 'Search brands, campaigns…'}
-        </Text>
-        <View style={styles.filterBtn}>
-          <Icon name="filter" size={16} color={Colors.cream} />
-        </View>
-      </TouchableOpacity>
     </View>
   );
 }

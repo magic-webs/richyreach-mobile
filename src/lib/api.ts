@@ -129,7 +129,34 @@ export const api = {
       request(`/chat/invite/${inviteId}/respond`, { method: 'POST', body: JSON.stringify({ status }) }),
   },
   arena: {
-    list: () => request('/arena'),
+    list: (type?: string) =>
+      request<any[]>(`/arena${type ? `?type=${type}` : ''}`),
+    mine: () => request<any[]>('/arena/brand/mine'),
+    get: (id: string) => request<any>(`/arena/${id}`),
+    create: (data: any, activeProfileId?: string | null) =>
+      request<any>('/arena/create', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        activeProfileId,
+      }),
+    update: (id: string, data: any) =>
+      request<any>(`/arena/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<any>(`/arena/${id}`, { method: 'DELETE' }),
+    pause: (id: string) => request<any>(`/arena/${id}/pause`, { method: 'POST' }),
+    resume: (id: string) => request<any>(`/arena/${id}/resume`, { method: 'POST' }),
+    join: (id: string) => request<any>(`/arena/${id}/join`, { method: 'POST' }),
+    submit: (id: string, data: { postUrl?: string; submissionUrl?: string; reviewLink?: string; accountReach?: number }) =>
+      request<any>(`/arena/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+    myParticipations: () => request<any[]>('/arena/influencer/participations'),
+    leaderboard: (id: string) => request<any[]>(`/arena/${id}/leaderboard`),
+    adminAll: () => request<any[]>('/arena/admin/all'),
+    verifySubmission: (participantId: string, action: 'approve' | 'reject', notes?: string) =>
+      request<any>(`/arena/submissions/${participantId}/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ action, notes }),
+      }),
+    distributeRewards: (id: string) =>
+      request<any>(`/arena/${id}/distribute`, { method: 'POST' }),
   },
   banners: {
     list: (position?: string) => request<any[]>(`/banners${position ? `?position=${position}` : ''}`),
@@ -152,5 +179,14 @@ export const api = {
         body: fileData,
         activeProfileId,
       }),
+  },
+  wallet: {
+    balance: () => request<{ coinBalance: number; rupeeValue: number; transactions: any[] }>('/wallet'),
+    createOrder: (coins: number) =>
+      request<any>('/wallet/create-order', { method: 'POST', body: JSON.stringify({ coins }) }),
+    verifyPayment: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; coins: number }) =>
+      request<any>('/wallet/verify', { method: 'POST', body: JSON.stringify(data) }),
+    withdraw: (coins: number) =>
+      request<any>('/wallet/withdraw', { method: 'POST', body: JSON.stringify({ coins }) }),
   },
 };

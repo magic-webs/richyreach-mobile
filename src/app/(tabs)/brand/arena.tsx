@@ -1,35 +1,123 @@
 import { Icon } from '@/components/ui/icon';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import React, { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useProfilesStore } from '@/store/profiles';
+import { CreateArenaSheet } from '@/components/brand/home/CreateArenaSheet';
+
+const ARENA_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  reel_reach: { label: '🎬 Reel Reach', color: '#b46a74', bg: 'rgba(180,106,116,0.12)' },
+  google_review: { label: '⭐ Google Review', color: '#2a7a5a', bg: 'rgba(42,122,90,0.1)' },
+};
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  draft: { label: 'Draft', color: '#888', dot: '#aaa' },
+  active: { label: 'Active', color: '#2a7a5a', dot: '#2a7a5a' },
+  paused: { label: 'Paused', color: '#c07000', dot: '#f3c969' },
+  completed: { label: 'Completed', color: '#5a1018', dot: '#b46a74' },
+  cancelled: { label: 'Cancelled', color: '#999', dot: '#ccc' },
+};
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ArenaCard({ arena, onManage }: { arena: any; onManage: () => void }) {
+  const typeConf = ARENA_TYPE_CONFIG[arena.arenaType] || ARENA_TYPE_CONFIG.reel_reach;
+  const statusConf = STATUS_CONFIG[arena.status] || STATUS_CONFIG.draft;
+  const budgetRupees = (arena.totalBudgetCoins / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+  const daysLeft = Math.max(0, Math.ceil((new Date(arena.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+  return (
+    <View style={styles.arenaCard}>
+      {/* Card Header */}
+      <View style={styles.arenaCardHeader}>
+        {/* Banner thumbnail */}
+        <View style={[styles.arenaThumbnail, { backgroundColor: typeConf.bg }]}>
+          {arena.bannerUrl ? (
+            <Image source={{ uri: arena.bannerUrl }} style={{ width: '100%', height: '100%', borderRadius: 12 }} contentFit="cover" />
+          ) : (
+            <Text style={{ fontSize: 26 }}>🏟️</Text>
+          )}
+        </View>
+
+        <View style={styles.arenaMeta}>
+          {/* Type badge */}
+          <View style={[styles.typeBadge, { backgroundColor: typeConf.bg }]}>
+            <Text style={[styles.typeBadgeText, { color: typeConf.color }]}>{typeConf.label}</Text>
+          </View>
+          <Text style={styles.arenaTitle} numberOfLines={2}>{arena.title}</Text>
+          <Text style={styles.arenaStats}>
+            {arena.participantCount || 0}/{arena.maxParticipants} participants · {daysLeft}d left
+          </Text>
+        </View>
+
+        {/* Status */}
+        <View style={styles.statusRow}>
+          <View style={[styles.statusDot, { backgroundColor: statusConf.dot }]} />
+          <Text style={[styles.statusText, { color: statusConf.color }]}>{statusConf.label}</Text>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Footer */}
+      <View style={styles.arenaCardFooter}>
+        <View style={styles.prizeInfo}>
+          <Text style={styles.prizeCoinLabel}>Prize Pool</Text>
+          <Text style={styles.prizeCoin}>
+            {arena.totalBudgetCoins.toLocaleString()} 🪙
+          </Text>
+          <Text style={styles.prizeRupee}>{budgetRupees}</Text>
+        </View>
+
+        <TouchableOpacity style={styles.manageBtn} activeOpacity={0.8} onPress={onManage}>
+          <Text style={styles.manageBtnText}>Manage</Text>
+          <Icon name="arrow" size={13} color={Colors.cream} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 export default function BrandArenaScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const showModal = useUIStore((s) => s.showModal);
+  const queryClient = useQueryClient();
+  const { activeBrandProfileId } = useProfilesStore();
 
-  const [contests, setContests] = useState([
-    { id: '1', title: '#SummerGlow', prize: '₹10,00,000', entries: 1842, daysLeft: 6, submissionsPending: 12, tone: 'rose' as const },
-    { id: '2', title: '#HeritageStory', prize: '₹3,60,000', entries: 420, daysLeft: 14, submissionsPending: 4, tone: 'ox' as const },
-  ]);
+  const [isCreateArenaOpen, setIsCreateArenaOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const handleLaunchContest = () => {
-    showModal({
-      title: 'New Contest',
-      message: 'Create Contest wizard is opening. Fill in the prize pool, terms, and hashtags to proceed. Contests are subject to review by the RichyReach safety board.',
-    });
-  };
+  const { data: arenas = [], isLoading, refetch } = useQuery({
+    queryKey: ['brandArenas', activeBrandProfileId],
+    queryFn: () => api.arena.mine(),
+    enabled: !!activeBrandProfileId,
+  });
 
-  const handleReviewSubmissions = (contestTitle: string) => {
-    showModal({
-      title: 'Submissions',
-      message: `Opening review dashboard for contest ${contestTitle}. You can rank entries and approve payouts here.`,
-    });
-  };
+  const { data: walletData } = useQuery({
+    queryKey: ['walletBalance'],
+    queryFn: () => api.wallet.balance(),
+  });
+
+  const filtered = typeFilter ? arenas.filter((a: any) => a.arenaType === typeFilter) : arenas;
+
+  // Summary stats
+  const totalBudget = arenas.reduce((sum: number, a: any) => sum + (a.totalBudgetCoins || 0), 0);
+  const totalParticipants = arenas.reduce((sum: number, a: any) => sum + (a.participantCount || 0), 0);
+  const activeCount = arenas.filter((a: any) => a.status === 'active').length;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -49,101 +137,106 @@ export default function BrandArenaScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.launchBtn} activeOpacity={0.8} onPress={handleLaunchContest}>
-          <Icon name="plus" size={14} color={Colors.oxblood} />
-          <Text style={styles.launchBtnText}>Launch</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {/* Wallet balance pill */}
+          {walletData && (
+            <View style={styles.walletPill}>
+              <Text style={styles.walletPillText}>
+                🪙 {(walletData.coinBalance || 0).toLocaleString()}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.launchBtn}
+            activeOpacity={0.8}
+            onPress={() => setIsCreateArenaOpen(true)}
+          >
+            <Icon name="plus" size={14} color={Colors.oxblood} />
+            <Text style={styles.launchBtnText}>Launch</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 130 }}
         style={styles.body}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            tintColor={Colors.cream}
+          />
+        }
       >
         {/* Quick Stats Summary */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Prize Budget</Text>
-            <Text style={styles.statValue}>₹13.6L</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Entries</Text>
-            <Text style={styles.statValue}>2,262</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Active Contests</Text>
-            <Text style={styles.statValue}>2</Text>
-          </View>
+          <StatCard label="Total Budget" value={`₹${(totalBudget / 100).toLocaleString('en-IN')}`} />
+          <StatCard label="Participants" value={totalParticipants.toLocaleString()} />
+          <StatCard label="Active" value={String(activeCount)} />
         </View>
 
-        {/* Active Contests List */}
-        <Text style={styles.sectionTitle}>Your Contests</Text>
-
-        <View style={styles.contestList}>
-          {contests.map((c) => (
-            <View key={c.id} style={styles.contestCard}>
-              <View style={styles.contestCardHeader}>
-                <PlaceholderImage tone={c.tone} height={50} width={50} borderRadius={12} />
-                <View style={styles.contestMeta}>
-                  <Text style={styles.contestTitleText}>{c.title}</Text>
-                  <Text style={styles.contestSubtext}>
-                    {c.daysLeft} days left · {c.entries} submissions
-                  </Text>
-                </View>
-                <View style={styles.prizePill}>
-                  <Text style={styles.prizePillText}>{c.prize}</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.contestCardFooter}>
-                <View style={styles.pendingIndicator}>
-                  <View style={styles.dot} />
-                  <Text style={styles.pendingText}>
-                    {c.submissionsPending} entries need review
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.reviewBtn}
-                  activeOpacity={0.8}
-                  onPress={() => handleReviewSubmissions(c.title)}
-                >
-                  <Text style={styles.reviewBtnText}>Manage</Text>
-                  <Icon name="arrow" size={13} color={Colors.cream} />
-                </TouchableOpacity>
-              </View>
-            </View>
+        {/* Type Filter */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {[null, 'reel_reach', 'google_review'].map((f) => (
+            <TouchableOpacity
+              key={String(f)}
+              style={[styles.filterPill, typeFilter === f && styles.filterPillActive]}
+              onPress={() => setTypeFilter(f)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterPillText, typeFilter === f && styles.filterPillTextActive]}>
+                {f === null ? 'All Arenas' : ARENA_TYPE_CONFIG[f]?.label || f}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
-        {/* Top Performers Section */}
-        <Text style={styles.sectionTitle}>Top Candidates in Contests</Text>
+        {/* Arenas List */}
+        <Text style={styles.sectionTitle}>Your Arenas</Text>
 
-        <View style={styles.rankingList}>
-          {[
-            { rank: 1, name: 'Muskan', handle: '@muskan.creates', score: '9.4/10', tone: 'rose' as const },
-            { rank: 2, name: 'Kai Rao', handle: '@kai.shoots', score: '9.1/10', tone: 'ox' as const },
-            { rank: 3, name: 'Léa Fontaine', handle: '@lea.fr', score: '8.8/10', tone: 'rose' as const }
-          ].map((u) => (
-            <View key={u.rank} style={styles.rankRow}>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankBadgeText}>#{u.rank}</Text>
-              </View>
-              <PlaceholderImage tone={u.tone} height={34} width={34} borderRadius={17} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.candidateName}>{u.name}</Text>
-                <Text style={styles.candidateHandle}>{u.handle}</Text>
-              </View>
-              <View style={styles.scoreBadge}>
-                <Text style={styles.scoreBadgeText}>{u.score}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Loading arenas...</Text>
+          </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={{ fontSize: 40, marginBottom: 12 }}>🏟️</Text>
+            <Text style={styles.emptyStateText}>No arenas yet</Text>
+            <Text style={styles.emptyStateSub}>
+              Launch your first arena to start competitive influencer campaigns powered by coins.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyLaunchBtn}
+              onPress={() => setIsCreateArenaOpen(true)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.emptyLaunchBtnText}>+ Create First Arena</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.arenaList}>
+            {filtered.map((arena: any) => (
+              <ArenaCard
+                key={arena.id}
+                arena={arena}
+                onManage={() => router.push({ pathname: '/brand/arena/[id]', params: { id: arena.id } } as any)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Create Arena Sheet */}
+      <CreateArenaSheet
+        isOpen={isCreateArenaOpen}
+        onClose={() => setIsCreateArenaOpen(false)}
+        onSuccess={() => {
+          setIsCreateArenaOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['brandArenas'] });
+          queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+        }}
+      />
     </View>
   );
 }
@@ -160,7 +253,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(180, 106, 116, 0.25)',
+    backgroundColor: 'rgba(180, 106, 116, 0.2)',
   },
   glow2: {
     position: 'absolute',
@@ -169,7 +262,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(141, 71, 80, 0.2)',
+    backgroundColor: 'rgba(141, 71, 80, 0.15)',
   },
   header: {
     flexDirection: 'row',
@@ -180,11 +273,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(232, 216, 204, 0.1)',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerIcon: {
     width: 38,
     height: 38,
@@ -209,6 +299,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: -2,
   },
+  walletPill: {
+    backgroundColor: 'rgba(232,216,204,0.12)',
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(232,216,204,0.2)',
+  },
+  walletPillText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.cream,
+    fontWeight: '700',
+  },
   launchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -224,15 +328,8 @@ const styles = StyleSheet.create({
     color: Colors.oxblood,
     fontWeight: '700',
   },
-  body: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
+  body: { paddingHorizontal: 20, paddingTop: 16 },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statCard: {
     flex: 1,
     backgroundColor: 'rgba(232, 216, 204, 0.07)',
@@ -243,15 +340,38 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 10,
+    fontSize: 9.5,
     color: 'rgba(232, 216, 204, 0.5)',
+    letterSpacing: 0.3,
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 20,
+    fontSize: 18,
     color: Colors.cream,
     fontWeight: '700',
     marginTop: 4,
+  },
+  filterRow: { gap: 8, paddingRight: 4, marginBottom: 20 },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(232,216,204,0.08)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(232,216,204,0.2)',
+  },
+  filterPillActive: {
+    backgroundColor: Colors.cream,
+    borderColor: Colors.cream,
+  },
+  filterPillText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: 'rgba(232,216,204,0.7)',
+  },
+  filterPillTextActive: {
+    color: Colors.oxblood,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontFamily: FontFamily.sansMedium,
@@ -259,135 +379,126 @@ const styles = StyleSheet.create({
     color: Colors.cream,
     fontWeight: '700',
     marginBottom: 14,
-    marginTop: 8,
   },
-  contestList: {
-    gap: 14,
-    marginBottom: 24,
-  },
-  contestCard: {
+  arenaList: { gap: 14 },
+  arenaCard: {
     backgroundColor: 'rgba(232, 216, 204, 0.07)',
     borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 0.5,
     borderColor: 'rgba(232, 216, 204, 0.15)',
   },
-  contestCardHeader: {
-    flexDirection: 'row',
+  arenaCardHeader: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  arenaThumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    flexShrink: 0,
+    overflow: 'hidden',
   },
-  contestMeta: {
-    flex: 1,
+  arenaMeta: { flex: 1, gap: 4 },
+  typeBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
   },
-  contestTitleText: {
+  typeBadgeText: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 16,
-    color: Colors.cream,
+    fontSize: 10,
     fontWeight: '700',
   },
-  contestSubtext: {
+  arenaTitle: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 11.5,
-    color: 'rgba(232, 216, 204, 0.5)',
-    marginTop: 2,
-  },
-  prizePill: {
-    backgroundColor: Colors.roseDeep,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  prizePillText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 10.5,
+    fontSize: 15,
     color: Colors.cream,
+    fontWeight: '700',
+    lineHeight: 20,
   },
+  arenaStats: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11.5,
+    color: 'rgba(232,216,204,0.5)',
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { fontFamily: FontFamily.sansMedium, fontSize: 10.5, fontWeight: '700' },
   divider: {
     height: 0.5,
     backgroundColor: 'rgba(232, 216, 204, 0.15)',
     marginVertical: 12,
   },
-  contestCardFooter: {
+  arenaCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  pendingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  prizeInfo: { gap: 2 },
+  prizeCoinLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 10,
+    color: 'rgba(232,216,204,0.45)',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.gold,
-  },
-  pendingText: {
+  prizeCoin: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 11.5,
+    fontSize: 15,
+    fontWeight: '700',
     color: Colors.gold,
   },
-  reviewBtn: {
+  prizeRupee: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(243,201,105,0.6)',
+  },
+  manageBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: Colors.oxblood2,
     borderRadius: Radius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 0.5,
     borderColor: 'rgba(232, 216, 204, 0.15)',
   },
-  reviewBtnText: {
+  manageBtnText: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 11.5,
+    fontSize: 12,
     color: Colors.cream,
+    fontWeight: '700',
   },
-  rankingList: {
-    backgroundColor: 'rgba(232, 216, 204, 0.07)',
-    borderRadius: Radius.lg,
-    padding: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(232, 216, 204, 0.15)',
-  },
-  rankRow: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232, 216, 204, 0.08)',
+    paddingVertical: 40,
+    gap: 8,
   },
-  rankBadge: {
-    width: 30,
-    alignItems: 'center',
+  emptyStateText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 17,
+    color: Colors.cream,
+    fontWeight: '700',
   },
-  rankBadgeText: {
+  emptyStateSub: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: 'rgba(232,216,204,0.5)',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  emptyLaunchBtn: {
+    marginTop: 16,
+    backgroundColor: Colors.cream,
+    borderRadius: Radius.full,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  emptyLaunchBtnText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 14,
-    color: 'rgba(232, 216, 204, 0.5)',
-  },
-  candidateName: {
-    fontFamily: FontFamily.sans,
-    fontSize: 13.5,
-    color: Colors.cream,
-  },
-  candidateHandle: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 11,
-    color: 'rgba(232, 216, 204, 0.5)',
-  },
-  scoreBadge: {
-    backgroundColor: 'rgba(243, 201, 105, 0.15)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  scoreBadgeText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 11,
-    color: Colors.gold,
     fontWeight: '700',
+    color: Colors.oxblood,
   },
 });

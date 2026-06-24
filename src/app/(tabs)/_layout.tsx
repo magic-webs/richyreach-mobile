@@ -131,10 +131,12 @@ function CustomTabBar({ state, navigation }: any) {
     'brand/marketplace/creator/[id]',
     'brand/chat',
     'brand/chat/[id]',
+    'brand/arena/[id]',
     'chat',
     'chat/[id]',
     'brand/referral',
-    'referral'
+    'referral',
+    'arena/[id]',
   ];
 
   if (activeRouteName && hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {
@@ -194,6 +196,7 @@ export default function TabLayout() {
           <Tabs.Screen name="chat/index" options={{ href: null }} />
           <Tabs.Screen name="chat/[id]" options={{ href: null }} />
           <Tabs.Screen name="referral" options={{ href: null }} />
+          <Tabs.Screen name="arena/[id]" options={{ href: null }} />
         </Tabs.Protected>
 
         <Tabs.Protected guard={role === 'brand'}>
@@ -207,6 +210,7 @@ export default function TabLayout() {
           <Tabs.Screen name="brand/chat/index" options={{ href: null }} />
           <Tabs.Screen name="brand/chat/[id]" options={{ href: null }} />
           <Tabs.Screen name="brand/referral" options={{ href: null }} />
+          <Tabs.Screen name="brand/arena/[id]" options={{ href: null }} />
         </Tabs.Protected>
       </Tabs>
     </View>
