@@ -11,7 +11,8 @@ import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import LottieView from 'lottie-react-native';
 import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator, Linking, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -170,7 +171,7 @@ export default function CollabDetail() {
       cat: c.campaignType || c.category || 'General',
       verified: c.verified ?? c.brand?.verified ?? false,
       title: c.title,
-      budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
+      budget: typeof c.budget === 'number' ? `â‚¹${(c.budget / 100).toLocaleString()}` : (c.budget || 'â‚¹10,000'),
       budgetNum: typeof c.budget === 'number' ? c.budget : 10000,
       deadline: c.deadline || '5 days left',
       applicants: c.applicants || 0,
@@ -276,12 +277,17 @@ export default function CollabDetail() {
     }
   });
 
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiRef = useRef<LottieView>(null);
+
   const acceptCounterMutation = useMutation({
     mutationFn: () => api.influencers.acceptCounterOffer(myApplication!.id),
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      // Show confetti celebration
+      setShowConfetti(true);
       useUIStore.getState().showModal({
-        title: 'Offer Accepted! 🎉',
+        title: 'Offer Accepted! ðŸŽ‰',
         message: 'You have accepted the brand\'s counter-offer. Navigating to your chat room...',
         actions: [
           {
@@ -317,16 +323,14 @@ export default function CollabDetail() {
 
   // Collaboration steps states & mutations
   const [scriptInput, setScriptInput] = useState('');
-  const [igInput, setIgInput] = useState('');
   const [postLinkInput, setPostLinkInput] = useState('');
 
   useEffect(() => {
     if (myApplication) {
       setScriptInput(myApplication.scriptUrl || '');
-      setIgInput(myApplication.igHandle || '');
       setPostLinkInput(myApplication.postLink || '');
     }
-  }, [myApplication?.scriptUrl, myApplication?.igHandle, myApplication?.postLink]);
+  }, [myApplication?.scriptUrl, myApplication?.postLink]);
 
   const submitScriptMutation = useMutation({
     mutationFn: (scriptUrl: string) => api.influencers.submitScript(myApplication!.id, scriptUrl),
@@ -336,17 +340,6 @@ export default function CollabDetail() {
     },
     onError: (err: any) => {
       useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit script draft' });
-    }
-  });
-
-  const submitIgHandleMutation = useMutation({
-    mutationFn: (igHandle: string) => api.influencers.submitIgHandle(myApplication!.id, igHandle),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collab', id] });
-      useUIStore.getState().showModal({ title: 'Success', message: 'Instagram handle updated!' });
-    },
-    onError: (err: any) => {
-      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit handle' });
     }
   });
 
@@ -461,7 +454,7 @@ export default function CollabDetail() {
               )}
               <Text style={styles.brandName}>{cm.brand}</Text>
               {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={15} color={Colors.roseSoft} strokeWidth={2} />}
-              <Text style={styles.reachText}>· {cm.followers} reach</Text>
+              <Text style={styles.reachText}>Â· {cm.followers} reach</Text>
             </View>
             <Text style={styles.campaignTitle}>{cm.title}</Text>
           </View>
@@ -473,10 +466,10 @@ export default function CollabDetail() {
           <View style={[styles.budgetStrip, { backgroundColor: cm.tone === 'rose' ? Colors.roseDeep : Colors.oxblood }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.budgetLabel}>
-                {cm.numCreators > 1 ? `Paid Collaboration · ${cm.numCreators} spots` : 'Paid collaboration'}
+                {cm.numCreators > 1 ? `Paid Collaboration Â· ${cm.numCreators} spots` : 'Paid collaboration'}
               </Text>
               <Text style={styles.budgetAmount}>
-                {cm.numCreators > 1 ? `₹${cm.costPerCreator.toLocaleString('en-IN')}` : cm.budget}
+                {cm.numCreators > 1 ? `â‚¹${cm.costPerCreator.toLocaleString('en-IN')}` : cm.budget}
                 {cm.numCreators > 1 && <Text style={styles.budgetPerSpotLabel}> / spot</Text>}
               </Text>
               {cm.numCreators > 1 && (
@@ -492,262 +485,70 @@ export default function CollabDetail() {
             </View>
           </View>
 
-          {/* Collaboration Steps Workspace */}
+          {/* Collaboration Workspace â€” tap to open dedicated workspace page */}
           {myApplication && myApplication.status === 'accepted' && (
-            <View style={styles.collabWorkspaceCard}>
+            <TouchableOpacity
+              style={styles.collabWorkspaceCard}
+              activeOpacity={0.85}
+              onPress={() =>
+                router.push({ pathname: '/collab/workspace/[id]' as any, params: { id } })
+              }
+            >
               <View style={styles.collabWorkspaceHeader}>
-                <Text style={styles.collabWorkspaceTitle}>Collaboration Workspace</Text>
-                <Text style={styles.collabWorkspaceSubtitle}>Complete the steps below to finish the campaign</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={styles.collabWorkspaceTitle}>Collaboration Workspace</Text>
+                  <Icon name="chevron" size={16} color={Colors.roseDeep} />
+                </View>
+                <Text style={styles.collabWorkspaceSubtitle}>Tap to open your workspace and complete deliverables</Text>
               </View>
 
-              {/* Step 1: Script Upload */}
-              <View style={styles.stepContainer}>
-                <View style={styles.stepLeft}>
+              {/* Quick step summary â€” tap card to open full workspace */}
+              {[
+                {
+                  label: 'Script Draft',
+                  status: myApplication.scriptStatus === 'approved'
+                    ? 'approved'
+                    : myApplication.scriptStatus === 'pending'
+                      ? 'pending'
+                      : 'action_needed',
+                  text: myApplication.scriptStatus === 'approved'
+                    ? 'Approved âœ“'
+                    : myApplication.scriptStatus === 'pending'
+                      ? 'Under Reviewâ€¦'
+                      : 'Not submitted',
+                },
+                {
+                  label: 'Instagram Handle',
+                  status: myApplication.igHandle ? 'approved' : 'action_needed',
+                  text: myApplication.igHandle ? `@${myApplication.igHandle}` : 'Not linked',
+                },
+                {
+                  label: 'Live Post Link',
+                  status: myApplication.postLink ? 'approved' : 'action_needed',
+                  text: myApplication.postLink ? 'Submitted âœ“' : 'Not submitted',
+                },
+              ].map((step) => (
+                <View key={step.label} style={styles.collabStepRow}>
                   <View style={[
-                    styles.stepIndicator,
-                    myApplication.scriptStatus === 'approved' ? styles.stepIndicatorDone : (myApplication.scriptStatus === 'pending' ? styles.stepIndicatorPending : styles.stepIndicatorActive)
+                    styles.collabStepDot,
+                    step.status === 'approved' && styles.collabStepDotDone,
+                    step.status === 'pending' && styles.collabStepDotPending,
                   ]}>
-                    {myApplication.scriptStatus === 'approved' ? (
-                      <Icon name="check" size={12} color="#fff" />
-                    ) : myApplication.scriptStatus === 'pending' ? (
-                      <Icon name="clock" size={12} color="#fff" />
-                    ) : (
-                      <Text style={styles.stepIndicatorText}>1</Text>
-                    )}
+                    {step.status === 'approved'
+                      ? <Icon name="check" size={9} color="#fff" />
+                      : <Icon name="clock" size={9} color="#fff" />}
                   </View>
-                  <View style={styles.stepConnectorLine} />
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Step 1: Upload Script Draft</Text>
-                  <Text style={styles.stepDescription}>
-                    Create your campaign script draft and share the draft link (e.g. Google Doc) for brand approval.
-                  </Text>
-                  
-                  {myApplication.scriptStatus === 'approved' ? (
-                    <View style={styles.stepStatusTextRow}>
-                      <Icon name="check" size={14} color={Colors.green} />
-                      <Text style={[styles.stepStatusValText, { color: Colors.green }]}>
-                        Approved: {myApplication.scriptUrl}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.stepForm}>
-                      {myApplication.scriptStatus === 'rejected' && (
-                        <View style={styles.rejectedBanner}>
-                          <Text style={styles.rejectedBannerText}>
-                            ✕ Draft Rejected. Please update your script and resubmit.
-                          </Text>
-                        </View>
-                      )}
-                      {myApplication.scriptStatus === 'pending' && (
-                        <View style={styles.pendingBanner}>
-                          <Text style={styles.pendingBannerText}>
-                            Awaiting brand review: {myApplication.scriptUrl}
-                          </Text>
-                        </View>
-                      )}
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Google Doc, Notion, or Drive link..."
-                        placeholderTextColor="rgba(63,3,11,0.4)"
-                        value={scriptInput}
-                        onChangeText={setScriptInput}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      <TouchableOpacity
-                        style={styles.submitBtn}
-                        onPress={() => submitScriptMutation.mutate(scriptInput)}
-                        disabled={submitScriptMutation.isPending || !scriptInput.trim()}
-                        activeOpacity={0.8}
-                      >
-                        {submitScriptMutation.isPending ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <Text style={styles.submitBtnText}>
-                            {myApplication.scriptStatus === 'pending' ? 'Update Draft Link' : 'Submit Script Link'}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* Step 2: Instagram Collaboration */}
-              <View style={styles.stepContainer}>
-                <View style={styles.stepLeft}>
-                  <View style={[
-                    styles.stepIndicator,
-                    myApplication.igHandle ? styles.stepIndicatorDone : styles.stepIndicatorActive
-                  ]}>
-                    {myApplication.igHandle ? (
-                      <Icon name="check" size={12} color="#fff" />
-                    ) : (
-                      <Text style={styles.stepIndicatorText}>2</Text>
-                    )}
-                  </View>
-                  <View style={styles.stepConnectorLine} />
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Step 2: Connected Instagram Handle</Text>
-                  <Text style={styles.stepDescription}>
-                    Link your Instagram handle so we can trace the collaboration.
-                  </Text>
-                  
-                  <View style={styles.stepForm}>
-                    {myApplication.igHandle && (
-                      <View style={[styles.pendingBanner, { backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.2)' }]}>
-                        <Text style={[styles.pendingBannerText, { color: Colors.ink }]}>
-                          Connected Handle: @{myApplication.igHandle}
-                        </Text>
-                      </View>
-                    )}
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g. @your_instagram"
-                      placeholderTextColor="rgba(63,3,11,0.4)"
-                      value={igInput}
-                      onChangeText={setIgInput}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                      style={styles.submitBtn}
-                      onPress={() => submitIgHandleMutation.mutate(igInput)}
-                      disabled={submitIgHandleMutation.isPending || !igInput.trim()}
-                      activeOpacity={0.8}
-                    >
-                      {submitIgHandleMutation.isPending ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.submitBtnText}>
-                          {myApplication.igHandle ? 'Update Connected Handle' : 'Save Connected Handle'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.collabStepLabel}>{step.label}</Text>
+                    <Text style={[
+                      styles.collabStepVal,
+                      step.status === 'approved' && { color: Colors.green },
+                      step.status === 'pending' && { color: '#e67e22' },
+                    ]}>{step.text}</Text>
                   </View>
                 </View>
-              </View>
-
-              {/* Step 3: Share Post Link */}
-              {(() => {
-                const isUnlocked = myApplication.scriptStatus === 'approved';
-                return (
-                  <View style={[styles.stepContainer, !isUnlocked && styles.stepContainerLocked]}>
-                    <View style={styles.stepLeft}>
-                      <View style={[
-                        styles.stepIndicator,
-                        !isUnlocked ? styles.stepIndicatorLocked : (myApplication.postLink ? styles.stepIndicatorDone : styles.stepIndicatorActive)
-                      ]}>
-                        {!isUnlocked ? (
-                          <Icon name="lock" size={12} color="#aaa" />
-                        ) : myApplication.postLink ? (
-                          <Icon name="check" size={12} color="#fff" />
-                        ) : (
-                          <Text style={styles.stepIndicatorText}>3</Text>
-                        )}
-                      </View>
-                      <View style={styles.stepConnectorLine} />
-                    </View>
-                    <View style={styles.stepContent}>
-                      <Text style={[styles.stepTitle, !isUnlocked && styles.stepTitleLocked]}>
-                        Step 3: Submit Live Post Link
-                      </Text>
-                      <Text style={[styles.stepDescription, !isUnlocked && styles.stepDescriptionLocked]}>
-                        Once your script is approved and the Reel/Post is live, share the Instagram link here.
-                      </Text>
-                      
-                      {isUnlocked ? (
-                        <View style={styles.stepForm}>
-                          {myApplication.postLink && (
-                            <View style={[styles.pendingBanner, { backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.2)' }]}>
-                              <Text style={[styles.pendingBannerText, { color: Colors.ink }]}>
-                                Submitted Link: {myApplication.postLink}
-                              </Text>
-                            </View>
-                          )}
-                          <TextInput
-                            style={styles.input}
-                            placeholder="https://www.instagram.com/reel/..."
-                            placeholderTextColor="rgba(63,3,11,0.4)"
-                            value={postLinkInput}
-                            onChangeText={setPostLinkInput}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                          />
-                          <TouchableOpacity
-                            style={styles.submitBtn}
-                            onPress={() => submitPostLinkMutation.mutate(postLinkInput)}
-                            disabled={submitPostLinkMutation.isPending || !postLinkInput.trim()}
-                            activeOpacity={0.8}
-                          >
-                            {submitPostLinkMutation.isPending ? (
-                              <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                              <Text style={styles.submitBtnText}>
-                                {myApplication.postLink ? 'Update Post Link' : 'Submit Post Link'}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.lockedHint}>
-                          <Icon name="lock" size={12} color="rgba(63,3,11,0.4)" />
-                          <Text style={styles.lockedHintText}>Unlock this step by getting script approval.</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })()}
-
-              {/* Step 4: Completion */}
-              {(() => {
-                const isUnlocked = !!myApplication.postLink;
-                const isCompleted = myApplication.collaborationStatus === 'completed';
-                return (
-                  <View style={[styles.stepContainer, !isUnlocked && styles.stepContainerLocked, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                    <View style={styles.stepLeft}>
-                      <View style={[
-                        styles.stepIndicator,
-                        !isUnlocked ? styles.stepIndicatorLocked : (isCompleted ? styles.stepIndicatorDone : styles.stepIndicatorActive)
-                      ]}>
-                        {!isUnlocked ? (
-                          <Icon name="lock" size={12} color="#aaa" />
-                        ) : isCompleted ? (
-                          <Icon name="check" size={12} color="#fff" />
-                        ) : (
-                          <Icon name="clock" size={12} color="#fff" />
-                        )}
-                      </View>
-                    </View>
-                    <View style={styles.stepContent}>
-                      <Text style={[styles.stepTitle, !isUnlocked && styles.stepTitleLocked]}>
-                        Step 4: Completion & Payout
-                      </Text>
-                      <Text style={[styles.stepDescription, !isUnlocked && styles.stepDescriptionLocked]}>
-                        Awaiting brand verification to release collaboration payout.
-                      </Text>
-                      
-                      {isCompleted ? (
-                        <View style={styles.celebrationCard}>
-                          <Text style={styles.celebrationCardText}>
-                            🎉 Collaboration Completed! The brand has verified the deliverables and marked this collab as done.
-                          </Text>
-                        </View>
-                      ) : isUnlocked ? (
-                        <View style={styles.pendingCompletionCard}>
-                          <Text style={styles.pendingCompletionCardText}>
-                            ⏱ Awaiting Verification: The brand is reviewing your live post link. Payout will be processed upon approval.
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                );
-              })()}
-            </View>
+              ))}
+            </TouchableOpacity>
           )}
 
           {/* Facts Grid */}
@@ -880,7 +681,7 @@ export default function CollabDetail() {
                 {cm.prodValue > 0 && (
                   <View style={styles.barterDetailRow}>
                     <Text style={styles.barterLabel}>Product Value</Text>
-                    <Text style={styles.barterValuePrice}>₹{cm.prodValue.toLocaleString()}</Text>
+                    <Text style={styles.barterValuePrice}>â‚¹{cm.prodValue.toLocaleString()}</Text>
                   </View>
                 )}
 
@@ -911,7 +712,7 @@ export default function CollabDetail() {
                     onPress={() => Linking.openURL(cm.prodUrl)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.barterLinkBtnText}>View Product Page ↗</Text>
+                    <Text style={styles.barterLinkBtnText}>View Product Page â†—</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -947,7 +748,7 @@ export default function CollabDetail() {
                   <Text style={styles.brandCardName}>{cm.brand}</Text>
                   {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />}
                 </View>
-                <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
+                <Text style={styles.brandCardMeta}>{cm.cat} Â· 12 active campaigns Â· 4.9 â˜…</Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
@@ -1009,7 +810,7 @@ export default function CollabDetail() {
               disabled={acceptCounterMutation.isPending}
             >
               <Text style={styles.applyBtnText}>
-                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: ₹${(myApplication.counterAmount / 100).toLocaleString()}`}
+                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: â‚¹${(myApplication.counterAmount / 100).toLocaleString()}`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1029,17 +830,17 @@ export default function CollabDetail() {
               ]}
             >
               <Text style={styles.applyBtnText}>
-                {loading ? 'Submitting…' : (
+                {loading ? 'Submittingâ€¦' : (
                   myApplication ? (
-                    myApplication.status === 'accepted' ? `✓ Accepted · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : (
-                      myApplication.status === 'rejected' ? '✕ Application Declined' : (
-                        myApplication.status === 'negotiating' ? `Awaiting Brand · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : `Applied · ₹${(myApplication.bidAmount / 100).toLocaleString()}`
+                    myApplication.status === 'accepted' ? `âœ“ Accepted Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}` : (
+                      myApplication.status === 'rejected' ? 'âœ• Application Declined' : (
+                        myApplication.status === 'negotiating' ? `Awaiting Brand Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}` : `Applied Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}`
                       )
                     )
                   ) : (
                     cm.numCreators > 1
-                      ? `Apply now · ₹${cm.costPerCreator.toLocaleString('en-IN')} / spot`
-                      : `Apply now · ${cm.budget}`
+                      ? `Apply now Â· â‚¹${cm.costPerCreator.toLocaleString('en-IN')} / spot`
+                      : `Apply now Â· ${cm.budget}`
                   )
                 )}
               </Text>
@@ -1077,6 +878,22 @@ export default function CollabDetail() {
           campaignTitle={cm.title}
           influencerName="Propose Counter Bid"
         />
+      )}
+
+      {/* Confetti overlay — shown when counter-offer is accepted */}
+      {showConfetti && (
+        <View style={styles.confettiOverlay} pointerEvents="none">
+          <LottieView
+            ref={confettiRef}
+            source={require('@/assets/lottie-animation/coffeti.json')}
+            autoPlay
+            loop={false}
+            style={styles.confettiAnim}
+            onAnimationFinish={() => {
+              setTimeout(() => setShowConfetti(false), 400);
+            }}
+          />
+        </View>
       )}
     </View>
   );
@@ -1529,5 +1346,56 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: Colors.roseDeep,
     textDecorationLine: 'underline',
+  },
+
+  // Workspace summary card step rows
+  collabStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.05)',
+  },
+  collabStepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(63,3,11,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  collabStepDotDone: {
+    backgroundColor: Colors.green,
+  },
+  collabStepDotPending: {
+    backgroundColor: '#e67e22',
+  },
+  collabStepLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.45)',
+  },
+  collabStepVal: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.ink,
+    fontWeight: '600',
+  },
+
+  // Confetti overlay
+  confettiOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    pointerEvents: 'none',
+  },
+  confettiAnim: {
+    width: '100%',
+    height: '100%',
   },
 });

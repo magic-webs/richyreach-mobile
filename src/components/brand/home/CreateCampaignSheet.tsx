@@ -3,8 +3,10 @@ import { api } from '@/lib/api';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import LottieView from 'lottie-react-native';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -38,6 +40,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
   const showModal = useUIStore((s) => s.showModal);
   const scrollViewRef = useRef<ScrollView>(null);
   const { brandProfiles, activeBrandProfileId } = useProfilesStore();
+
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
 
   const {
     createStep,
@@ -138,16 +143,12 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
     const totalBudget = cost * creators;
 
     try {
-      onClose();
-      showModal({
-        title: 'Launching Campaign...',
-        message: 'Uploading attachments and launching campaign...',
-      });
+      setIsLaunching(true);
 
       // Helper function to upload files to R2 bucket
       const uploadFileToR2 = async (uri: string, prefix: string) => {
         const formData = new FormData();
-        
+
         // Resolve extension safely to avoid using full URLs/blobs as file extensions
         let extension = prefix === 'audio' ? 'm4a' : 'jpg';
         const cleanUri = uri.split('?')[0].split('#')[0];
@@ -159,7 +160,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
             extension = possibleExt;
           }
         }
-        
+
         const filename = `${prefix}.${extension}`;
 
         if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
@@ -302,14 +303,11 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
 
       await api.campaigns.create(finalPayload, data.selectedBrandProfileId);
 
-      showModal({
-        title: 'Campaign Launched! 🚀',
-        message: `Your campaign "${data.campName}" is now active on RichyReach.`,
-      });
-
-      onSuccess();
+      setIsLaunching(false);
+      setShowSuccessAnimation(true);
     } catch (err: any) {
       console.error('Failed to launch campaign:', err);
+      setIsLaunching(false);
       showModal({
         title: 'Campaign Creation Failed',
         message: err.message || 'An error occurred while launching your campaign.',
@@ -392,6 +390,34 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
           </FormProvider>
         </View>
       </KeyboardAvoidingView>
+
+      {isLaunching && (
+        <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+          <ActivityIndicator size="large" color={Colors.oxblood} />
+          <Text style={styles.loadingText}>Launching Your Campaign...</Text>
+          <Text style={styles.loadingSubtext}>Uploading media & finalising details...</Text>
+        </View>
+      )}
+
+      {showSuccessAnimation && (
+        <View style={[StyleSheet.absoluteFill, styles.successOverlay]}>
+          <LottieView
+            source={require('@/assets/lottie-animation/success.json')}
+            autoPlay
+            loop={false}
+            style={styles.lottie}
+            speed={0.7}
+            onAnimationFinish={() => {
+              setTimeout(() => {
+                setShowSuccessAnimation(false);
+                onClose();
+                onSuccess();
+              }, 800);
+            }}
+          />
+          <Text style={styles.successText}>Campaign Launched!</Text>
+        </View>
+      )}
     </Modal>
   );
 }
@@ -496,5 +522,44 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  successOverlay: {
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  loadingOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.oxblood,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: 'rgba(63,3,11,0.6)',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  lottie: {
+    width: 250,
+    height: 250,
+  },
+  successText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.oxblood,
+    marginTop: 20,
+    textAlign: 'center',
   },
 });
