@@ -22,12 +22,12 @@ export function TopBanner({ onSwitchProfile }: TopBannerProps) {
 
   const { data: brandProfileData, isLoading: loadingProfile } = useQuery<any>({
     queryKey: ['brandProfile', activeProfileId],
-    queryFn: () => api.brands.profile().catch(() => null),
+    queryFn: () => api.brands.profile(activeProfileId).catch(() => null),
   });
 
   const { data: dashRes, isLoading: loadingDashboard } = useQuery<any>({
     queryKey: ['brandDashboard', activeProfileId],
-    queryFn: () => api.brands.dashboard().catch(() => null),
+    queryFn: () => api.brands.dashboard(activeProfileId).catch(() => null),
     enabled: !!activeProfileId,
   });
 

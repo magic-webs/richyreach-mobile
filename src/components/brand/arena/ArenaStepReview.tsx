@@ -3,10 +3,24 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { TactileButton } from '@/components/ui/tactile-button';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import {
+  AlertCircleIcon,
+  Coins01Icon,
+  Film01Icon,
+  ListViewIcon,
+  Location01Icon,
+  StarIcon,
+} from '@hugeicons/core-free-icons';
 
 const ARENA_TYPE_LABELS: Record<string, string> = {
-  reel_reach: '🎬 Reel Reach Arena',
-  google_review: '⭐ Google Review Arena',
+  reel_reach: 'Reel Reach Arena',
+  google_review: 'Google Review Arena',
+};
+
+const ARENA_TYPE_ICONS: Record<string, any> = {
+  reel_reach: Film01Icon,
+  google_review: StarIcon,
 };
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
@@ -18,10 +32,13 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({ icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
   return (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionCardTitle}>{title}</Text>
+      <View style={styles.sectionCardTitleRow}>
+        <HugeiconsIcon icon={icon} size={14} color={Colors.oxblood} strokeWidth={2} />
+        <Text style={styles.sectionCardTitleText}>{title}</Text>
+      </View>
       {children}
     </View>
   );
@@ -44,13 +61,10 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
   const endDate = watch('endDate');
   const totalBudgetCoins = watch('totalBudgetCoins') || 0;
   const entryFeeCoins = watch('entryFeeCoins') || 2000;
-  const rewardPerReview = watch('rewardPerReview') || 2500;
   const businessName = watch('businessName');
   const googleMapsLink = watch('googleMapsLink');
-  const reviewGuidelines = watch('reviewGuidelines');
 
-  const winnerPool = Math.floor(totalBudgetCoins * 0.5);
-  const participantPool = totalBudgetCoins - winnerPool;
+  const arenaIcon = ARENA_TYPE_ICONS[arenaType] || Film01Icon;
 
   return (
     <View style={styles.container}>
@@ -61,11 +75,12 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
 
       {/* Arena Type Badge */}
       <View style={styles.typeBadge}>
+        <HugeiconsIcon icon={arenaIcon} size={14} color={Colors.cream} strokeWidth={2} />
         <Text style={styles.typeBadgeText}>{ARENA_TYPE_LABELS[arenaType] || arenaType}</Text>
       </View>
 
       {/* Basic Info */}
-      <SectionCard title="📋 Arena Details">
+      <SectionCard icon={ListViewIcon} title="Arena Details">
         <ReviewRow label="Title" value={title || '—'} />
         <ReviewRow label="Description" value={description ? (description.length > 80 ? description.substring(0, 80) + '…' : description) : '—'} />
         <ReviewRow label="Category" value={category || '—'} />
@@ -74,31 +89,25 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
       </SectionCard>
 
       {/* Coin Economy */}
-      <SectionCard title="💰 Coin Economy">
+      <SectionCard icon={Coins01Icon} title="Coin Economy">
         <ReviewRow label="Prize Pool" value={`${totalBudgetCoins.toLocaleString()} 🪙 = ₹${(totalBudgetCoins / 100).toLocaleString('en-IN')}`} />
         <ReviewRow label="Entry Fee" value={`${entryFeeCoins.toLocaleString()} 🪙 = ₹${(entryFeeCoins / 100).toLocaleString('en-IN')} per influencer`} />
-        {arenaType !== 'google_review' ? (
-          <>
-            <ReviewRow label="Winner Prize (50%)" value={`${winnerPool.toLocaleString()} 🪙 = ₹${(winnerPool / 100).toLocaleString('en-IN')}`} />
-            <ReviewRow label="Participant Pool (50%)" value={`${participantPool.toLocaleString()} 🪙 split by reach`} />
-          </>
-        ) : (
-          <ReviewRow label="Per Verified Review" value={`${rewardPerReview.toLocaleString()} 🪙 = ₹${(rewardPerReview / 100).toLocaleString('en-IN')}`} />
-        )}
       </SectionCard>
 
       {/* Google Review Info */}
       {arenaType === 'google_review' && (
-        <SectionCard title="📍 Business Info">
+        <SectionCard icon={Location01Icon} title="Business Info">
           <ReviewRow label="Business" value={businessName || '—'} />
           <ReviewRow label="Maps Link" value={googleMapsLink ? '✅ Set' : '❌ Missing'} />
-          <ReviewRow label="Guidelines" value={reviewGuidelines ? '✅ Set' : '—'} />
         </SectionCard>
       )}
 
       {/* Wallet Deduction Warning */}
       <View style={styles.warningBox}>
-        <Text style={styles.warningTitle}>⚠️ Wallet Deduction</Text>
+        <View style={styles.warningTitleRow}>
+          <HugeiconsIcon icon={AlertCircleIcon} size={14} color="#7a5a00" strokeWidth={2} />
+          <Text style={styles.warningTitle}>Wallet Deduction</Text>
+        </View>
         <Text style={styles.warningText}>
           Launching this arena will immediately deduct{' '}
           <Text style={{ fontWeight: '800' }}>{totalBudgetCoins.toLocaleString()} coins (₹{(totalBudgetCoins / 100).toLocaleString('en-IN')})</Text>
@@ -109,7 +118,7 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
       {/* Launch CTA */}
       <TactileButton
         onPress={onPublish}
-        text={isLoading ? 'Launching Arena...' : `🏟️ Launch Arena · ${totalBudgetCoins.toLocaleString()} 🪙`}
+        text={isLoading ? 'Launching Arena...' : `Launch Arena · ${totalBudgetCoins.toLocaleString()} 🪙`}
         variant="primary"
         fullWidth
         style={{ marginTop: 8 }}
@@ -134,6 +143,9 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 16,
@@ -155,15 +167,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(63,3,11,0.07)',
     ...Shadow.card,
   },
-  sectionCardTitle: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.oxblood,
+  sectionCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(63,3,11,0.07)',
     paddingBottom: 8,
+  },
+  sectionCardTitleText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.oxblood,
   },
   reviewRow: {
     flexDirection: 'row',
@@ -193,6 +210,11 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: 'rgba(243,201,105,0.5)',
+  },
+  warningTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   warningTitle: {
     fontFamily: FontFamily.sansMedium,

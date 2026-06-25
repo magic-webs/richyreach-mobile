@@ -1,11 +1,13 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import React, { useEffect, useState, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Platform } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 import { Image } from 'expo-image';
 
 interface CreateInfluencerProfileSheetProps {
@@ -27,6 +29,15 @@ interface CreateInfluencerProfileSheetProps {
   } | null;
 }
 
+type InfluencerProfileFormValues = {
+  instagramHandle: string;
+  pricing: string;
+  niche: string;
+  skills: string;
+  country: string;
+  youtube: string;
+};
+
 const NICHES = ['Beauty', 'Fashion', 'Tech', 'Fitness', 'Luxury', 'Lifestyle', 'Travel', 'Other'];
 
 export function CreateInfluencerProfileSheet({
@@ -40,119 +51,86 @@ export function CreateInfluencerProfileSheet({
   const saveInfluencerProfile = useProfilesStore((s) => s.saveInfluencerProfile);
   const setActiveInfluencerProfileId = useProfilesStore((s) => s.setActiveInfluencerProfileId);
 
-  const [instagramHandle, setInstagramHandle] = useState('');
-  const [pricing, setPricing] = useState('');
-  const [niche, setNiche] = useState('Lifestyle');
-  const [skills, setSkills] = useState('');
-  const [country, setCountry] = useState('India');
-  const [youtube, setYoutube] = useState('');
-  const [tiktok, setTiktok] = useState('');
+  // Avatar stays as plain state — it's a file picker, not a form field
   const [avatar, setAvatar] = useState('');
   const [avatarFile, setAvatarFile] = useState<any>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<InfluencerProfileFormValues>({
+    defaultValues: {
+      instagramHandle: '',
+      pricing: '',
+      niche: 'Lifestyle',
+      skills: '',
+      country: 'India',
+      youtube: '',
+    },
+  });
+
+  const instagramHandleValue = watch('instagramHandle');
 
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(() => {
-        setInstagramHandle(initialData?.instagramHandle ?? '');
-        // Format pricing from cents to standard Rupees for user input
-        setPricing(initialData?.pricing ? String(Math.floor(initialData.pricing / 100)) : '');
-        setNiche(initialData?.niche ?? 'Lifestyle');
-        setSkills(initialData?.skills ? initialData.skills.join(', ') : '');
-        setCountry(initialData?.country ?? 'India');
-        setYoutube(initialData?.socialLinks?.youtube ?? '');
-        setTiktok(initialData?.socialLinks?.tiktok ?? '');
-        setAvatar(initialData?.avatar ?? '');
-        setAvatarFile(null);
-        setSubmitting(false);
-      }, 0);
-      return () => clearTimeout(timer);
+      reset({
+        instagramHandle: initialData?.instagramHandle ?? '',
+        pricing: initialData?.pricing ? String(Math.floor(initialData.pricing / 100)) : '',
+        niche: initialData?.niche ?? 'Lifestyle',
+        skills: initialData?.skills ? initialData.skills.join(', ') : '',
+        country: initialData?.country ?? 'India',
+        youtube: initialData?.socialLinks?.youtube ?? '',
+      });
+      setAvatar(initialData?.avatar ?? '');
+      setAvatarFile(null);
     }
   }, [isOpen, initialData]);
 
-  const handleSubmit = async () => {
-    if (!instagramHandle.trim()) {
-      showModal({
-        title: 'Validation Error',
-        message: 'Please enter your Instagram handle.',
-      });
-      return;
-    }
+  const onSubmit = async (data: InfluencerProfileFormValues) => {
+    const cleanHandle = data.instagramHandle.trim().replace(/^@/, '');
+    const parsedPriceInCents = Math.round(Number(data.pricing.trim()) * 100);
+    const skillsArray = data.skills.trim()
+      ? data.skills.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
 
-    // Strip '@' if user included it
-    let cleanHandle = instagramHandle.trim();
-    if (cleanHandle.startsWith('@')) {
-      cleanHandle = cleanHandle.substring(1);
-    }
-
-    if (!cleanHandle) {
-      showModal({
-        title: 'Validation Error',
-        message: 'Please enter a valid Instagram handle.',
-      });
-      return;
-    }
-
-    if (!pricing.trim() || isNaN(Number(pricing.trim())) || Number(pricing.trim()) <= 0) {
-      showModal({
-        title: 'Validation Error',
-        message: 'Please enter a valid positive price (minimum pricing per collaboration).',
-      });
-      return;
-    }
-
-    setSubmitting(true);
     try {
-      const parsedPriceInCents = Math.round(Number(pricing.trim()) * 100);
-      const skillsArray = skills.trim()
-        ? skills.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
-
       let payload: any;
       if (avatarFile) {
         payload = new FormData();
         payload.append('instagramHandle', cleanHandle);
         payload.append('pricing', String(parsedPriceInCents));
-        payload.append('niche', niche);
+        payload.append('niche', data.niche);
         payload.append('skills', JSON.stringify(skillsArray));
-        payload.append('country', country.trim() || 'India');
+        payload.append('country', data.country.trim() || 'India');
         payload.append('avatar', avatarFile);
-        payload.append('socialLinks', JSON.stringify({
-          youtube: youtube.trim() || undefined,
-          tiktok: tiktok.trim() || undefined,
-        }));
-        if (initialData?.id) {
-          payload.append('id', initialData.id);
-        }
+        payload.append('socialLinks', JSON.stringify({ youtube: data.youtube.trim() || undefined }));
+        if (initialData?.id) payload.append('id', initialData.id);
       } else {
         payload = {
           instagramHandle: cleanHandle,
           pricing: parsedPriceInCents,
-          niche,
+          niche: data.niche,
           skills: skillsArray,
-          country: country.trim() || 'India',
+          country: data.country.trim() || 'India',
           avatar: avatar.trim() || undefined,
-          socialLinks: {
-            youtube: youtube.trim() || undefined,
-            tiktok: tiktok.trim() || undefined,
-          },
+          socialLinks: { youtube: data.youtube.trim() || undefined },
         };
-        if (initialData?.id) {
-          payload.id = initialData.id;
-        }
+        if (initialData?.id) payload.id = initialData.id;
       }
 
       const res = await api.influencers.updateProfile(payload);
 
-      // Save influencer profile locally in store
       const userId = session?.user?.id;
       if (userId) {
         const profileId = initialData?.id || (res as any)?.id || 'ip_' + Math.random().toString(36).substr(2, 9);
         const profileObj = {
           id: profileId,
           instagramHandle: cleanHandle,
-          niche,
+          niche: data.niche,
           pricing: parsedPriceInCents,
           followers: (res as any)?.followers ?? (initialData as any)?.followers ?? 0,
           level: (res as any)?.level ?? (initialData as any)?.level ?? 'micro',
@@ -177,8 +155,6 @@ export function CreateInfluencerProfileSheet({
         title: 'Operation Failed',
         message: err?.message || 'Failed to save creator profile. Please check your network connection and try again.',
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -226,19 +202,28 @@ export function CreateInfluencerProfileSheet({
         {/* INSTAGRAM HANDLE */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Instagram Handle *</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputPrefix}>@</Text>
-            <TextInput
-              style={[styles.formInput, { flex: 1, borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
-              placeholder="username"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={instagramHandle}
-              onChangeText={setInstagramHandle}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!submitting}
-            />
-          </View>
+          <Controller
+            control={control}
+            name="instagramHandle"
+            rules={{ required: 'Instagram handle is required' }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <View style={[styles.inputContainer, errors.instagramHandle && styles.inputContainerError]}>
+                <Text style={styles.inputPrefix}>@</Text>
+                <TextInput
+                  style={[styles.formInput, { flex: 1, borderWidth: 0, borderRadius: 0 }]}
+                  placeholder="username"
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isSubmitting}
+                />
+              </View>
+            )}
+          />
+          {errors.instagramHandle && <Text style={styles.errorText}>{errors.instagramHandle.message}</Text>}
         </View>
 
         {/* PROFILE AVATAR */}
@@ -251,7 +236,7 @@ export function CreateInfluencerProfileSheet({
               ) : (
                 <View style={[styles.avatarPreview, styles.avatarPreviewFallback]}>
                   <Text style={styles.avatarPreviewText}>
-                    {instagramHandle ? instagramHandle.charAt(0).toUpperCase() : '?'}
+                    {instagramHandleValue ? instagramHandleValue.charAt(0).toUpperCase() : '?'}
                   </Text>
                 </View>
               )}
@@ -262,19 +247,16 @@ export function CreateInfluencerProfileSheet({
                   style={styles.avatarUploadBtn}
                   onPress={triggerAvatarPicker}
                   activeOpacity={0.8}
-                  disabled={submitting}
+                  disabled={isSubmitting}
                 >
                   <Text style={styles.avatarUploadBtnText}>Upload Photo</Text>
                 </TouchableOpacity>
                 {(avatar || avatarFile) ? (
                   <TouchableOpacity
                     style={styles.avatarClearBtn}
-                    onPress={() => {
-                      setAvatar('');
-                      setAvatarFile(null);
-                    }}
+                    onPress={() => { setAvatar(''); setAvatarFile(null); }}
                     activeOpacity={0.8}
-                    disabled={submitting}
+                    disabled={isSubmitting}
                   >
                     <Text style={styles.avatarClearBtnText}>Reset</Text>
                   </TouchableOpacity>
@@ -290,61 +272,93 @@ export function CreateInfluencerProfileSheet({
         {/* PRICING */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Base Collaboration Pricing (₹) *</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. 15000"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={pricing}
-            onChangeText={setPricing}
-            keyboardType="numeric"
-            editable={!submitting}
+          <Controller
+            control={control}
+            name="pricing"
+            rules={{
+              required: 'Pricing is required',
+              validate: (v) => (Number(v) > 0) || 'Enter a valid positive price',
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={[styles.formInput, errors.pricing && styles.inputError]}
+                placeholder="e.g. 15000"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                keyboardType="numeric"
+                editable={!isSubmitting}
+              />
+            )}
           />
+          {errors.pricing && <Text style={styles.errorText}>{errors.pricing.message}</Text>}
         </View>
 
         {/* NICHE CATEGORY */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Content Niche *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-            {NICHES.map((nch) => {
-              const active = niche === nch;
-              return (
-                <TouchableOpacity
-                  key={nch}
-                  style={[styles.toggleBtn, active && styles.toggleBtnActive]}
-                  activeOpacity={0.8}
-                  onPress={() => setNiche(nch)}
-                  disabled={submitting}
-                >
-                  <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{nch}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <Controller
+            control={control}
+            name="niche"
+            render={({ field: { onChange, value } }) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+                {NICHES.map((nch) => {
+                  const active = value === nch;
+                  return (
+                    <TouchableOpacity
+                      key={nch}
+                      style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                      activeOpacity={0.8}
+                      onPress={() => onChange(nch)}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{nch}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          />
         </View>
 
         {/* SKILLS */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Skills / Specialties (Optional)</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. Videography, Storytelling, Editing (comma separated)"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={skills}
-            onChangeText={setSkills}
-            editable={!submitting}
+          <Controller
+            control={control}
+            name="skills"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. Videography, Storytelling, Editing (comma separated)"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                editable={!isSubmitting}
+              />
+            )}
           />
         </View>
 
         {/* COUNTRY */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Country (Optional)</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. India"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={country}
-            onChangeText={setCountry}
-            editable={!submitting}
+          <Controller
+            control={control}
+            name="country"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. India"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                editable={!isSubmitting}
+              />
+            )}
           />
         </View>
 
@@ -353,31 +367,36 @@ export function CreateInfluencerProfileSheet({
 
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>YouTube Channel URL (Optional)</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder="e.g. https://youtube.com/@channel"
-            placeholderTextColor="rgba(63,3,11,0.35)"
-            value={youtube}
-            onChangeText={setYoutube}
-            keyboardType="url"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!submitting}
+          <Controller
+            control={control}
+            name="youtube"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. https://youtube.com/@channel"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting}
+              />
+            )}
           />
         </View>
+
         {/* ACTION BUTTON */}
-        <TouchableOpacity
-          style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-          activeOpacity={0.85}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.submitBtnText}>{initialData ? 'Save Changes ✨' : 'Create Profile ✨'}</Text>
-          )}
-        </TouchableOpacity>
+        <TactileButton
+          text={initialData ? 'Save Changes' : 'Create Profile'}
+          onPress={handleSubmit(onSubmit)}
+          loading={isSubmitting}
+          fullWidth
+          size="lg"
+          variant="primary"
+          style={{ marginTop: 10 }}
+        />
       </ScrollView>
     </BottomSheet>
   );
@@ -403,6 +422,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(63,3,11,0.08)',
     overflow: 'hidden',
   },
+  inputContainerError: {
+    borderColor: Colors.rose,
+    borderWidth: 1.5,
+  },
   inputPrefix: {
     paddingLeft: 16,
     paddingRight: 4,
@@ -420,6 +443,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.ink,
     fontFamily: FontFamily.sansMedium,
+  },
+  inputError: {
+    borderColor: Colors.rose,
+    borderWidth: 1.5,
+  },
+  errorText: {
+    fontSize: 11,
+    color: Colors.rose,
+    fontFamily: FontFamily.sans,
+    marginTop: -4,
   },
   categoryRow: {
     gap: 8,
@@ -452,22 +485,6 @@ const styles = StyleSheet.create({
     color: Colors.ink,
     marginTop: 8,
     marginBottom: -4,
-  },
-  submitBtn: {
-    backgroundColor: Colors.oxblood,
-    borderRadius: 14,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  submitBtnDisabled: {
-    backgroundColor: 'rgba(63,3,11,0.5)',
-  },
-  submitBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 14,
-    color: '#ffffff',
   },
   avatarPickerContainer: {
     flexDirection: 'row',

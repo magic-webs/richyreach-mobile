@@ -17,7 +17,7 @@ export default function BrandAnalyticsScreen() {
   // Fetch brand dashboard from backend via TanStack Query
   const { data: brandDashboardData, isLoading: loadingDashboard } = useQuery<any>({
     queryKey: ['brandDashboard', activeProfileId],
-    queryFn: () => api.brands.dashboard().catch(() => null),
+    queryFn: () => api.brands.dashboard(activeProfileId).catch(() => null),
     enabled: !!activeProfileId,
   });
   const brandDashboard = brandDashboardData as any;

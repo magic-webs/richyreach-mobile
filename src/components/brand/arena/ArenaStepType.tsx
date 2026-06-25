@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { StarIcon, FlashIcon, BadgeCheckIcon } from '@hugeicons/core-free-icons';
+import { StarIcon, FlashIcon, BadgeCheckIcon, Coins01Icon } from '@hugeicons/core-free-icons';
 
 const ARENA_TYPES = [
   {
@@ -17,7 +17,7 @@ const ARENA_TYPES = [
   {
     id: 'google_review',
     label: 'Google Review Arena',
-    subtitle: 'Influencers leave verified Google reviews. Earn ₹250 per approved review.',
+    subtitle: 'Influencers leave verified Google reviews. Earn ₹25 per approved review.',
     icon: BadgeCheckIcon,
     gradient: ['#2a7a5a', '#1a4a38'] as [string, string],
     tag: 'Fixed Reward',
@@ -90,9 +90,12 @@ export function ArenaStepType() {
 
       {/* Coin economy note */}
       <View style={styles.noteBox}>
-        <Text style={styles.noteTitle}>💰 Coin Economy</Text>
+        <View style={styles.noteTitleRow}>
+          <HugeiconsIcon icon={Coins01Icon} size={14} color={Colors.oxblood} strokeWidth={2} />
+          <Text style={styles.noteTitle}>Coin Economy</Text>
+        </View>
         <Text style={styles.noteText}>1 Rupee = 100 Coins  ·  Entry Fee: 2,000 Coins (₹20)</Text>
-        <Text style={styles.noteText}>Google Review Reward: 25,000 Coins (₹250) per verified review</Text>
+        <Text style={styles.noteText}>Google Review Reward: 2,500 Coins (₹25) per verified review</Text>
       </View>
     </View>
   );
@@ -202,12 +205,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(243,201,105,0.4)',
   },
+  noteTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   noteTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.oxblood,
-    marginBottom: 2,
   },
   noteText: {
     fontFamily: FontFamily.sansRegular,

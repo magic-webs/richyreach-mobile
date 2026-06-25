@@ -2,7 +2,11 @@ import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
-import { LinearGradient } from 'expo-linear-gradient';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import {
+  GiftIcon,
+  ListViewIcon,
+} from '@hugeicons/core-free-icons';
 
 function CoinInput({ label, control, name, description, locked }: {
   label: string;
@@ -57,11 +61,6 @@ export function ArenaStepBudget() {
   const maxP = watch('maxParticipants') || 1;
   const entryFee = watch('entryFeeCoins') || 2000;
 
-  const winnerPool = Math.floor(totalBudget * 0.5);
-  const participantPool = totalBudget - winnerPool;
-  const perParticipant = maxP > 1 ? Math.floor(participantPool / (maxP - 1)) : 0;
-  const totalEntryRevenue = entryFee * maxP;
-
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Budget & Coins</Text>
@@ -77,14 +76,25 @@ export function ArenaStepBudget() {
         description="Total coins allocated as prize money for winners."
       />
 
-      {/* Entry Fee — always locked at 2000 */}
-      <CoinInput
-        label="Entry Fee per Influencer"
-        control={control}
-        name="entryFeeCoins"
-        description="Fixed at 2,000 coins (₹20) per participant. Collected automatically on join."
-        locked
-      />
+      {/* Entry Fee — free for Google Review, locked at 2000 for Reel Reach */}
+      {arenaType === 'google_review' ? (
+        <View style={styles.field}>
+          <Text style={styles.label}>Entry Fee per Influencer</Text>
+          <Text style={styles.fieldDesc}>Google Review arenas have no entry fee — influencers join for free.</Text>
+          <View style={[styles.coinInputRow, styles.coinInputRowLocked]}>
+            <HugeiconsIcon icon={GiftIcon} size={22} color="rgba(63,3,11,0.4)" strokeWidth={2} />
+            <Text style={[styles.coinInput, { color: 'rgba(63,3,11,0.4)', fontSize: 16 }]}>Free · 0 coins</Text>
+          </View>
+        </View>
+      ) : (
+        <CoinInput
+          label="Entry Fee per Influencer"
+          control={control}
+          name="entryFeeCoins"
+          description="Fixed at 2,000 coins (₹20) per participant. Collected automatically on join."
+          locked
+        />
+      )}
 
       {arenaType === 'google_review' && (
         <CoinInput
@@ -95,40 +105,12 @@ export function ArenaStepBudget() {
         />
       )}
 
-      {/* Distribution Preview */}
-      {arenaType !== 'google_review' && totalBudget > 0 && (
-        <LinearGradient
-          colors={['rgba(63,3,11,0.06)', 'rgba(63,3,11,0.02)']}
-          style={styles.previewCard}
-        >
-          <Text style={styles.previewTitle}>🏆 Reward Distribution Preview</Text>
-          <View style={styles.previewRow}>
-            <Text style={styles.previewLabel}>🥇 Winner Prize (50%)</Text>
-            <Text style={styles.previewValue}>
-              {winnerPool.toLocaleString()} 🪙 = ₹{(winnerPool / 100).toLocaleString('en-IN')}
-            </Text>
-          </View>
-          <View style={styles.previewRow}>
-            <Text style={styles.previewLabel}>👥 Participant Pool (50%)</Text>
-            <Text style={styles.previewValue}>
-              {participantPool.toLocaleString()} 🪙 = ₹{(participantPool / 100).toLocaleString('en-IN')}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 11, color: 'rgba(63,3,11,0.4)', marginTop: -4, marginBottom: 4 }}>
-            * Distributed proportionally to all other participants based on their post/reel reach.
-          </Text>
-          <View style={[styles.previewRow, styles.previewRowBorder]}>
-            <Text style={styles.previewLabel}>💰 Total Entry Revenue</Text>
-            <Text style={[styles.previewValue, { color: Colors.green }]}>
-              +{totalEntryRevenue.toLocaleString()} 🪙
-            </Text>
-          </View>
-        </LinearGradient>
-      )}
-
       {arenaType === 'google_review' && (
         <View style={styles.reviewNoteBox}>
-          <Text style={styles.reviewNoteTitle}>📋 Google Review Payout Model</Text>
+          <View style={styles.reviewNoteTitleRow}>
+            <HugeiconsIcon icon={ListViewIcon} size={14} color={Colors.green} strokeWidth={2} />
+            <Text style={styles.reviewNoteTitle}>Google Review Payout Model</Text>
+          </View>
           <Text style={styles.reviewNoteText}>
             Each influencer who submits a verified Google review receives{' '}
             <Text style={{ fontWeight: '800' }}>
@@ -227,12 +209,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(63,3,11,0.08)',
   },
+  previewTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   previewTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 14,
     fontWeight: '700',
     color: Colors.oxblood,
-    marginBottom: 4,
   },
   previewRow: {
     flexDirection: 'row',
@@ -245,11 +232,16 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     marginTop: 4,
   },
-  previewLabel: {
+  previewLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+  },
+  previewLabelTxt: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 12.5,
     color: 'rgba(63,3,11,0.6)',
-    flex: 1,
   },
   previewValue: {
     fontFamily: FontFamily.sansMedium,
@@ -265,12 +257,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(42,122,90,0.25)',
   },
+  reviewNoteTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   reviewNoteTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.green,
-    marginBottom: 2,
   },
   reviewNoteText: {
     fontFamily: FontFamily.sansRegular,

@@ -54,6 +54,7 @@ const FEATHER_MAP: Record<string, FeatherName> = {
   camera: 'camera',
   check: 'check',
   x: 'x',
+  pause: 'pause',
   briefcase: 'briefcase',
   users: 'users',
   back: 'arrow-left',

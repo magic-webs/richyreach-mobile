@@ -2,10 +2,9 @@ import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
-import { useProfilesStore } from '@/store/profiles';
 import LottieView from 'lottie-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,7 +25,7 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 /**
  * Collaboration Workspace Page
  * ─────────────────────────────────────────────────────────────────────────────
- * Displays the 3-step deliverable workflow for an accepted influencer:
+ * Displays the 2-step deliverable workflow for an accepted influencer:
  *   Step 1 — Submit script draft link  (brand reviews)
  *   Step 2 — Submit live post link     (unlocked after script approved)
  *   Step 3 — Completion & Payout       (brand marks complete)
@@ -39,13 +38,11 @@ export default function CollabWorkspacePage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const showModal = useUIStore((s) => s.showModal);
-  const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
   const queryClient = useQueryClient();
 
   // ── Input state ────────────────────────────────────────────────────────────
   const [scriptInput, setScriptInput] = useState('');
   const [postLinkInput, setPostLinkInput] = useState('');
-  const [igHandleInput, setIgHandleInput] = useState('');
 
   // ── Confetti state (shown when collab is completed) ────────────────────────
   const [showConfetti, setShowConfetti] = useState(false);
@@ -54,27 +51,21 @@ export default function CollabWorkspacePage() {
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: collabData, isLoading } = useQuery<any>({
-    queryKey: ['collab', id],
-    queryFn: () => api.campaigns.get(id),
+    queryKey: ['workspace', id],
+    queryFn: () => api.influencers.workspace(id),
     enabled: !!id,
     refetchInterval: 15_000, // poll every 15 s so status updates appear quickly
   });
 
-  const myApplication = React.useMemo(() => {
-    if (!collabData?.applications || !activeInfluencerProfileId) return null;
-    return collabData.applications.find(
-      (app: any) => app.influencerId === activeInfluencerProfileId,
-    );
-  }, [collabData?.applications, activeInfluencerProfileId]);
-
-  const campaign = collabData?.campaign || collabData;
+  const myApplication = collabData?.application ?? null;
+  const campaign = collabData?.campaign;
+  const brandInstagramPage = campaign?.brandInstagramPage ?? null;
 
   // Sync input defaults from loaded application data
   useEffect(() => {
     if (myApplication) {
       setScriptInput(myApplication.scriptUrl || '');
       setPostLinkInput(myApplication.postLink || '');
-      setIgHandleInput(myApplication.igHandle || '');
     }
   }, [myApplication?.scriptUrl, myApplication?.postLink, myApplication?.igHandle]);
 
@@ -91,29 +82,18 @@ export default function CollabWorkspacePage() {
     mutationFn: (scriptUrl: string) =>
       api.influencers.submitScript(myApplication!.id, scriptUrl),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', id] });
       showModal({ title: 'Submitted!', message: 'Script draft submitted for brand review.' });
     },
     onError: (err: any) =>
       showModal({ title: 'Error', message: err.message || 'Failed to submit script draft' }),
   });
 
-  const submitIgHandleMutation = useMutation({
-    mutationFn: (igHandle: string) =>
-      api.influencers.submitIgHandle(myApplication!.id, igHandle),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collab', id] });
-      showModal({ title: 'Linked!', message: 'Instagram handle linked successfully.' });
-    },
-    onError: (err: any) =>
-      showModal({ title: 'Error', message: err.message || 'Failed to link Instagram handle' }),
-  });
-
   const submitPostLinkMutation = useMutation({
     mutationFn: (postLink: string) =>
       api.influencers.submitPostLink(myApplication!.id, postLink),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      queryClient.invalidateQueries({ queryKey: ['workspace', id] });
       showModal({ title: 'Submitted!', message: 'Live post link shared with the brand.' });
     },
     onError: (err: any) =>
@@ -149,7 +129,6 @@ export default function CollabWorkspacePage() {
   const scriptApproved = myApplication.scriptStatus === 'approved';
   const scriptPending = myApplication.scriptStatus === 'pending';
   const scriptRejected = myApplication.scriptStatus === 'rejected';
-  const igLinked = !!myApplication.igHandle;
   const postSubmitted = !!myApplication.postLink;
 
   return (
@@ -208,15 +187,9 @@ export default function CollabWorkspacePage() {
                 pending: scriptPending,
               },
               {
-                label: 'Instagram Linked',
-                done: igLinked,
-                active: scriptApproved && !igLinked,
-                pending: false,
-              },
-              {
                 label: 'Post Submitted',
                 done: postSubmitted,
-                active: scriptApproved && igLinked && !postSubmitted,
+                active: scriptApproved && !postSubmitted,
                 pending: false,
               },
               {
@@ -339,81 +312,7 @@ export default function CollabWorkspacePage() {
           </View>
 
           {/* ─────────────────────────────────────────────────────────────── */}
-          {/* STEP 2: Instagram Handle                                        */}
-          {/* ─────────────────────────────────────────────────────────────── */}
-          <View style={[styles.stepCard, !scriptApproved && styles.stepCardLocked]}>
-            <View style={styles.stepCardHeader}>
-              <View
-                style={[
-                  styles.stepBadge,
-                  !scriptApproved
-                    ? styles.stepBadgeLocked
-                    : igLinked
-                      ? styles.stepBadgeDone
-                      : styles.stepBadgeActive,
-                ]}
-              >
-                {!scriptApproved ? (
-                  <Icon name="lock" size={11} color="#aaa" />
-                ) : igLinked ? (
-                  <Icon name="check" size={12} color="#fff" />
-                ) : (
-                  <Text style={styles.stepBadgeText}>2</Text>
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.stepTitle, !scriptApproved && styles.stepTitleLocked]}>
-                  Link Instagram Handle
-                </Text>
-                <Text style={[styles.stepSubtitle, !scriptApproved && styles.stepSubtitleLocked]}>
-                  Connect your Instagram account so the brand can track the post.
-                </Text>
-              </View>
-            </View>
-
-            {!scriptApproved ? (
-              <View style={styles.lockedHint}>
-                <Icon name="lock" size={11} color="rgba(63,3,11,0.35)" />
-                <Text style={styles.lockedHintText}>
-                  Unlocked after script approval.
-                </Text>
-              </View>
-            ) : igLinked ? (
-              <View style={styles.approvedRow}>
-                <Icon name="check" size={14} color={Colors.green} />
-                <Text style={styles.approvedText}>
-                  Linked — @{myApplication.igHandle}
-                </Text>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={styles.input}
-                  placeholder="@yourhandle (without @)"
-                  placeholderTextColor="rgba(63,3,11,0.35)"
-                  value={igHandleInput}
-                  onChangeText={setIgHandleInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={[styles.actionBtn, (!igHandleInput.trim() || submitIgHandleMutation.isPending) && styles.actionBtnDisabled]}
-                  onPress={() => submitIgHandleMutation.mutate(igHandleInput.replace('@', '').trim())}
-                  disabled={!igHandleInput.trim() || submitIgHandleMutation.isPending}
-                  activeOpacity={0.8}
-                >
-                  {submitIgHandleMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.actionBtnText}>Link Handle</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-
-          {/* ─────────────────────────────────────────────────────────────── */}
-          {/* STEP 3: Submit Live Post Link                                   */}
+          {/* STEP 2: Submit Live Post Link                                   */}
           {/* ─────────────────────────────────────────────────────────────── */}
           <View style={[styles.stepCard, !scriptApproved && styles.stepCardLocked]}>
             <View style={styles.stepCardHeader}>
@@ -432,7 +331,7 @@ export default function CollabWorkspacePage() {
                 ) : postSubmitted ? (
                   <Icon name="check" size={12} color="#fff" />
                 ) : (
-                  <Text style={styles.stepBadgeText}>3</Text>
+                  <Text style={styles.stepBadgeText}>2</Text>
                 )}
               </View>
               <View style={{ flex: 1 }}>
@@ -464,6 +363,17 @@ export default function CollabWorkspacePage() {
                     </TouchableOpacity>
                   </View>
                 )}
+                {brandInstagramPage && (
+                  <TouchableOpacity
+                    style={styles.brandHandleHint}
+                    activeOpacity={0.75}
+                    onPress={() => Linking.openURL(`https://www.instagram.com/${brandInstagramPage}`)}
+                  >
+                    <Text style={styles.brandHandleHintTitle}>Tag the brand in your post</Text>
+                    <Text style={styles.brandHandleHintHandle}>@{brandInstagramPage}</Text>
+                    <Text style={styles.brandHandleHintSub}>Tap to open their Instagram profile</Text>
+                  </TouchableOpacity>
+                )}
                 <TextInput
                   style={styles.input}
                   placeholder="https://www.instagram.com/reel/…"
@@ -492,7 +402,7 @@ export default function CollabWorkspacePage() {
           </View>
 
           {/* ─────────────────────────────────────────────────────────────── */}
-          {/* STEP 4: Completion & Payout                                     */}
+          {/* STEP 3: Completion & Payout                                     */}
           {/* ─────────────────────────────────────────────────────────────── */}
           <View style={[styles.stepCard, !postSubmitted && styles.stepCardLocked]}>
             <View style={styles.stepCardHeader}>
@@ -977,5 +887,31 @@ const styles = StyleSheet.create({
   confettiAnim: {
     width: '100%',
     height: '100%',
+  },
+  brandHandleHint: {
+    backgroundColor: 'rgba(225,48,108,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(225,48,108,0.18)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 2,
+  },
+  brandHandleHintTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.roseDeep,
+  },
+  brandHandleHintHandle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 16,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  brandHandleHintSub: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 2,
   },
 });

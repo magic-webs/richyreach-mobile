@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -14,12 +13,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon, Location01Icon, ExternalLinkIcon } from '@hugeicons/core-free-icons';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
-import { Icon } from '@/components/ui/icon';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useProfilesStore } from '@/store/profiles';
 
@@ -46,14 +45,14 @@ function LeaderboardRow({ rank, p }: { rank: number; p: any }) {
           {p.verificationStatus === 'approved'
             ? '✅'
             : p.verificationStatus === 'rejected'
-            ? '❌'
-            : '⏳'}
+              ? '❌'
+              : '⏳'}
         </Text>
         {p.accountReach > 0 && (
           <Text style={styles.lbReach}>{p.accountReach.toLocaleString()} views</Text>
         )}
         {p.coinsAwarded > 0 && (
-          <Text style={styles.lbCoins}>+{p.coinsAwarded.toLocaleString()} 🪙</Text>
+          <Text style={styles.lbCoins}>+{p.coinsAwarded.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text></Text>
         )}
       </View>
     </View>
@@ -68,11 +67,12 @@ export default function ArenaDetailScreen() {
   const queryClient = useQueryClient();
   const { activeInfluencerProfileId } = useProfilesStore();
 
-  const [postUrl, setPostUrl] = useState('');
-  const [submissionUrl, setSubmissionUrl] = useState('');
-  const [reviewLink, setReviewLink] = useState('');
-  const [accountReach, setAccountReach] = useState('');
   const [showSubmitForm, setShowSubmitForm] = useState(false);
+
+  const submitForm = useForm<{ collaborationLink: string; reviewLink: string }>({
+    mode: 'onSubmit',
+    defaultValues: { collaborationLink: '', reviewLink: '' },
+  });
 
   const { data: arena, isLoading } = useQuery({
     queryKey: ['arena', id],
@@ -88,21 +88,22 @@ export default function ArenaDetailScreen() {
 
   const { data: participations = [] } = useQuery({
     queryKey: ['myParticipations'],
-    queryFn: () => api.arena.myParticipations(),
+    queryFn: () => api.arena.myParticipations(activeInfluencerProfileId),
     enabled: !!activeInfluencerProfileId,
   });
 
   const myParticipation = participations.find((p: any) => p.arenaId === id);
   const isJoined = !!myParticipation;
+  const isGoogleReview = arena?.arenaType === 'google_review';
 
   const joinMutation = useMutation({
-    mutationFn: () => api.arena.join(id),
+    mutationFn: () => api.arena.join(id, activeInfluencerProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myParticipations'] });
       queryClient.invalidateQueries({ queryKey: ['arena', id] });
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
       showModal({
-        title: '🏟️ Joined!',
+        title: 'Joined!',
         message: `You have joined "${arena?.title}". ${arena?.entryFeeCoins?.toLocaleString()} coins deducted. Now upload your submission!`,
       });
       setShowSubmitForm(true);
@@ -111,16 +112,14 @@ export default function ArenaDetailScreen() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: () =>
-      api.arena.submit(id, {
-        postUrl: postUrl || undefined,
-        submissionUrl: submissionUrl || undefined,
-        reviewLink: reviewLink || undefined,
-        accountReach: accountReach ? parseInt(accountReach) : undefined,
-      }),
+    mutationFn: (data: { collaborationLink: string; reviewLink: string }) =>
+      isGoogleReview
+        ? api.arena.submit(id, { reviewLink: data.reviewLink }, activeInfluencerProfileId)
+        : api.arena.submit(id, { collaborationLink: data.collaborationLink }, activeInfluencerProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myParticipations'] });
       queryClient.invalidateQueries({ queryKey: ['arenaLeaderboard', id] });
+      submitForm.reset();
       showModal({
         title: '✅ Submission Uploaded!',
         message: 'Your entry has been submitted and is pending verification.',
@@ -132,14 +131,23 @@ export default function ArenaDetailScreen() {
 
   const handleJoin = () => {
     if (!arena) return;
-    Alert.alert(
-      `Join Arena`,
-      `Joining "${arena.title}" will deduct ${arena.entryFeeCoins?.toLocaleString()} coins (₹${(arena.entryFeeCoins / 100).toFixed(0)}) from your wallet. Continue?`,
-      [
+    const isFree = arena.entryFeeCoins === 0;
+    const message = isFree
+      ? `Join "${arena.title}" for free. No entry fee for this Google Review arena.`
+      : `Joining "${arena.title}" will deduct ${arena.entryFeeCoins?.toLocaleString()} coins (₹${(arena.entryFeeCoins / 100).toFixed(0)}) from your wallet. Continue?`;
+
+    showModal({
+      title: 'Join Arena',
+      message: message,
+      actions: [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Join & Pay', style: 'destructive', onPress: () => joinMutation.mutate() },
-      ]
-    );
+        {
+          text: isFree ? 'Join Free' : 'Join & Pay',
+          style: 'destructive',
+          onPress: () => joinMutation.mutate(),
+        },
+      ],
+    });
   };
 
   if (isLoading || !arena) {
@@ -152,7 +160,6 @@ export default function ArenaDetailScreen() {
 
   const daysLeft = Math.max(0, Math.ceil((new Date(arena.endDate).getTime() - Date.now()) / 864e5));
   const winnerPool = Math.floor(arena.totalBudgetCoins * 0.5);
-  const isGoogleReview = arena.arenaType === 'google_review';
 
   return (
     <KeyboardAvoidingView
@@ -186,7 +193,7 @@ export default function ArenaDetailScreen() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Prize Pool</Text>
               <Text style={[styles.statValue, { color: Colors.gold }]}>
-                {arena.totalBudgetCoins.toLocaleString()} 🪙
+                {arena.totalBudgetCoins.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
               </Text>
               <Text style={styles.statSub}>
                 = ₹{(arena.totalBudgetCoins / 100).toLocaleString('en-IN')}
@@ -194,7 +201,7 @@ export default function ArenaDetailScreen() {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Entry Fee</Text>
-              <Text style={styles.statValue}>{arena.entryFeeCoins.toLocaleString()} 🪙</Text>
+              <Text style={styles.statValue}>{arena.entryFeeCoins.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text></Text>
               <Text style={styles.statSub}>= ₹{(arena.entryFeeCoins / 100).toFixed(0)}</Text>
             </View>
             <View style={styles.statCard}>
@@ -212,7 +219,7 @@ export default function ArenaDetailScreen() {
                 <View style={styles.prizeRow}>
                   <Text style={styles.prizeRowLabel}>Per Verified Review</Text>
                   <Text style={[styles.prizeRowValue, { color: Colors.gold }]}>
-                    {(arena.rewardPerReview || 2500).toLocaleString()} 🪙
+                    {(arena.rewardPerReview || 2500).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
                   </Text>
                 </View>
               ) : (
@@ -220,13 +227,13 @@ export default function ArenaDetailScreen() {
                   <View style={styles.prizeRow}>
                     <Text style={styles.prizeRowLabel}>🥇 Winner Prize (50%)</Text>
                     <Text style={[styles.prizeRowValue, { color: Colors.gold }]}>
-                      {winnerPool.toLocaleString()} 🪙
+                      {winnerPool.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
                     </Text>
                   </View>
                   <View style={styles.prizeRow}>
                     <Text style={styles.prizeRowLabel}>👥 Others (50% split by reach)</Text>
                     <Text style={styles.prizeRowValue}>
-                      {(arena.totalBudgetCoins - winnerPool).toLocaleString()} 🪙
+                      {(arena.totalBudgetCoins - winnerPool).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
                     </Text>
                   </View>
                 </>
@@ -243,7 +250,7 @@ export default function ArenaDetailScreen() {
                 {arena.googleMapsLink && (
                   <TouchableOpacity
                     style={styles.mapsBtn}
-                    onPress={() => Linking.openURL(arena.googleMapsLink).catch(() => {})}
+                    onPress={() => Linking.openURL(arena.googleMapsLink).catch(() => { })}
                     activeOpacity={0.8}
                   >
                     <HugeiconsIcon icon={Location01Icon} size={14} color={Colors.green} strokeWidth={2} />
@@ -276,15 +283,15 @@ export default function ArenaDetailScreen() {
                     {myParticipation.verificationStatus === 'approved'
                       ? '✅ Approved'
                       : myParticipation.verificationStatus === 'rejected'
-                      ? '❌ Rejected'
-                      : '⏳ Pending'}
+                        ? '❌ Rejected'
+                        : '⏳ Pending'}
                   </Text>
                 </View>
                 {myParticipation.coinsAwarded > 0 && (
                   <View style={styles.statusRow}>
                     <Text style={styles.statusLabel}>Earned</Text>
                     <Text style={[styles.statusValue, { color: Colors.gold }]}>
-                      +{myParticipation.coinsAwarded.toLocaleString()} 🪙
+                      +{myParticipation.coinsAwarded.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
                     </Text>
                   </View>
                 )}
@@ -310,78 +317,69 @@ export default function ArenaDetailScreen() {
               <Text style={styles.sectionTitle}>📤 Submit Entry</Text>
               <View style={styles.submitForm}>
                 {!isGoogleReview && (
-                  <>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Post / Reel URL</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="https://instagram.com/reel/..."
-                        placeholderTextColor="rgba(232,216,204,0.3)"
-                        value={postUrl}
-                        onChangeText={setPostUrl}
-                        keyboardType="url"
-                        autoCapitalize="none"
-                      />
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Screenshot / Proof URL</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="Screenshot URL (upload to CDN first)"
-                        placeholderTextColor="rgba(232,216,204,0.3)"
-                        value={submissionUrl}
-                        onChangeText={setSubmissionUrl}
-                        keyboardType="url"
-                        autoCapitalize="none"
-                      />
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Account Reach (views)</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="e.g. 50000"
-                        placeholderTextColor="rgba(232,216,204,0.3)"
-                        value={accountReach}
-                        onChangeText={setAccountReach}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                  </>
+                  <Controller
+                    control={submitForm.control}
+                    name="collaborationLink"
+                    rules={{
+                      required: 'Collaboration link is required',
+                      validate: (v) =>
+                        v.includes('instagram.com') || 'Must be a valid Instagram URL',
+                    }}
+                    render={({ field: { onChange, value }, fieldState: { error } }) => (
+                      <View style={styles.formField}>
+                        <Text style={styles.formLabel}>Instagram Collaboration Link *</Text>
+                        <TextInput
+                          style={[styles.formInput, error && styles.formInputError]}
+                          placeholder="https://www.instagram.com/reel/..."
+                          placeholderTextColor="rgba(232,216,204,0.3)"
+                          value={value}
+                          onChangeText={onChange}
+                          keyboardType="url"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {error ? (
+                          <Text style={styles.formError}>{error.message}</Text>
+                        ) : (
+                          <Text style={styles.formHint}>
+                            {'Invite @richyreach_official' +
+                              (arena.brandInstagramPage ? ` and @${arena.brandInstagramPage}` : '') +
+                              ' as collaborators on your reel, then paste the link here. Reach is auto-fetched.'}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  />
                 )}
                 {isGoogleReview && (
-                  <>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Google Review Link *</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="https://maps.google.com/...your-review..."
-                        placeholderTextColor="rgba(232,216,204,0.3)"
-                        value={reviewLink}
-                        onChangeText={setReviewLink}
-                        keyboardType="url"
-                        autoCapitalize="none"
-                      />
-                    </View>
-                    <View style={styles.formField}>
-                      <Text style={styles.formLabel}>Screenshot URL *</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="Link to your review screenshot"
-                        placeholderTextColor="rgba(232,216,204,0.3)"
-                        value={submissionUrl}
-                        onChangeText={setSubmissionUrl}
-                        keyboardType="url"
-                        autoCapitalize="none"
-                      />
-                    </View>
-                  </>
+                  <Controller
+                    control={submitForm.control}
+                    name="reviewLink"
+                    rules={{ required: 'Google Review link is required' }}
+                    render={({ field: { onChange, value }, fieldState: { error } }) => (
+                      <View style={styles.formField}>
+                        <Text style={styles.formLabel}>Google Review Link *</Text>
+                        <TextInput
+                          style={[styles.formInput, error && styles.formInputError]}
+                          placeholder="https://maps.google.com/...your-review..."
+                          placeholderTextColor="rgba(232,216,204,0.3)"
+                          value={value}
+                          onChangeText={onChange}
+                          keyboardType="url"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {error && <Text style={styles.formError}>{error.message}</Text>}
+                      </View>
+                    )}
+                  />
                 )}
 
                 <TactileButton
                   text={submitMutation.isPending ? 'Submitting...' : '📤 Submit Entry'}
                   variant="green"
                   fullWidth
-                  onPress={() => submitMutation.mutate()}
+                  onPress={submitForm.handleSubmit((data) => submitMutation.mutate(data))}
                   loading={submitMutation.isPending}
                 />
               </View>
@@ -410,12 +408,16 @@ export default function ArenaDetailScreen() {
           <View style={[styles.joinCta, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.joinCtaInfo}>
               <Text style={styles.joinCtaLabel}>Entry Fee</Text>
-              <Text style={styles.joinCtaCoins}>
-                {arena.entryFeeCoins.toLocaleString()} 🪙 = ₹{(arena.entryFeeCoins / 100).toFixed(0)}
-              </Text>
+              {arena.entryFeeCoins === 0 ? (
+                <Text style={[styles.joinCtaCoins, { color: Colors.green }]}>Free 🎁</Text>
+              ) : (
+                <Text style={styles.joinCtaCoins}>
+                  {arena.entryFeeCoins.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text> = ₹{(arena.entryFeeCoins / 100).toFixed(0)}
+                </Text>
+              )}
             </View>
             <TactileButton
-              text={joinMutation.isPending ? 'Joining...' : '🏟️ Join Arena'}
+              text={joinMutation.isPending ? 'Joining...' : 'Join Arena'}
               variant="rose"
               onPress={handleJoin}
               loading={joinMutation.isPending}
@@ -626,6 +628,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(232,216,204,0.12)',
   },
   formField: { gap: 6 },
+  formHint: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11.5,
+    color: 'rgba(232,216,204,0.45)',
+    lineHeight: 17,
+  },
+  formError: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11.5,
+    color: Colors.rose,
+  },
+  formInputError: {
+    borderColor: Colors.rose,
+  },
   formLabel: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
@@ -713,6 +729,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 99,
+    elevation: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -733,5 +751,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: Colors.gold,
+  },
+  coinEmojiOverride: {
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
 });

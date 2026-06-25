@@ -171,7 +171,7 @@ export default function CollabDetail() {
       cat: c.campaignType || c.category || 'General',
       verified: c.verified ?? c.brand?.verified ?? false,
       title: c.title,
-      budget: typeof c.budget === 'number' ? `â‚¹${(c.budget / 100).toLocaleString()}` : (c.budget || 'â‚¹10,000'),
+      budget: typeof c.budget === 'number' ? `₹${(c.budget / 100).toLocaleString()}` : (c.budget || '₹10,000'),
       budgetNum: typeof c.budget === 'number' ? c.budget : 10000,
       deadline: c.deadline || '5 days left',
       applicants: c.applicants || 0,
@@ -287,7 +287,7 @@ export default function CollabDetail() {
       // Show confetti celebration
       setShowConfetti(true);
       useUIStore.getState().showModal({
-        title: 'Offer Accepted! ðŸŽ‰',
+        title: 'Offer Accepted! 🎉',
         message: 'You have accepted the brand\'s counter-offer. Navigating to your chat room...',
         actions: [
           {
@@ -454,7 +454,7 @@ export default function CollabDetail() {
               )}
               <Text style={styles.brandName}>{cm.brand}</Text>
               {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={15} color={Colors.roseSoft} strokeWidth={2} />}
-              <Text style={styles.reachText}>Â· {cm.followers} reach</Text>
+              <Text style={styles.reachText}>· {cm.followers} reach</Text>
             </View>
             <Text style={styles.campaignTitle}>{cm.title}</Text>
           </View>
@@ -466,10 +466,10 @@ export default function CollabDetail() {
           <View style={[styles.budgetStrip, { backgroundColor: cm.tone === 'rose' ? Colors.roseDeep : Colors.oxblood }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.budgetLabel}>
-                {cm.numCreators > 1 ? `Paid Collaboration Â· ${cm.numCreators} spots` : 'Paid collaboration'}
+                {cm.numCreators > 1 ? `Paid Collaboration · ${cm.numCreators} spots` : 'Paid collaboration'}
               </Text>
               <Text style={styles.budgetAmount}>
-                {cm.numCreators > 1 ? `â‚¹${cm.costPerCreator.toLocaleString('en-IN')}` : cm.budget}
+                {cm.numCreators > 1 ? `₹${cm.costPerCreator.toLocaleString('en-IN')}` : cm.budget}
                 {cm.numCreators > 1 && <Text style={styles.budgetPerSpotLabel}> / spot</Text>}
               </Text>
               {cm.numCreators > 1 && (
@@ -485,7 +485,7 @@ export default function CollabDetail() {
             </View>
           </View>
 
-          {/* Collaboration Workspace â€” tap to open dedicated workspace page */}
+          {/* Collaboration Workspace — tap to open dedicated workspace page */}
           {myApplication && myApplication.status === 'accepted' && (
             <TouchableOpacity
               style={styles.collabWorkspaceCard}
@@ -502,7 +502,7 @@ export default function CollabDetail() {
                 <Text style={styles.collabWorkspaceSubtitle}>Tap to open your workspace and complete deliverables</Text>
               </View>
 
-              {/* Quick step summary â€” tap card to open full workspace */}
+              {/* Quick step summary — tap card to open full workspace */}
               {[
                 {
                   label: 'Script Draft',
@@ -512,9 +512,9 @@ export default function CollabDetail() {
                       ? 'pending'
                       : 'action_needed',
                   text: myApplication.scriptStatus === 'approved'
-                    ? 'Approved âœ“'
+                    ? 'Approved ✓'
                     : myApplication.scriptStatus === 'pending'
-                      ? 'Under Reviewâ€¦'
+                      ? 'Under Review…'
                       : 'Not submitted',
                 },
                 {
@@ -525,7 +525,7 @@ export default function CollabDetail() {
                 {
                   label: 'Live Post Link',
                   status: myApplication.postLink ? 'approved' : 'action_needed',
-                  text: myApplication.postLink ? 'Submitted âœ“' : 'Not submitted',
+                  text: myApplication.postLink ? 'Submitted ✓' : 'Not submitted',
                 },
               ].map((step) => (
                 <View key={step.label} style={styles.collabStepRow}>
@@ -681,7 +681,7 @@ export default function CollabDetail() {
                 {cm.prodValue > 0 && (
                   <View style={styles.barterDetailRow}>
                     <Text style={styles.barterLabel}>Product Value</Text>
-                    <Text style={styles.barterValuePrice}>â‚¹{cm.prodValue.toLocaleString()}</Text>
+                    <Text style={styles.barterValuePrice}>₹{cm.prodValue.toLocaleString()}</Text>
                   </View>
                 )}
 
@@ -712,7 +712,7 @@ export default function CollabDetail() {
                     onPress={() => Linking.openURL(cm.prodUrl)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.barterLinkBtnText}>View Product Page â†—</Text>
+                    <Text style={styles.barterLinkBtnText}>View Product Page ↗</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -748,7 +748,7 @@ export default function CollabDetail() {
                   <Text style={styles.brandCardName}>{cm.brand}</Text>
                   {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />}
                 </View>
-                <Text style={styles.brandCardMeta}>{cm.cat} Â· 12 active campaigns Â· 4.9 â˜…</Text>
+                <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
@@ -810,7 +810,7 @@ export default function CollabDetail() {
               disabled={acceptCounterMutation.isPending}
             >
               <Text style={styles.applyBtnText}>
-                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: â‚¹${(myApplication.counterAmount / 100).toLocaleString()}`}
+                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: ₹${(myApplication.counterAmount / 100).toLocaleString()}`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -830,17 +830,17 @@ export default function CollabDetail() {
               ]}
             >
               <Text style={styles.applyBtnText}>
-                {loading ? 'Submittingâ€¦' : (
+                {loading ? 'Submitting…' : (
                   myApplication ? (
-                    myApplication.status === 'accepted' ? `âœ“ Accepted Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}` : (
-                      myApplication.status === 'rejected' ? 'âœ• Application Declined' : (
-                        myApplication.status === 'negotiating' ? `Awaiting Brand Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}` : `Applied Â· â‚¹${(myApplication.bidAmount / 100).toLocaleString()}`
+                    myApplication.status === 'accepted' ? `✓ Accepted · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : (
+                      myApplication.status === 'rejected' ? '✕ Application Declined' : (
+                        myApplication.status === 'negotiating' ? `Awaiting Brand · ₹${(myApplication.bidAmount / 100).toLocaleString()}` : `Applied · ₹${(myApplication.bidAmount / 100).toLocaleString()}`
                       )
                     )
                   ) : (
                     cm.numCreators > 1
-                      ? `Apply now Â· â‚¹${cm.costPerCreator.toLocaleString('en-IN')} / spot`
-                      : `Apply now Â· ${cm.budget}`
+                      ? `Apply now · ₹${cm.costPerCreator.toLocaleString('en-IN')} / spot`
+                      : `Apply now · ${cm.budget}`
                   )
                 )}
               </Text>

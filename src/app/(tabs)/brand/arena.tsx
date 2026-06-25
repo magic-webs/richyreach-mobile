@@ -5,15 +5,15 @@ import { useUIStore } from '@/store/ui';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useProfilesStore } from '@/store/profiles';
 import { CreateArenaSheet } from '@/components/brand/home/CreateArenaSheet';
 
-const ARENA_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  reel_reach: { label: '🎬 Reel Reach', color: '#b46a74', bg: 'rgba(180,106,116,0.12)' },
-  google_review: { label: '⭐ Google Review', color: '#2a7a5a', bg: 'rgba(42,122,90,0.1)' },
+const ARENA_TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+  reel_reach: { label: 'Reel Reach', icon: 'reel', color: '#b46a74', bg: 'rgba(180,106,116,0.12)' },
+  google_review: { label: 'Google Review', icon: 'star', color: '#2a7a5a', bg: 'rgba(42,122,90,0.1)' },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -24,11 +24,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   cancelled: { label: 'Cancelled', color: '#999', dot: '#ccc' },
 };
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
+      <View style={{ position: 'absolute', top: 12, right: 12 }}>
+        <Icon name={icon} size={13} color="rgba(232, 216, 204, 0.4)" />
+      </View>
     </View>
   );
 }
@@ -44,24 +47,25 @@ function ArenaCard({ arena, onManage }: { arena: any; onManage: () => void }) {
       {/* Card Header */}
       <View style={styles.arenaCardHeader}>
         {/* Banner thumbnail */}
-        <View style={[styles.arenaThumbnail, { backgroundColor: typeConf.bg }]}>
+        <View style={[styles.arenaThumbnail, { backgroundColor: typeConf.bg, alignItems: 'center', justifyContent: 'center' }]}>
           {arena.bannerUrl ? (
             <Image source={{ uri: arena.bannerUrl }} style={{ width: '100%', height: '100%', borderRadius: 12 }} contentFit="cover" />
           ) : (
-            <Text style={{ fontSize: 26 }}>🏟️</Text>
+            <Icon name={typeConf.icon} size={22} color={typeConf.color} />
           )}
         </View>
-
-        <View style={styles.arenaMeta}>
-          {/* Type badge */}
-          <View style={[styles.typeBadge, { backgroundColor: typeConf.bg }]}>
-            <Text style={[styles.typeBadgeText, { color: typeConf.color }]}>{typeConf.label}</Text>
-          </View>
-          <Text style={styles.arenaTitle} numberOfLines={2}>{arena.title}</Text>
-          <Text style={styles.arenaStats}>
-            {arena.participantCount || 0}/{arena.maxParticipants} participants · {daysLeft}d left
-          </Text>
-        </View>
+ 
+         <View style={styles.arenaMeta}>
+           {/* Type badge */}
+           <View style={[styles.typeBadge, { backgroundColor: typeConf.bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+             <Icon name={typeConf.icon} size={10} color={typeConf.color} />
+             <Text style={[styles.typeBadgeText, { color: typeConf.color }]}>{typeConf.label}</Text>
+           </View>
+           <Text style={styles.arenaTitle} numberOfLines={2}>{arena.title}</Text>
+           <Text style={styles.arenaStats}>
+             {arena.participantCount || 0}/{arena.maxParticipants} participants · {daysLeft}d left
+           </Text>
+         </View>
 
         {/* Status */}
         <View style={styles.statusRow}>
@@ -77,7 +81,7 @@ function ArenaCard({ arena, onManage }: { arena: any; onManage: () => void }) {
         <View style={styles.prizeInfo}>
           <Text style={styles.prizeCoinLabel}>Prize Pool</Text>
           <Text style={styles.prizeCoin}>
-            {arena.totalBudgetCoins.toLocaleString()} 🪙
+            {arena.totalBudgetCoins.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
           </Text>
           <Text style={styles.prizeRupee}>{budgetRupees}</Text>
         </View>
@@ -103,7 +107,7 @@ export default function BrandArenaScreen() {
 
   const { data: arenas = [], isLoading, refetch } = useQuery({
     queryKey: ['brandArenas', activeBrandProfileId],
-    queryFn: () => api.arena.mine(),
+    queryFn: () => api.arena.mine(activeBrandProfileId),
     enabled: !!activeBrandProfileId,
   });
 
@@ -142,7 +146,7 @@ export default function BrandArenaScreen() {
           {walletData && (
             <View style={styles.walletPill}>
               <Text style={styles.walletPillText}>
-                🪙 {(walletData.coinBalance || 0).toLocaleString()}
+                <Text style={styles.coinEmojiOverride}>🪙</Text> {(walletData.coinBalance || 0).toLocaleString()}
               </Text>
             </View>
           )}
@@ -171,25 +175,40 @@ export default function BrandArenaScreen() {
       >
         {/* Quick Stats Summary */}
         <View style={styles.statsRow}>
-          <StatCard label="Total Budget" value={`₹${(totalBudget / 100).toLocaleString('en-IN')}`} />
-          <StatCard label="Participants" value={totalParticipants.toLocaleString()} />
-          <StatCard label="Active" value={String(activeCount)} />
+          <StatCard label="Total Budget" value={`₹${(totalBudget / 100).toLocaleString('en-IN')}`} icon="wallet" />
+          <StatCard label="Participants" value={totalParticipants.toLocaleString()} icon="users" />
+          <StatCard label="Active" value={String(activeCount)} icon="bolt" />
         </View>
 
         {/* Type Filter */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {[null, 'reel_reach', 'google_review'].map((f) => (
-            <TouchableOpacity
-              key={String(f)}
-              style={[styles.filterPill, typeFilter === f && styles.filterPillActive]}
-              onPress={() => setTypeFilter(f)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.filterPillText, typeFilter === f && styles.filterPillTextActive]}>
-                {f === null ? 'All Arenas' : ARENA_TYPE_CONFIG[f]?.label || f}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {[null, 'reel_reach', 'google_review'].map((f) => {
+            const isActive = typeFilter === f;
+            const conf = f ? ARENA_TYPE_CONFIG[f] : null;
+            return (
+              <TouchableOpacity
+                key={String(f)}
+                style={[
+                  styles.filterPill, 
+                  isActive && styles.filterPillActive,
+                  { flexDirection: 'row', alignItems: 'center', gap: 6 }
+                ]}
+                onPress={() => setTypeFilter(f)}
+                activeOpacity={0.8}
+              >
+                {conf?.icon && (
+                  <Icon 
+                    name={conf.icon} 
+                    size={12} 
+                    color={isActive ? Colors.oxblood : 'rgba(232,216,204,0.7)'} 
+                  />
+                )}
+                <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+                  {f === null ? 'All Arenas' : conf?.label || f}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Arenas List */}
@@ -201,7 +220,9 @@ export default function BrandArenaScreen() {
           </View>
         ) : filtered.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 40, marginBottom: 12 }}>🏟️</Text>
+            <View style={{ marginBottom: 10 }}>
+              <Icon name="arena" size={44} color="rgba(232,216,204,0.2)" />
+            </View>
             <Text style={styles.emptyStateText}>No arenas yet</Text>
             <Text style={styles.emptyStateSub}>
               Launch your first arena to start competitive influencer campaigns powered by coins.
@@ -343,6 +364,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     color: 'rgba(232, 216, 204, 0.5)',
     letterSpacing: 0.3,
+    paddingRight: 16,
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
@@ -500,5 +522,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.oxblood,
+  },
+  coinEmojiOverride: {
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },
 });

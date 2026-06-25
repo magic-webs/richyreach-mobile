@@ -95,6 +95,7 @@ export const api = {
       request(`/influencers/applications/${id}/submit-ig-handle`, { method: 'POST', body: JSON.stringify({ igHandle }) }),
     submitPostLink: (id: string, postLink: string) =>
       request(`/influencers/applications/${id}/submit-post-link`, { method: 'POST', body: JSON.stringify({ postLink }) }),
+    workspace: (campaignId: string) => request<any>(`/influencers/workspace/${campaignId}`),
     services: {
       list: () => request<any[]>('/influencers/services'),
       create: (data: FormData | any) => {
@@ -115,19 +116,19 @@ export const api = {
     },
   },
   brands: {
-    profile: () => request('/brands/profile'),
+    profile: (activeProfileId?: string | null) => request('/brands/profile', { activeProfileId }),
     profiles: () => request<any[]>('/brands/profiles'),
-    updateProfile: (data: any) => request('/brands/profile', { method: 'POST', body: JSON.stringify(data) }),
-    dashboard: () => request('/brands/dashboard'),
-    applications: (status?: string) => request<any[]>(`/brands/applications${status ? `?status=${status}` : ''}`),
-    rejectApplication: (id: string) => request(`/brands/applications/${id}/reject`, { method: 'POST' }),
-    acceptApplication: (id: string) => request(`/brands/applications/${id}/accept`, { method: 'POST' }),
-    negotiateApplication: (id: string, counterAmount: number) =>
-      request(`/brands/applications/${id}/negotiate`, { method: 'POST', body: JSON.stringify({ counterAmount }) }),
-    reviewScript: (id: string, status: 'approved' | 'rejected') =>
-      request(`/brands/applications/${id}/review-script`, { method: 'POST', body: JSON.stringify({ status }) }),
-    completeCollaboration: (id: string) =>
-      request(`/brands/applications/${id}/complete`, { method: 'POST' }),
+    updateProfile: (data: any, activeProfileId?: string | null) => request('/brands/profile', { method: 'POST', body: JSON.stringify(data), activeProfileId }),
+    dashboard: (activeProfileId?: string | null) => request('/brands/dashboard', { activeProfileId }),
+    applications: (status?: string, activeProfileId?: string | null) => request<any[]>(`/brands/applications${status ? `?status=${status}` : ''}`, { activeProfileId }),
+    rejectApplication: (id: string, activeProfileId?: string | null) => request(`/brands/applications/${id}/reject`, { method: 'POST', activeProfileId }),
+    acceptApplication: (id: string, activeProfileId?: string | null) => request(`/brands/applications/${id}/accept`, { method: 'POST', activeProfileId }),
+    negotiateApplication: (id: string, counterAmount: number, activeProfileId?: string | null) =>
+      request(`/brands/applications/${id}/negotiate`, { method: 'POST', body: JSON.stringify({ counterAmount }), activeProfileId }),
+    reviewScript: (id: string, status: 'approved' | 'rejected', activeProfileId?: string | null) =>
+      request(`/brands/applications/${id}/review-script`, { method: 'POST', body: JSON.stringify({ status }), activeProfileId }),
+    completeCollaboration: (id: string, activeProfileId?: string | null) =>
+      request(`/brands/applications/${id}/complete`, { method: 'POST', activeProfileId }),
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),
@@ -149,7 +150,8 @@ export const api = {
   arena: {
     list: (type?: string) =>
       request<any[]>(`/arena${type ? `?type=${type}` : ''}`),
-    mine: () => request<any[]>('/arena/brand/mine'),
+    mine: (activeProfileId?: string | null) =>
+      request<any[]>('/arena/brand/mine', { activeProfileId }),
     get: (id: string) => request<any>(`/arena/${id}`),
     create: (data: any, activeProfileId?: string | null) =>
       request<any>('/arena/create', {
@@ -157,15 +159,32 @@ export const api = {
         body: JSON.stringify(data),
         activeProfileId,
       }),
-    update: (id: string, data: any) =>
-      request<any>(`/arena/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id: string) => request<any>(`/arena/${id}`, { method: 'DELETE' }),
-    pause: (id: string) => request<any>(`/arena/${id}/pause`, { method: 'POST' }),
-    resume: (id: string) => request<any>(`/arena/${id}/resume`, { method: 'POST' }),
-    join: (id: string) => request<any>(`/arena/${id}/join`, { method: 'POST' }),
-    submit: (id: string, data: { postUrl?: string; submissionUrl?: string; reviewLink?: string; accountReach?: number }) =>
-      request<any>(`/arena/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
-    myParticipations: () => request<any[]>('/arena/influencer/participations'),
+    update: (id: string, data: any, activeProfileId?: string | null) =>
+      request<any>(`/arena/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        activeProfileId,
+      }),
+    delete: (id: string, activeProfileId?: string | null) =>
+      request<any>(`/arena/${id}`, { method: 'DELETE', activeProfileId }),
+    pause: (id: string, activeProfileId?: string | null) =>
+      request<any>(`/arena/${id}/pause`, { method: 'POST', activeProfileId }),
+    resume: (id: string, activeProfileId?: string | null) =>
+      request<any>(`/arena/${id}/resume`, { method: 'POST', activeProfileId }),
+    join: (id: string, activeProfileId?: string | null) =>
+      request<any>(`/arena/${id}/join`, { method: 'POST', activeProfileId }),
+    submit: (
+      id: string,
+      data: { collaborationLink?: string; reviewLink?: string; postUrl?: string; submissionUrl?: string; accountReach?: number },
+      activeProfileId?: string | null
+    ) =>
+      request<any>(`/arena/${id}/submit`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        activeProfileId,
+      }),
+    myParticipations: (activeProfileId?: string | null) =>
+      request<any[]>('/arena/influencer/participations', { activeProfileId }),
     leaderboard: (id: string) => request<any[]>(`/arena/${id}/leaderboard`),
     adminAll: () => request<any[]>('/arena/admin/all'),
     verifySubmission: (participantId: string, action: 'approve' | 'reject', notes?: string) =>

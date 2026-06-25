@@ -245,7 +245,7 @@ export default function BrandProfileScreen() {
   // Fetch brand profile from backend via TanStack Query
   const { data: profileData, isLoading: loadingProfile } = useQuery<any>({
     queryKey: ['brandProfile', activeProfileId],
-    queryFn: () => api.brands.profile().catch(() => null),
+    queryFn: () => api.brands.profile(activeProfileId).catch(() => null),
   });
   const profile = profileData as any;
 
@@ -259,7 +259,7 @@ export default function BrandProfileScreen() {
   // Fetch brand dashboard from backend via TanStack Query
   const { data: brandDashboardData } = useQuery<any>({
     queryKey: ['brandDashboard', activeProfileId],
-    queryFn: () => api.brands.dashboard().catch(() => null),
+    queryFn: () => api.brands.dashboard(activeProfileId).catch(() => null),
     enabled: !!activeProfileId,
   });
   const brandDashboard = brandDashboardData as any;
@@ -275,7 +275,7 @@ export default function BrandProfileScreen() {
   // Fetch real applications to list real creators
   const { data: applicationsData = [] } = useQuery<any[]>({
     queryKey: ['brandApplications', activeProfileId],
-    queryFn: () => api.brands.applications().catch(() => []),
+    queryFn: () => api.brands.applications(undefined, activeProfileId).catch(() => []),
     enabled: !!activeProfileId,
   });
 

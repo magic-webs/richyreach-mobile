@@ -5,8 +5,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,10 +18,12 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { Icon } from '@/components/ui/icon';
+import { useProfilesStore } from '@/store/profiles';
+
 
 const ARENA_TYPE_LABELS: Record<string, string> = {
-  reel_reach: '🎬 Reel Reach',
-  google_review: '⭐ Google Review',
+  reel_reach: 'Reel Reach',
+  google_review: 'Google Review',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -33,12 +35,35 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function LeaderboardRow({ rank, participant }: { rank: number; participant: any }) {
+  const isTop3 = rank <= 3;
+  const rankColors = ['#f3c969', '#d1d1d6', '#c08a3e'];
+
   return (
     <View style={styles.lbRow}>
       <View style={styles.lbRank}>
-        <Text style={styles.lbRankText}>
-          {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
-        </Text>
+        {isTop3 ? (
+          <View style={{
+            backgroundColor: rankColors[rank - 1],
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: rankColors[rank - 1],
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 3,
+          }}>
+            <Text style={{
+              fontFamily: FontFamily.sansMedium,
+              fontSize: 11.5,
+              fontWeight: '700',
+              color: Colors.oxblood,
+            }}>{rank}</Text>
+          </View>
+        ) : (
+          <Text style={styles.lbRankText}>#{rank}</Text>
+        )}
       </View>
       <View style={styles.lbAvatar}>
         {participant.avatar ? (
@@ -52,11 +77,8 @@ function LeaderboardRow({ rank, participant }: { rank: number; participant: any 
         <Text style={styles.lbHandle}>@{participant.instagramHandle || '—'}</Text>
       </View>
       <View style={styles.lbRight}>
-        <Text style={styles.lbStatus}>
-          {participant.verificationStatus === 'approved' ? '✅' : participant.verificationStatus === 'rejected' ? '❌' : '⏳'}
-        </Text>
         {participant.coinsAwarded > 0 && (
-          <Text style={styles.lbCoins}>+{participant.coinsAwarded.toLocaleString()} 🪙</Text>
+          <Text style={styles.lbCoins}>+{participant.coinsAwarded.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text></Text>
         )}
       </View>
     </View>
@@ -69,6 +91,7 @@ export default function BrandArenaDetailScreen() {
   const router = useRouter();
   const showModal = useUIStore((s) => s.showModal);
   const queryClient = useQueryClient();
+  const { activeBrandProfileId } = useProfilesStore();
 
   const { data: arena, isLoading } = useQuery({
     queryKey: ['arena', id],
@@ -83,7 +106,7 @@ export default function BrandArenaDetailScreen() {
   });
 
   const pauseMutation = useMutation({
-    mutationFn: () => api.arena.pause(id),
+    mutationFn: () => api.arena.pause(id, activeBrandProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['arena', id] });
       queryClient.invalidateQueries({ queryKey: ['brandArenas'] });
@@ -93,7 +116,7 @@ export default function BrandArenaDetailScreen() {
   });
 
   const resumeMutation = useMutation({
-    mutationFn: () => api.arena.resume(id),
+    mutationFn: () => api.arena.resume(id, activeBrandProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['arena', id] });
       queryClient.invalidateQueries({ queryKey: ['brandArenas'] });
@@ -111,11 +134,6 @@ export default function BrandArenaDetailScreen() {
   }
 
   const statusColor = STATUS_COLORS[arena.status] || '#888';
-  const budgetRupees = (arena.totalBudgetCoins / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
-  const winnerPool = Math.floor(arena.totalBudgetCoins * 0.5);
-  const participantPool = arena.totalBudgetCoins - winnerPool;
-  const approvedCount = leaderboard.filter((p: any) => p.verificationStatus === 'approved').length;
-  const pendingCount = leaderboard.filter((p: any) => p.verificationStatus === 'pending').length;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -133,20 +151,22 @@ export default function BrandArenaDetailScreen() {
         {/* Pause / Resume */}
         {arena.status === 'active' && (
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[styles.actionBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             onPress={() => pauseMutation.mutate()}
             activeOpacity={0.8}
           >
-            <Text style={styles.actionBtnText}>⏸ Pause</Text>
+            <Icon name="pause" size={12} color={Colors.cream} />
+            <Text style={styles.actionBtnText}>Pause</Text>
           </TouchableOpacity>
         )}
         {arena.status === 'paused' && (
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: Colors.green }]}
+            style={[styles.actionBtn, { backgroundColor: Colors.green, flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             onPress={() => resumeMutation.mutate()}
             activeOpacity={0.8}
           >
-            <Text style={[styles.actionBtnText, { color: '#fff' }]}>▶ Resume</Text>
+            <Icon name="play" size={12} color="#fff" />
+            <Text style={[styles.actionBtnText, { color: '#fff' }]}>Resume</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -160,59 +180,28 @@ export default function BrandArenaDetailScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Prize Pool</Text>
-            <Text style={styles.statValue}>{arena.totalBudgetCoins.toLocaleString()} 🪙</Text>
-            <Text style={styles.statSub}>{budgetRupees}</Text>
+            <Text style={styles.statValue}>{arena.totalBudgetCoins.toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text></Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Participants</Text>
             <Text style={styles.statValue}>{arena.participantCount || 0}</Text>
             <Text style={styles.statSub}>/ {arena.maxParticipants} max</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Verified</Text>
-            <Text style={styles.statValue}>{approvedCount}</Text>
-            <Text style={styles.statSub}>{pendingCount} pending</Text>
-          </View>
-        </View>
-
-        {/* Coin Economy */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💰 Reward Structure</Text>
-          <View style={styles.rewardCard}>
-            <View style={styles.rewardRow}>
-              <Text style={styles.rewardLabel}>Entry Fee (per influencer)</Text>
-              <Text style={styles.rewardValue}>{arena.entryFeeCoins.toLocaleString()} 🪙 = ₹{(arena.entryFeeCoins / 100).toFixed(0)}</Text>
-            </View>
-            {arena.arenaType !== 'google_review' ? (
-              <>
-                <View style={styles.rewardRow}>
-                  <Text style={styles.rewardLabel}>🥇 Winner Prize (50%)</Text>
-                  <Text style={[styles.rewardValue, { color: Colors.gold }]}>{winnerPool.toLocaleString()} 🪙</Text>
-                </View>
-                <View style={styles.rewardRow}>
-                  <Text style={styles.rewardLabel}>👥 Participant Pool (50%)</Text>
-                  <Text style={styles.rewardValue}>{participantPool.toLocaleString()} 🪙</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.rewardRow}>
-                <Text style={styles.rewardLabel}>Per Verified Review</Text>
-                <Text style={[styles.rewardValue, { color: Colors.gold }]}>{(arena.rewardPerReview || 2500).toLocaleString()} 🪙 = ₹{((arena.rewardPerReview || 2500) / 100).toFixed(0)}</Text>
-              </View>
-            )}
-          </View>
         </View>
 
         {/* Google Review Info */}
         {arena.arenaType === 'google_review' && arena.businessName && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Business Info</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+              <HugeiconsIcon icon={Location01Icon} size={16} color={Colors.cream} strokeWidth={2} />
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Business Info</Text>
+            </View>
             <View style={styles.rewardCard}>
               <Text style={styles.businessName}>{arena.businessName}</Text>
               {arena.googleMapsLink && (
                 <TouchableOpacity
                   style={styles.mapsLinkBtn}
-                  onPress={() => Linking.openURL(arena.googleMapsLink).catch(() => {})}
+                  onPress={() => Linking.openURL(arena.googleMapsLink).catch(() => { })}
                   activeOpacity={0.8}
                 >
                   <HugeiconsIcon icon={Location01Icon} size={14} color={Colors.green} strokeWidth={2} />
@@ -224,19 +213,12 @@ export default function BrandArenaDetailScreen() {
           </View>
         )}
 
-        {/* Guidelines */}
-        {arena.reviewGuidelines && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📋 Guidelines</Text>
-            <View style={styles.guidelinesCard}>
-              <Text style={styles.guidelinesText}>{arena.reviewGuidelines}</Text>
-            </View>
-          </View>
-        )}
-
         {/* Leaderboard */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 Leaderboard</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <Icon name="trophy" size={16} color={Colors.cream} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Leaderboard</Text>
+          </View>
           {leaderboard.length === 0 ? (
             <View style={styles.emptyLb}>
               <Text style={styles.emptyLbText}>No participants yet</Text>
@@ -402,4 +384,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyLbText: { fontFamily: FontFamily.sansRegular, fontSize: 14, color: 'rgba(232,216,204,0.4)' },
+  coinEmojiOverride: {
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
+  },
 });

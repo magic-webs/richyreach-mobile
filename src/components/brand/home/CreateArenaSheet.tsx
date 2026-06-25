@@ -34,6 +34,20 @@ interface CreateArenaSheetProps {
 
 const TOTAL_STEPS = 5;
 
+const REEL_DEFAULTS = {
+  reviewGuidelines:
+    'Create an authentic Instagram Reel showcasing our brand. Invite @richyreach_official and our brand\'s Instagram as collaborators. Include our brand hashtag in the caption. Minimum 15 seconds. Reel must be public.',
+  verificationRules:
+    'Collaboration reel link must be submitted. Both @richyreach_official and brand Instagram must appear as collaborators. Brand hashtag must be in the caption. Reel must be public.',
+};
+
+const GOOGLE_DEFAULTS = {
+  reviewGuidelines:
+    'Visit our business and leave an honest 4–5 star Google Review. Mention the service quality, ambience, and staff experience. Include at least one photo. Review must be posted from your real Google account.',
+  verificationRules:
+    'Review must be posted on a real Google account. Minimum 50 words. Google review link must be submitted. Review must remain public and verifiable.',
+};
+
 const stepTitles = [
   'Step 1: Arena Type',
   'Step 2: Basic Details',
@@ -95,18 +109,47 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
         rewardPerReview: 2500,
         businessName: '',
         googleMapsLink: '',
-        reviewGuidelines: '',
-        verificationRules: '',
+        reviewGuidelines: REEL_DEFAULTS.reviewGuidelines,
+        verificationRules: REEL_DEFAULTS.verificationRules,
         bannerUrl: '',
       });
     }
   }, [isOpen]);
 
+  // When arena type changes, update entry fee and pre-fill type-appropriate defaults
+  useEffect(() => {
+    const sub = methods.watch((value, { name }) => {
+      if (name !== 'arenaType') return;
+      const type = value.arenaType;
+      const defaults = type === 'google_review' ? GOOGLE_DEFAULTS : REEL_DEFAULTS;
+      methods.setValue('entryFeeCoins', type === 'google_review' ? 0 : 2000, { shouldDirty: false });
+      methods.setValue('reviewGuidelines', defaults.reviewGuidelines, { shouldDirty: false });
+      methods.setValue('verificationRules', defaults.verificationRules, { shouldDirty: false });
+    });
+    return () => sub.unsubscribe();
+  }, [methods]);
+
   useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   }, [currentStep]);
 
-  const nextStep = () => {
+  const STEP_FIELDS: Record<number, string[]> = {
+    1: ['arenaType'],
+    2: ['title', 'description', 'startDate', 'endDate'],
+    3: ['totalBudgetCoins'],
+    4: [],
+  };
+
+  const nextStep = async () => {
+    let fields: string[] = STEP_FIELDS[currentStep] || [];
+    if (currentStep === 4) {
+      const type = methods.getValues('arenaType');
+      fields = type === 'google_review'
+        ? ['businessName', 'googleMapsLink', 'reviewGuidelines', 'verificationRules']
+        : ['reviewGuidelines', 'verificationRules'];
+    }
+    const isValid = await methods.trigger(fields as any);
+    if (!isValid) return;
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep((s) => (s + 1) as any);
     }
