@@ -12,13 +12,15 @@ import { useUIStore } from '@/store/ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator, Linking, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon, Share01Icon, Bookmark02Icon, BadgeCheckIcon, Clock01Icon, InstagramIcon, Camera01Icon, UserGroupIcon, Calendar01Icon, CheckIcon, ChatIcon } from '@hugeicons/core-free-icons';
+import { Icon } from '@/components/ui/icon';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 function CollabDetailSkeleton() {
   const insets = useSafeAreaInsets();
@@ -126,11 +128,6 @@ export default function CollabDetail() {
     enabled: !!id,
   });
 
-  const myApplication = React.useMemo(() => {
-    if (!collabData?.applications || !activeInfluencerProfileId) return null;
-    return collabData.applications.find((app: any) => app.influencerId === activeInfluencerProfileId);
-  }, [collabData?.applications, activeInfluencerProfileId]);
-
   const cm = React.useMemo(() => {
     const c = collabData?.campaign;
     if (!c) {
@@ -138,6 +135,33 @@ export default function CollabDetail() {
     }
     const numCreators = c.numCreators || 1;
     const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
+    
+    let brief = {};
+    if (c.briefDetails) {
+      try {
+        brief = typeof c.briefDetails === 'string' ? JSON.parse(c.briefDetails) : c.briefDetails;
+      } catch (err) {
+        brief = {};
+      }
+    }
+    
+    let deliverables: string[] = [];
+    // @ts-ignore
+    if (brief.deliverables && Array.isArray(brief.deliverables)) {
+      // @ts-ignore
+      brief.deliverables.forEach((d: any) => {
+        deliverables.push(`${d.quantity}x ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}(s)`);
+      });
+    } else if (c.requirements) {
+      deliverables = typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements;
+    } else {
+      if (c.reelCount > 0) deliverables.push(`${c.reelCount}x Reel(s)`);
+      if (c.storyCount > 0) deliverables.push(`${c.storyCount}x Story(ies)`);
+      if (deliverables.length === 0) deliverables.push('1x Reel(s)');
+    }
+
+    const type = c.campaignType || (c.reelCount > 0 && c.storyCount > 0 ? 'Reel & Story' : c.storyCount > 0 ? 'Story' : 'Reel');
+
     return {
       id: c.id,
       brandId: c.brandId || c.brandProfileId,
@@ -152,15 +176,53 @@ export default function CollabDetail() {
       applicants: c.applicants || 0,
       tone: c.tone || (c.campaignType === 'Beauty' ? 'rose' : 'ox'),
       about: c.description || c.about,
-      deliverables: c.requirements ? (typeof c.requirements === 'string' ? c.requirements.split('\n') : c.requirements) : ['1 Reel'],
+      deliverables,
       platform: c.platform || 'Instagram',
-      type: c.campaignType || 'Reel',
+      type,
       followers: c.followers || '10k+',
       imageUrl: c.imageUrl || null,
       numCreators,
       costPerCreator,
+      category: c.category || null,
+      objective: c.objective || null,
+      gender: c.gender || null,
+      targetLanguage: c.targetLanguage || null,
+      mustMention: c.mustMention || null,
+      hashtags: c.hashtags || null,
+      brandTone: c.brandTone || null,
+      audioInstructionUrl: c.audioInstructionUrl || c.audioUrl || null,
+      prodName: c.prodName || null,
+      prodValue: c.prodValue || 0,
+      prodDescription: c.prodDescription || null,
+      prodSku: c.prodSku || null,
+      prodUrl: c.prodUrl || null,
+      prodShipping: c.prodShipping || null,
     };
   }, [collabData]);
+
+  const myApplication = React.useMemo(() => {
+    if (!collabData?.applications || !activeInfluencerProfileId) return null;
+    return collabData.applications.find((app: any) => app.influencerId === activeInfluencerProfileId);
+  }, [collabData?.applications, activeInfluencerProfileId]);
+
+  // Audio Player hook for voice note instructions
+  const player = useAudioPlayer(cm?.audioInstructionUrl || undefined);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const triggerApplyAnimation = () => {
     Animated.sequence([
@@ -229,8 +291,6 @@ export default function CollabDetail() {
                 pathname: '/chat/[id]' as any,
                 params: {
                   id: res.roomId,
-                  name: cm?.brand || 'Brand',
-                  avatar: cm?.brandLogo || '',
                 }
               });
             }
@@ -255,7 +315,64 @@ export default function CollabDetail() {
     }
   });
 
+  // Collaboration steps states & mutations
+  const [scriptInput, setScriptInput] = useState('');
+  const [igInput, setIgInput] = useState('');
+  const [postLinkInput, setPostLinkInput] = useState('');
+
+  useEffect(() => {
+    if (myApplication) {
+      setScriptInput(myApplication.scriptUrl || '');
+      setIgInput(myApplication.igHandle || '');
+      setPostLinkInput(myApplication.postLink || '');
+    }
+  }, [myApplication?.scriptUrl, myApplication?.igHandle, myApplication?.postLink]);
+
+  const submitScriptMutation = useMutation({
+    mutationFn: (scriptUrl: string) => api.influencers.submitScript(myApplication!.id, scriptUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      useUIStore.getState().showModal({ title: 'Success', message: 'Script draft submitted successfully!' });
+    },
+    onError: (err: any) => {
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit script draft' });
+    }
+  });
+
+  const submitIgHandleMutation = useMutation({
+    mutationFn: (igHandle: string) => api.influencers.submitIgHandle(myApplication!.id, igHandle),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      useUIStore.getState().showModal({ title: 'Success', message: 'Instagram handle updated!' });
+    },
+    onError: (err: any) => {
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit handle' });
+    }
+  });
+
+  const submitPostLinkMutation = useMutation({
+    mutationFn: (postLink: string) => api.influencers.submitPostLink(myApplication!.id, postLink),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collab', id] });
+      useUIStore.getState().showModal({ title: 'Success', message: 'Live post link shared successfully!' });
+    },
+    onError: (err: any) => {
+      useUIStore.getState().showModal({ title: 'Error', message: err.message || 'Failed to submit post link' });
+    }
+  });
+
   const loading = applyMutation.isPending;
+
+  const handleShareCampaign = async () => {
+    try {
+      const shareUrl = `https://app.richyreach.com/shared/${id}`;
+      await Share.share({
+        message: `Check out this collaboration campaign "${cm?.title}" by ${cm?.brand} on RichyReach! View details and apply here: ${shareUrl}`,
+      });
+    } catch (err) {
+      console.error('Failed to share campaign:', err);
+    }
+  };
 
   const handleApply = async () => {
     if (role !== 'influencer') {
@@ -326,7 +443,7 @@ export default function CollabDetail() {
               <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
+              <TouchableOpacity onPress={handleShareCampaign} style={styles.navBtn} activeOpacity={0.8}>
                 <HugeiconsIcon icon={Share01Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
@@ -375,6 +492,264 @@ export default function CollabDetail() {
             </View>
           </View>
 
+          {/* Collaboration Steps Workspace */}
+          {myApplication && myApplication.status === 'accepted' && (
+            <View style={styles.collabWorkspaceCard}>
+              <View style={styles.collabWorkspaceHeader}>
+                <Text style={styles.collabWorkspaceTitle}>Collaboration Workspace</Text>
+                <Text style={styles.collabWorkspaceSubtitle}>Complete the steps below to finish the campaign</Text>
+              </View>
+
+              {/* Step 1: Script Upload */}
+              <View style={styles.stepContainer}>
+                <View style={styles.stepLeft}>
+                  <View style={[
+                    styles.stepIndicator,
+                    myApplication.scriptStatus === 'approved' ? styles.stepIndicatorDone : (myApplication.scriptStatus === 'pending' ? styles.stepIndicatorPending : styles.stepIndicatorActive)
+                  ]}>
+                    {myApplication.scriptStatus === 'approved' ? (
+                      <Icon name="check" size={12} color="#fff" />
+                    ) : myApplication.scriptStatus === 'pending' ? (
+                      <Icon name="clock" size={12} color="#fff" />
+                    ) : (
+                      <Text style={styles.stepIndicatorText}>1</Text>
+                    )}
+                  </View>
+                  <View style={styles.stepConnectorLine} />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Step 1: Upload Script Draft</Text>
+                  <Text style={styles.stepDescription}>
+                    Create your campaign script draft and share the draft link (e.g. Google Doc) for brand approval.
+                  </Text>
+                  
+                  {myApplication.scriptStatus === 'approved' ? (
+                    <View style={styles.stepStatusTextRow}>
+                      <Icon name="check" size={14} color={Colors.green} />
+                      <Text style={[styles.stepStatusValText, { color: Colors.green }]}>
+                        Approved: {myApplication.scriptUrl}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.stepForm}>
+                      {myApplication.scriptStatus === 'rejected' && (
+                        <View style={styles.rejectedBanner}>
+                          <Text style={styles.rejectedBannerText}>
+                            ✕ Draft Rejected. Please update your script and resubmit.
+                          </Text>
+                        </View>
+                      )}
+                      {myApplication.scriptStatus === 'pending' && (
+                        <View style={styles.pendingBanner}>
+                          <Text style={styles.pendingBannerText}>
+                            Awaiting brand review: {myApplication.scriptUrl}
+                          </Text>
+                        </View>
+                      )}
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Google Doc, Notion, or Drive link..."
+                        placeholderTextColor="rgba(63,3,11,0.4)"
+                        value={scriptInput}
+                        onChangeText={setScriptInput}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <TouchableOpacity
+                        style={styles.submitBtn}
+                        onPress={() => submitScriptMutation.mutate(scriptInput)}
+                        disabled={submitScriptMutation.isPending || !scriptInput.trim()}
+                        activeOpacity={0.8}
+                      >
+                        {submitScriptMutation.isPending ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.submitBtnText}>
+                            {myApplication.scriptStatus === 'pending' ? 'Update Draft Link' : 'Submit Script Link'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Step 2: Instagram Collaboration */}
+              <View style={styles.stepContainer}>
+                <View style={styles.stepLeft}>
+                  <View style={[
+                    styles.stepIndicator,
+                    myApplication.igHandle ? styles.stepIndicatorDone : styles.stepIndicatorActive
+                  ]}>
+                    {myApplication.igHandle ? (
+                      <Icon name="check" size={12} color="#fff" />
+                    ) : (
+                      <Text style={styles.stepIndicatorText}>2</Text>
+                    )}
+                  </View>
+                  <View style={styles.stepConnectorLine} />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Step 2: Connected Instagram Handle</Text>
+                  <Text style={styles.stepDescription}>
+                    Link your Instagram handle so we can trace the collaboration.
+                  </Text>
+                  
+                  <View style={styles.stepForm}>
+                    {myApplication.igHandle && (
+                      <View style={[styles.pendingBanner, { backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.2)' }]}>
+                        <Text style={[styles.pendingBannerText, { color: Colors.ink }]}>
+                          Connected Handle: @{myApplication.igHandle}
+                        </Text>
+                      </View>
+                    )}
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. @your_instagram"
+                      placeholderTextColor="rgba(63,3,11,0.4)"
+                      value={igInput}
+                      onChangeText={setIgInput}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.submitBtn}
+                      onPress={() => submitIgHandleMutation.mutate(igInput)}
+                      disabled={submitIgHandleMutation.isPending || !igInput.trim()}
+                      activeOpacity={0.8}
+                    >
+                      {submitIgHandleMutation.isPending ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.submitBtnText}>
+                          {myApplication.igHandle ? 'Update Connected Handle' : 'Save Connected Handle'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Step 3: Share Post Link */}
+              {(() => {
+                const isUnlocked = myApplication.scriptStatus === 'approved';
+                return (
+                  <View style={[styles.stepContainer, !isUnlocked && styles.stepContainerLocked]}>
+                    <View style={styles.stepLeft}>
+                      <View style={[
+                        styles.stepIndicator,
+                        !isUnlocked ? styles.stepIndicatorLocked : (myApplication.postLink ? styles.stepIndicatorDone : styles.stepIndicatorActive)
+                      ]}>
+                        {!isUnlocked ? (
+                          <Icon name="lock" size={12} color="#aaa" />
+                        ) : myApplication.postLink ? (
+                          <Icon name="check" size={12} color="#fff" />
+                        ) : (
+                          <Text style={styles.stepIndicatorText}>3</Text>
+                        )}
+                      </View>
+                      <View style={styles.stepConnectorLine} />
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={[styles.stepTitle, !isUnlocked && styles.stepTitleLocked]}>
+                        Step 3: Submit Live Post Link
+                      </Text>
+                      <Text style={[styles.stepDescription, !isUnlocked && styles.stepDescriptionLocked]}>
+                        Once your script is approved and the Reel/Post is live, share the Instagram link here.
+                      </Text>
+                      
+                      {isUnlocked ? (
+                        <View style={styles.stepForm}>
+                          {myApplication.postLink && (
+                            <View style={[styles.pendingBanner, { backgroundColor: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.2)' }]}>
+                              <Text style={[styles.pendingBannerText, { color: Colors.ink }]}>
+                                Submitted Link: {myApplication.postLink}
+                              </Text>
+                            </View>
+                          )}
+                          <TextInput
+                            style={styles.input}
+                            placeholder="https://www.instagram.com/reel/..."
+                            placeholderTextColor="rgba(63,3,11,0.4)"
+                            value={postLinkInput}
+                            onChangeText={setPostLinkInput}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                          />
+                          <TouchableOpacity
+                            style={styles.submitBtn}
+                            onPress={() => submitPostLinkMutation.mutate(postLinkInput)}
+                            disabled={submitPostLinkMutation.isPending || !postLinkInput.trim()}
+                            activeOpacity={0.8}
+                          >
+                            {submitPostLinkMutation.isPending ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Text style={styles.submitBtnText}>
+                                {myApplication.postLink ? 'Update Post Link' : 'Submit Post Link'}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.lockedHint}>
+                          <Icon name="lock" size={12} color="rgba(63,3,11,0.4)" />
+                          <Text style={styles.lockedHintText}>Unlock this step by getting script approval.</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })()}
+
+              {/* Step 4: Completion */}
+              {(() => {
+                const isUnlocked = !!myApplication.postLink;
+                const isCompleted = myApplication.collaborationStatus === 'completed';
+                return (
+                  <View style={[styles.stepContainer, !isUnlocked && styles.stepContainerLocked, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+                    <View style={styles.stepLeft}>
+                      <View style={[
+                        styles.stepIndicator,
+                        !isUnlocked ? styles.stepIndicatorLocked : (isCompleted ? styles.stepIndicatorDone : styles.stepIndicatorActive)
+                      ]}>
+                        {!isUnlocked ? (
+                          <Icon name="lock" size={12} color="#aaa" />
+                        ) : isCompleted ? (
+                          <Icon name="check" size={12} color="#fff" />
+                        ) : (
+                          <Icon name="clock" size={12} color="#fff" />
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={[styles.stepTitle, !isUnlocked && styles.stepTitleLocked]}>
+                        Step 4: Completion & Payout
+                      </Text>
+                      <Text style={[styles.stepDescription, !isUnlocked && styles.stepDescriptionLocked]}>
+                        Awaiting brand verification to release collaboration payout.
+                      </Text>
+                      
+                      {isCompleted ? (
+                        <View style={styles.celebrationCard}>
+                          <Text style={styles.celebrationCardText}>
+                            🎉 Collaboration Completed! The brand has verified the deliverables and marked this collab as done.
+                          </Text>
+                        </View>
+                      ) : isUnlocked ? (
+                        <View style={styles.pendingCompletionCard}>
+                          <Text style={styles.pendingCompletionCardText}>
+                            ⏱ Awaiting Verification: The brand is reviewing your live post link. Payout will be processed upon approval.
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })()}
+            </View>
+          )}
+
           {/* Facts Grid */}
           <View style={styles.factsWrap}>
             {facts.map((f) => (
@@ -391,6 +766,157 @@ export default function CollabDetail() {
             <SectionHead title="The brief" action={null} />
             <Text style={styles.aboutText}>{cm.about}</Text>
           </View>
+
+          {/* Campaign Details Section */}
+          <View style={styles.detailsSectionContainer}>
+            <SectionHead title="Campaign Details" action={null} />
+            <View style={styles.detailsGrid}>
+              {cm.category && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="briefcase" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Category</Text>
+                    <Text style={styles.detailValue}>{cm.category}</Text>
+                  </View>
+                </View>
+              )}
+              {cm.objective && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="star" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Objective</Text>
+                    <Text style={styles.detailValue}>{cm.objective.replace(/_/g, ' ')}</Text>
+                  </View>
+                </View>
+              )}
+              {cm.gender && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="users" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Target Gender</Text>
+                    <Text style={styles.detailValue}>{cm.gender}</Text>
+                  </View>
+                </View>
+              )}
+              {cm.targetLanguage && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="globe" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Language</Text>
+                    <Text style={styles.detailValue}>{cm.targetLanguage}</Text>
+                  </View>
+                </View>
+              )}
+              {cm.brandTone && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="sun" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Brand Tone</Text>
+                    <Text style={styles.detailValue}>{cm.brandTone}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Must Mention Banner */}
+            {cm.mustMention && (
+              <View style={styles.requirementBanner}>
+                <View style={styles.requirementBannerHeader}>
+                  <Icon name="mic" size={15} color={Colors.oxblood} />
+                  <Text style={styles.requirementBannerTitle}>Must Mention Keywords</Text>
+                </View>
+                <Text style={styles.requirementBannerText}>{cm.mustMention}</Text>
+              </View>
+            )}
+
+            {/* Hashtags Banner */}
+            {cm.hashtags && (
+              <View style={[styles.requirementBanner, { backgroundColor: 'rgba(63,3,11,0.02)', borderColor: 'rgba(63,3,11,0.05)' }]}>
+                <View style={styles.requirementBannerHeader}>
+                  <Icon name="bookmark" size={15} color={Colors.oxblood} />
+                  <Text style={styles.requirementBannerTitle}>Required Hashtags</Text>
+                </View>
+                <Text style={[styles.requirementBannerText, { color: Colors.roseDeep, fontWeight: '700' }]}>{cm.hashtags}</Text>
+              </View>
+            )}
+
+            {/* Audio Instructions Player */}
+            {cm.audioInstructionUrl && (
+              <View style={styles.audioInstructionsCard}>
+                <Text style={styles.audioSectionHeading}>Audio Instructions</Text>
+                <View style={styles.audioPlayerControlsRow}>
+                  <TouchableOpacity style={styles.audioPlayBtn} onPress={handlePlayPause} activeOpacity={0.8}>
+                    <Icon name={playerStatus.playing ? 'pause' : 'play'} size={18} color="#fff" />
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.audioInstructionsText}>
+                      {playerStatus.playing
+                        ? `Playing instructions...`
+                        : `Listen to voice instructions`}
+                    </Text>
+                    <Text style={styles.audioDurationText}>
+                      {formatDuration(playerStatus.currentTime)} / {formatDuration(playerStatus.duration ?? 0)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Barter Product Details */}
+          {cm.prodName && (
+            <View style={styles.barterDetailsCard}>
+              <View style={styles.barterHeader}>
+                <Icon name="gift" size={18} color={Colors.roseDeep} />
+                <Text style={styles.barterCardTitle}>Barter Product Details</Text>
+              </View>
+              
+              <View style={styles.barterDetailsGrid}>
+                <View style={styles.barterDetailRow}>
+                  <Text style={styles.barterLabel}>Product Name</Text>
+                  <Text style={styles.barterValue}>{cm.prodName}</Text>
+                </View>
+
+                {cm.prodValue > 0 && (
+                  <View style={styles.barterDetailRow}>
+                    <Text style={styles.barterLabel}>Product Value</Text>
+                    <Text style={styles.barterValuePrice}>₹{cm.prodValue.toLocaleString()}</Text>
+                  </View>
+                )}
+
+                {cm.prodSku && (
+                  <View style={styles.barterDetailRow}>
+                    <Text style={styles.barterLabel}>SKU / Code</Text>
+                    <Text style={styles.barterValue}>{cm.prodSku}</Text>
+                  </View>
+                )}
+
+                {cm.prodShipping && (
+                  <View style={styles.barterDetailRowCol}>
+                    <Text style={styles.barterLabel}>Shipping Details</Text>
+                    <Text style={styles.barterValueDesc}>{cm.prodShipping}</Text>
+                  </View>
+                )}
+
+                {cm.prodDescription && (
+                  <View style={styles.barterDetailRowCol}>
+                    <Text style={styles.barterLabel}>Product Description</Text>
+                    <Text style={styles.barterValueDesc}>{cm.prodDescription}</Text>
+                  </View>
+                )}
+
+                {cm.prodUrl && (
+                  <TouchableOpacity 
+                    style={styles.barterLinkBtn} 
+                    onPress={() => Linking.openURL(cm.prodUrl)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.barterLinkBtnText}>View Product Page ↗</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Deliverables */}
           <View style={{ marginTop: 24 }}>
@@ -430,8 +956,6 @@ export default function CollabDetail() {
                       pathname: '/chat/[id]' as any,
                       params: {
                         id: cm.brandId,
-                        name: cm.brand || '',
-                        avatar: cm.brandLogo || '',
                       }
                     });
                   }
@@ -459,8 +983,6 @@ export default function CollabDetail() {
                 pathname: '/chat/[id]' as any,
                 params: {
                   id: cm.brandId,
-                  name: cm.brand || '',
-                  avatar: cm.brandLogo || '',
                 }
               });
             }
@@ -627,4 +1149,385 @@ const styles = StyleSheet.create({
   applyBtn: { width: '100%', height: '100%', borderRadius: 16, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center', ...Shadow.button },
   applyBtnDone: { backgroundColor: Colors.roseDeep },
   applyBtnText: { fontFamily: FontFamily.sans, fontWeight: '800', fontSize: 16, color: Colors.cream },
+
+  // Collaboration steps workspace styles
+  collabWorkspaceCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 18,
+    marginTop: 20,
+    ...Shadow.card,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.04)',
+  },
+  collabWorkspaceHeader: {
+    marginBottom: 20,
+  },
+  collabWorkspaceTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  collabWorkspaceSubtitle: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.5)',
+    marginTop: 4,
+  },
+  stepContainer: {
+    flexDirection: 'row',
+    paddingBottom: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+    marginBottom: 20,
+  },
+  stepContainerLocked: {
+    opacity: 0.5,
+  },
+  stepLeft: {
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  stepIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepIndicatorActive: {
+    backgroundColor: Colors.roseDeep,
+  },
+  stepIndicatorDone: {
+    backgroundColor: Colors.green,
+  },
+  stepIndicatorPending: {
+    backgroundColor: '#e67e22',
+  },
+  stepIndicatorLocked: {
+    backgroundColor: '#eee',
+  },
+  stepIndicatorText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  stepConnectorLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: 'rgba(63,3,11,0.06)',
+    marginTop: 6,
+    marginBottom: -16,
+  },
+  stepContent: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  stepTitleLocked: {
+    color: 'rgba(63,3,11,0.4)',
+  },
+  stepDescription: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.6)',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  stepDescriptionLocked: {
+    color: 'rgba(63,3,11,0.3)',
+  },
+  stepStatusTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  stepStatusValText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stepForm: {
+    marginTop: 12,
+  },
+  rejectedBanner: {
+    backgroundColor: 'rgba(235, 87, 87, 0.08)',
+    borderColor: 'rgba(235, 87, 87, 0.16)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  rejectedBannerText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: '#eb5757',
+  },
+  pendingBanner: {
+    backgroundColor: 'rgba(230, 126, 34, 0.08)',
+    borderColor: 'rgba(230, 126, 34, 0.16)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  pendingBannerText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: '#e67e22',
+  },
+  celebrationCard: {
+    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+    borderColor: 'rgba(46, 204, 113, 0.16)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  celebrationCardText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: '#27ae60',
+    lineHeight: 18,
+  },
+  pendingCompletionCard: {
+    backgroundColor: 'rgba(241, 196, 15, 0.08)',
+    borderColor: 'rgba(241, 196, 15, 0.16)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  pendingCompletionCardText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: '#d4ac0d',
+    lineHeight: 18,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13.5,
+    fontFamily: FontFamily.sansRegular,
+    color: Colors.ink,
+    marginBottom: 8,
+  },
+  submitBtn: {
+    backgroundColor: Colors.oxblood,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  lockedHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  lockedHintText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.4)',
+  },
+
+  // Campaign details and barter styles
+  detailsSectionContainer: {
+    marginTop: 24,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  detailGridItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: '45%',
+    flex: 1,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    gap: 10,
+    ...Shadow.card,
+  },
+  detailItemTextContainer: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 10.5,
+    color: 'rgba(63,3,11,0.5)',
+    fontWeight: '600',
+  },
+  detailValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+    marginTop: 1,
+    textTransform: 'capitalize',
+  },
+  requirementBanner: {
+    backgroundColor: 'rgba(63,3,11,0.01)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  requirementBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  requirementBannerTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  requirementBannerText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.7)',
+    lineHeight: 18,
+  },
+  audioInstructionsCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 12,
+    ...Shadow.card,
+  },
+  audioSectionHeading: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.oxblood,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  audioPlayerControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  audioPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioInstructionsText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.ink,
+  },
+  audioDurationText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 2,
+  },
+  barterDetailsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    ...Shadow.card,
+  },
+  barterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+    paddingBottom: 8,
+  },
+  barterCardTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  barterDetailsGrid: {
+    gap: 12,
+  },
+  barterDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.04)',
+    paddingBottom: 8,
+  },
+  barterDetailRowCol: {
+    flexDirection: 'column',
+    gap: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.04)',
+    paddingBottom: 8,
+  },
+  barterLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.5)',
+  },
+  barterValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  barterValuePrice: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.roseDeep,
+  },
+  barterValueDesc: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.7)',
+    lineHeight: 18,
+  },
+  barterLinkBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  barterLinkBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.roseDeep,
+    textDecorationLine: 'underline',
+  },
 });

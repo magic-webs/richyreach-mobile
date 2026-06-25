@@ -132,8 +132,6 @@ export default function BrandChatListScreen() {
                   pathname: '/brand/chat/[id]' as any,
                   params: {
                     id: c.roomId,
-                    name: titleName,
-                    avatar: imageUrl || "",
                   }
                 })}
                 activeOpacity={0.8}

@@ -48,6 +48,7 @@ export const api = {
   campaigns: {
     list: () => request('/campaigns'),
     get: (id: string) => request(`/campaigns/${id}`),
+    getPublic: (id: string) => request(`/campaigns/public/${id}`),
     create: (data: FormData | any, activeProfileId?: string | null) => {
       const isFormData = data instanceof FormData;
       return request('/campaigns/create', {
@@ -88,6 +89,12 @@ export const api = {
       request(`/influencers/applications/${id}/accept-counter`, { method: 'POST' }),
     counterOffer: (id: string, bidAmount: number) =>
       request(`/influencers/applications/${id}/counter`, { method: 'POST', body: JSON.stringify({ bidAmount }) }),
+    submitScript: (id: string, scriptUrl: string) =>
+      request(`/influencers/applications/${id}/submit-script`, { method: 'POST', body: JSON.stringify({ scriptUrl }) }),
+    submitIgHandle: (id: string, igHandle: string) =>
+      request(`/influencers/applications/${id}/submit-ig-handle`, { method: 'POST', body: JSON.stringify({ igHandle }) }),
+    submitPostLink: (id: string, postLink: string) =>
+      request(`/influencers/applications/${id}/submit-post-link`, { method: 'POST', body: JSON.stringify({ postLink }) }),
     services: {
       list: () => request<any[]>('/influencers/services'),
       create: (data: FormData | any) => {
@@ -117,6 +124,10 @@ export const api = {
     acceptApplication: (id: string) => request(`/brands/applications/${id}/accept`, { method: 'POST' }),
     negotiateApplication: (id: string, counterAmount: number) =>
       request(`/brands/applications/${id}/negotiate`, { method: 'POST', body: JSON.stringify({ counterAmount }) }),
+    reviewScript: (id: string, status: 'approved' | 'rejected') =>
+      request(`/brands/applications/${id}/review-script`, { method: 'POST', body: JSON.stringify({ status }) }),
+    completeCollaboration: (id: string) =>
+      request(`/brands/applications/${id}/complete`, { method: 'POST' }),
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),

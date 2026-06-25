@@ -548,8 +548,6 @@ export default function BrandMarketplaceScreen() {
                 pathname: '/brand/chat/[id]' as any,
                 params: {
                   id: room.id,
-                  name: selectedCreator.name || '',
-                  avatar: selectedCreator.avatar || '',
                 }
               });
             }
@@ -574,8 +572,6 @@ export default function BrandMarketplaceScreen() {
           pathname: '/brand/chat/[id]' as any,
           params: {
             id: room.id,
-            name: selectedCreator.name || '',
-            avatar: selectedCreator.avatar || '',
           }
         });
       } catch (err) {

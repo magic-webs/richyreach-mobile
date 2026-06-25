@@ -172,8 +172,6 @@ export default function CreatorProfileDetail() {
                 pathname: '/brand/chat/[id]' as any,
                 params: {
                   id: room.id,
-                  name: creator.name || '',
-                  avatar: creator.avatar || '',
                 }
               });
             }
@@ -198,8 +196,6 @@ export default function CreatorProfileDetail() {
           pathname: '/brand/chat/[id]' as any,
           params: {
             id: room.id,
-            name: creator.name || '',
-            avatar: creator.avatar || '',
           }
         });
       } catch (err) {

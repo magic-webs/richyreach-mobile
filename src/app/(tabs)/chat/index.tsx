@@ -131,8 +131,6 @@ export default function InfluencerChatListScreen() {
                   pathname: '/chat/[id]',
                   params: {
                     id: c.roomId,
-                    name: titleName,
-                    avatar: imageUrl || "",
                   }
                 })}
                 activeOpacity={0.8}

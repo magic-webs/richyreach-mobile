@@ -89,6 +89,9 @@ function NavigationLayout() {
         <Stack.Screen name="insights" />
         <Stack.Screen name="referral" />
       </Stack.Protected>
+
+      {/* Public Shared Pages */}
+      <Stack.Screen name="shared/[id]" />
     </Stack>
   );
 }

@@ -27,7 +27,8 @@ import {
   ArrowLeft01Icon,
   Attachment01FreeIcons,
   Navigation03Icon,
-  Pin02FreeIcons
+  Pin02FreeIcons,
+  CheckIcon
 } from '@hugeicons/core-free-icons';
 
 export default function BrandChatConversationScreen() {
@@ -69,6 +70,8 @@ export default function BrandChatConversationScreen() {
           resolvedId = room.id;
           if (active) {
             setRoomId(room.id);
+            if (room.name) setRoomName(room.name);
+            if (room.avatar) setRoomAvatar(room.avatar);
           }
         }
 
@@ -359,7 +362,8 @@ export default function BrandChatConversationScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item: m }) => {
             const isMe = m.senderId === currentUserId;
-            const isCampaign = !!m.campaignId;
+            const isCollabAccepted = !!m.campaignId && m.content && m.content.includes("Collaboration accepted!");
+            const isCampaign = !!m.campaignId && !isCollabAccepted && !(m.content && m.content.startsWith("Application Proposal:"));
 
             return (
               <View style={[
@@ -382,9 +386,33 @@ export default function BrandChatConversationScreen() {
                   <View style={[
                     styles.bubble,
                     isMe ? styles.bubbleMe : styles.bubbleThem,
-                    isCampaign && styles.campaignBubble
+                    (isCampaign || isCollabAccepted) && styles.campaignBubble
                   ]}>
-                    {isCampaign ? (
+                    {isCollabAccepted ? (
+                      <View style={styles.campaignCard}>
+                        <View style={styles.campaignCardHeader}>
+                          <HugeiconsIcon icon={CheckIcon} size={16} color={Colors.green} strokeWidth={2} />
+                          <Text style={[styles.campaignLabel, { color: Colors.green }]}>Collaboration Accepted</Text>
+                        </View>
+                        <Text style={styles.campaignTitle}>{m.campaignTitle}</Text>
+                        <Text style={[styles.campaignDesc, { color: Colors.ink, marginTop: 8 }]}>
+                          {m.content}
+                        </Text>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { backgroundColor: Colors.oxblood, marginTop: 12, width: '100%', height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }]}
+                          onPress={() => {
+                            router.push({
+                              pathname: '/brand/campaign/[id]' as any,
+                              params: { id: m.campaignId }
+                            });
+                          }}
+                        >
+                          <Text style={{ color: Colors.cream, fontWeight: '700', fontSize: 13 }}>
+                            View Collaboration Steps
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : isCampaign ? (
                       <View style={styles.campaignCard}>
                         <View style={styles.campaignCardHeader}>
                           <HugeiconsIcon
@@ -595,6 +623,7 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 14.5, fontWeight: '700', color: Colors.oxblood, marginTop: 2, fontFamily: FontFamily.sans },
 
   actionContainer: { marginTop: 12, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: 'rgba(63,3,11,0.08)' },
+  actionBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   statusBadge: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(63,3,11,0.04)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 },
   statusBadgeText: { fontSize: 12, fontWeight: '700', color: 'rgba(63,3,11,0.5)', fontFamily: FontFamily.sansMedium },
   statusAccepted: { backgroundColor: 'rgba(42,122,90,0.1)' },

@@ -17,9 +17,10 @@ import {
   TouchableOpacity,
   View,
   Linking,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useProfilesStore } from '@/store/profiles';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -65,15 +66,11 @@ export default function CampaignDetailScreen() {
   // Deliverables
   const [reelCount, setReelCount] = useState('0');
   const [storyCount, setStoryCount] = useState('0');
-  const [postCount, setPostCount] = useState('0');
-  const [liveCount, setLiveCount] = useState('0');
 
   // Budget
   const [paymentType, setPaymentType] = useState('Paid');
   const [costPerCreator, setCostPerCreator] = useState('5000');
   const [numCreators, setNumCreators] = useState('5');
-  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
-  const [paymentTimeline, setPaymentTimeline] = useState('After Approval');
 
   // Barter Details
   const [prodName, setProdName] = useState('');
@@ -140,19 +137,13 @@ export default function CampaignDetailScreen() {
       const deliverables = brief.deliverables || [];
       const reel = deliverables.find((d: any) => d.type === 'reel');
       const story = deliverables.find((d: any) => d.type === 'story');
-      const post = deliverables.find((d: any) => d.type === 'post');
-      const live = deliverables.find((d: any) => d.type === 'live');
       setReelCount(String(reel?.quantity ?? campaign.reelCount ?? 0));
       setStoryCount(String(story?.quantity ?? campaign.storyCount ?? 0));
-      setPostCount(String(post?.quantity ?? campaign.postCount ?? 0));
-      setLiveCount(String(live?.quantity ?? campaign.liveCount ?? 0));
 
       // Rewards
       setPaymentType(brief.paymentType || campaign.paymentType || 'Paid');
       setCostPerCreator(String(brief.costPerCreator ?? campaign.costPerCreator ?? 0));
       setNumCreators(String(brief.numCreators ?? campaign.numCreators ?? 1));
-      setPaymentMethod(brief.paymentMethod || campaign.paymentMethod || 'Bank Transfer');
-      setPaymentTimeline(brief.paymentTimeline || campaign.paymentTimeline || 'After Approval');
 
       // Product info (barter)
       const prod = brief.productInfo || {};
@@ -273,6 +264,17 @@ export default function CampaignDetailScreen() {
     }
   };
 
+  const handleShareCampaign = async () => {
+    try {
+      const shareUrl = `https://app.richyreach.com/shared/${id}`;
+      await Share.share({
+        message: `Check out this campaign "${title}" on RichyReach! View details here: ${shareUrl}`,
+      });
+    } catch (err) {
+      console.error('Failed to share campaign:', err);
+    }
+  };
+
   const handleUpdate = async () => {
     if (!title.trim() || !brandName.trim() || !description.trim()) {
       showModal({
@@ -286,14 +288,10 @@ export default function CampaignDetailScreen() {
     try {
       const parsedReel = parseInt(reelCount) || 0;
       const parsedStory = parseInt(storyCount) || 0;
-      const parsedPost = parseInt(postCount) || 0;
-      const parsedLive = parseInt(liveCount) || 0;
 
       const deliverables = [];
       if (parsedReel > 0) deliverables.push({ type: 'reel', quantity: parsedReel });
       if (parsedStory > 0) deliverables.push({ type: 'story', quantity: parsedStory });
-      if (parsedPost > 0) deliverables.push({ type: 'post', quantity: parsedPost });
-      if (parsedLive > 0) deliverables.push({ type: 'live', quantity: parsedLive });
 
       const updatedBrief = {
         brandName,
@@ -307,8 +305,6 @@ export default function CampaignDetailScreen() {
         minFollowers: parseInt(minFollowers) || 10000,
         languages: [targetLanguage],
         deliverables,
-        paymentMethod,
-        paymentTimeline,
         costPerCreator: paymentType === 'Barter' ? 0 : (parseInt(costPerCreator) || 0),
         numCreators: paymentType === 'Barter' ? 1 : (parseInt(numCreators) || 1),
         productInfo: paymentType !== 'Paid' ? {
@@ -410,6 +406,32 @@ export default function CampaignDetailScreen() {
   const [negotiatingApp, setNegotiatingApp] = useState<any>(null);
   const [counterSubmitting, setCounterSubmitting] = useState(false);
 
+  // Collaboration review state & mutations
+  const [expandedCollabAppId, setExpandedCollabAppId] = useState<string | null>(null);
+
+  const reviewScriptMutation = useMutation({
+    mutationFn: ({ appId, status }: { appId: string; status: 'approved' | 'rejected' }) =>
+      api.brands.reviewScript(appId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
+      showModal({ title: 'Success', message: 'Script status updated successfully!' });
+    },
+    onError: (err: any) => {
+      showModal({ title: 'Error', message: err.message || 'Failed to update script status' });
+    }
+  });
+
+  const completeCollabMutation = useMutation({
+    mutationFn: (appId: string) => api.brands.completeCollaboration(appId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
+      showModal({ title: 'Success', message: 'Collaboration marked as complete! 🎉' });
+    },
+    onError: (err: any) => {
+      showModal({ title: 'Error', message: err.message || 'Failed to complete collaboration' });
+    }
+  });
+
   const handleAcceptApplicant = async (app: any) => {
     try {
       const res: any = await api.brands.acceptApplication(app.id);
@@ -426,8 +448,6 @@ export default function CampaignDetailScreen() {
                 pathname: '/brand/chat/[id]' as any,
                 params: {
                   id: res.roomId,
-                  name: app.name || app.instagramHandle,
-                  avatar: app.avatar || '',
                 }
               });
             }
@@ -464,28 +484,13 @@ export default function CampaignDetailScreen() {
     if (!negotiatingApp) return;
     setCounterSubmitting(true);
     try {
-      const res: any = await api.brands.negotiateApplication(negotiatingApp.id, counterAmount);
+      await api.brands.negotiateApplication(negotiatingApp.id, counterAmount);
       setNegotiatingApp(null);
       queryClient.invalidateQueries({ queryKey: ['brandCampaign', id] });
 
       showModal({
         title: 'Counter Offer Proposed',
-        message: `You proposed a counter-offer of ₹${counterAmount.toLocaleString()} to ${negotiatingApp.name || negotiatingApp.instagramHandle}. Navigating to the chat room...`,
-        actions: [
-          {
-            text: 'Go to Chat',
-            onPress: () => {
-              router.push({
-                pathname: '/brand/chat/[id]' as any,
-                params: {
-                  id: res.roomId,
-                  name: negotiatingApp.name || negotiatingApp.instagramHandle,
-                  avatar: negotiatingApp.avatar || '',
-                }
-              });
-            }
-          }
-        ]
+        message: `You proposed a counter-offer of ₹${counterAmount.toLocaleString()} to ${negotiatingApp.name || negotiatingApp.instagramHandle}.`,
       });
     } catch (err: any) {
       console.error('Failed to send counter-offer:', err);
@@ -546,9 +551,14 @@ export default function CampaignDetailScreen() {
             {mode === 'edit' ? 'Edit Campaign' : 'Campaign Details'}
           </Text>
           {mode === 'view' ? (
-            <TouchableOpacity style={styles.editHeaderBtn} onPress={() => setMode('edit')} activeOpacity={0.8}>
-              <Text style={styles.editHeaderText}>Edit</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={handleShareCampaign} activeOpacity={0.8} style={{ padding: 4 }}>
+                <Icon name="share" size={20} color={Colors.oxblood} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editHeaderBtn} onPress={() => setMode('edit')} activeOpacity={0.8}>
+                <Text style={styles.editHeaderText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity style={styles.editHeaderBtn} onPress={() => setMode('view')} activeOpacity={0.8}>
               <Text style={styles.cancelHeaderText}>Cancel</Text>
@@ -610,7 +620,7 @@ export default function CampaignDetailScreen() {
               </View>
 
               {/* Deliverables Section */}
-              {((parseInt(reelCount) || 0) > 0 || (parseInt(storyCount) || 0) > 0 || (parseInt(postCount) || 0) > 0 || (parseInt(liveCount) || 0) > 0) && (
+              {((parseInt(reelCount) || 0) > 0 || (parseInt(storyCount) || 0) > 0) && (
                 <View style={styles.sectionContainer}>
                   <Text style={styles.sectionHeading}>Deliverables Required</Text>
                   <View style={styles.deliverablesList}>
@@ -624,18 +634,6 @@ export default function CampaignDetailScreen() {
                       <View style={styles.deliverablePill}>
                         <Icon name="check" size={12} color={Colors.green} />
                         <Text style={styles.deliverableText}>{storyCount}x Story(ies)</Text>
-                      </View>
-                    )}
-                    {parseInt(postCount) > 0 && (
-                      <View style={styles.deliverablePill}>
-                        <Icon name="check" size={12} color={Colors.green} />
-                        <Text style={styles.deliverableText}>{postCount}x Post(s)</Text>
-                      </View>
-                    )}
-                    {parseInt(liveCount) > 0 && (
-                      <View style={styles.deliverablePill}>
-                        <Icon name="check" size={12} color={Colors.green} />
-                        <Text style={styles.deliverableText}>{liveCount}x Live Session(s)</Text>
                       </View>
                     )}
                   </View>
@@ -884,22 +882,215 @@ export default function CampaignDetailScreen() {
                                 </TouchableOpacity>
                               </View>
                             ) : (
-                              <View style={[
-                                styles.statusBadge,
-                                isAccepted && styles.statusAccepted,
-                                isRejected && styles.statusDeclined,
-                                isNegotiating && { backgroundColor: 'rgba(180, 106, 116, 0.12)' }
-                              ]}>
-                                <Text style={[
-                                  styles.statusBadgeText,
-                                  isAccepted && styles.statusAcceptedText,
-                                  isRejected && styles.statusDeclinedText,
-                                  isNegotiating && { color: Colors.roseDeep }
-                                ]}>
-                                  {isAccepted ? 'Accepted ✓' : (
-                                    isRejected ? 'Declined ✕' : `Countered: ₹${((app.counterAmount || 0) / 100).toLocaleString()} (Awaiting Creator)`
+                              <View style={{ flexDirection: 'column', width: '100%', gap: 10, marginTop: 10 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                  <View style={[
+                                    styles.statusBadge,
+                                    isAccepted && styles.statusAccepted,
+                                    isRejected && styles.statusDeclined,
+                                    isNegotiating && { backgroundColor: 'rgba(180, 106, 116, 0.12)' }
+                                  ]}>
+                                    <Text style={[
+                                      styles.statusBadgeText,
+                                      isAccepted && styles.statusAcceptedText,
+                                      isRejected && styles.statusDeclinedText,
+                                      isNegotiating && { color: Colors.roseDeep }
+                                    ]}>
+                                      {isAccepted ? 'Accepted ✓' : (
+                                        isRejected ? 'Declined ✕' : `Countered: ₹${((app.counterAmount || 0) / 100).toLocaleString()} (Awaiting Creator)`
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  {isAccepted && (
+                                    <TouchableOpacity
+                                      style={styles.reviewCollabBtn}
+                                      onPress={() => setExpandedCollabAppId(expandedCollabAppId === app.id ? null : app.id)}
+                                      activeOpacity={0.8}
+                                    >
+                                      <Text style={styles.reviewCollabBtnText}>
+                                        {expandedCollabAppId === app.id ? 'Hide Progress' : 'Review Progress'}
+                                      </Text>
+                                      <Icon name={expandedCollabAppId === app.id ? 'chevDown' : 'chevron'} size={14} color={Colors.oxblood} />
+                                    </TouchableOpacity>
                                   )}
-                                </Text>
+                                </View>
+
+                                {isAccepted && expandedCollabAppId === app.id && (
+                                  <View style={styles.collabReviewPanel}>
+                                    <View style={styles.collabReviewHeader}>
+                                      <Text style={styles.collabReviewTitle}>Collaboration Progress</Text>
+                                    </View>
+
+                                    {/* Step 1: Script Review */}
+                                    <View style={styles.reviewStep}>
+                                      <View style={styles.reviewStepLeft}>
+                                        <View style={[
+                                          styles.stepCircle,
+                                          app.scriptStatus === 'approved' ? styles.stepCircleDone : (app.scriptStatus === 'pending' ? styles.stepCirclePending : styles.stepCircleActive)
+                                        ]}>
+                                          {app.scriptStatus === 'approved' ? (
+                                            <Icon name="check" size={10} color="#fff" />
+                                          ) : (
+                                            <Text style={styles.stepCircleText}>1</Text>
+                                          )}
+                                        </View>
+                                        <View style={styles.stepLine} />
+                                      </View>
+                                      <View style={styles.reviewStepContent}>
+                                        <Text style={styles.reviewStepTitle}>Script Draft Review</Text>
+                                        
+                                        {app.scriptStatus === 'approved' ? (
+                                          <View style={{ gap: 4, marginTop: 4 }}>
+                                            <Text style={styles.reviewSuccessText}>✓ Approved script</Text>
+                                            <TouchableOpacity onPress={() => app.scriptUrl && Linking.openURL(app.scriptUrl)}>
+                                              <Text style={styles.reviewLinkText} numberOfLines={1}>{app.scriptUrl} ↗</Text>
+                                            </TouchableOpacity>
+                                          </View>
+                                        ) : app.scriptStatus === 'pending' ? (
+                                          <View style={{ marginTop: 6, gap: 8 }}>
+                                            <Text style={styles.reviewWarningText}>⏱ Awaiting Script Review</Text>
+                                            <TouchableOpacity onPress={() => app.scriptUrl && Linking.openURL(app.scriptUrl)}>
+                                              <Text style={styles.reviewLinkText} numberOfLines={1}>{app.scriptUrl} ↗</Text>
+                                            </TouchableOpacity>
+                                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                                              <TouchableOpacity
+                                                style={[styles.reviewActionBtn, { backgroundColor: '#eb5757' }]}
+                                                onPress={() => reviewScriptMutation.mutate({ appId: app.id, status: 'rejected' })}
+                                                disabled={reviewScriptMutation.isPending}
+                                                activeOpacity={0.8}
+                                              >
+                                                <Text style={styles.reviewActionBtnText}>Reject</Text>
+                                              </TouchableOpacity>
+                                              <TouchableOpacity
+                                                style={[styles.reviewActionBtn, { backgroundColor: '#2ecc71' }]}
+                                                onPress={() => reviewScriptMutation.mutate({ appId: app.id, status: 'approved' })}
+                                                disabled={reviewScriptMutation.isPending}
+                                                activeOpacity={0.8}
+                                              >
+                                                <Text style={styles.reviewActionBtnText}>Approve</Text>
+                                              </TouchableOpacity>
+                                            </View>
+                                          </View>
+                                        ) : app.scriptStatus === 'rejected' ? (
+                                          <Text style={styles.reviewDescText}>
+                                            ✕ Script Rejected. Waiting for creator to resubmit.
+                                          </Text>
+                                        ) : (
+                                          <Text style={styles.reviewDescText}>
+                                            Awaiting script draft upload from creator.
+                                          </Text>
+                                        )}
+                                      </View>
+                                    </View>
+
+                                    {/* Step 2: Instagram Handle Connection */}
+                                    <View style={styles.reviewStep}>
+                                      <View style={styles.reviewStepLeft}>
+                                        <View style={[
+                                          styles.stepCircle,
+                                          app.igHandle ? styles.stepCircleDone : styles.stepCircleActive
+                                        ]}>
+                                          {app.igHandle ? (
+                                            <Icon name="check" size={10} color="#fff" />
+                                          ) : (
+                                            <Text style={styles.stepCircleText}>2</Text>
+                                          )}
+                                        </View>
+                                        <View style={styles.stepLine} />
+                                      </View>
+                                      <View style={styles.reviewStepContent}>
+                                        <Text style={styles.reviewStepTitle}>Creator Instagram Handle</Text>
+                                        {app.igHandle ? (
+                                          <Text style={styles.reviewConnectedText}>
+                                            Linked Handle: @{app.igHandle}
+                                          </Text>
+                                        ) : (
+                                          <Text style={styles.reviewDescText}>
+                                            Awaiting Instagram handle linkage from creator.
+                                          </Text>
+                                        )}
+                                      </View>
+                                    </View>
+
+                                    {/* Step 3: Live Post Link */}
+                                    <View style={styles.reviewStep}>
+                                      <View style={styles.reviewStepLeft}>
+                                        <View style={[
+                                          styles.stepCircle,
+                                          app.postLink ? styles.stepCircleDone : styles.stepCircleActive
+                                        ]}>
+                                          {app.postLink ? (
+                                            <Icon name="check" size={10} color="#fff" />
+                                          ) : (
+                                            <Text style={styles.stepCircleText}>3</Text>
+                                          )}
+                                        </View>
+                                        <View style={styles.stepLine} />
+                                      </View>
+                                      <View style={styles.reviewStepContent}>
+                                        <Text style={styles.reviewStepTitle}>Reel / Post Deliverable</Text>
+                                        {app.postLink ? (
+                                          <View style={{ gap: 4, marginTop: 4 }}>
+                                            <Text style={styles.reviewSuccessText}>✓ Creator shared post link</Text>
+                                            <TouchableOpacity onPress={() => Linking.openURL(app.postLink)}>
+                                              <Text style={styles.reviewLinkText} numberOfLines={1}>{app.postLink} ↗</Text>
+                                            </TouchableOpacity>
+                                          </View>
+                                        ) : (
+                                          <Text style={styles.reviewDescText}>
+                                            Awaiting post upload (unlocked once script is approved).
+                                          </Text>
+                                        )}
+                                      </View>
+                                    </View>
+
+                                    {/* Step 4: Completion */}
+                                    <View style={[styles.reviewStep, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+                                      <View style={styles.reviewStepLeft}>
+                                        <View style={[
+                                          styles.stepCircle,
+                                          app.collaborationStatus === 'completed' ? styles.stepCircleDone : styles.stepCircleActive
+                                        ]}>
+                                          {app.collaborationStatus === 'completed' ? (
+                                            <Icon name="check" size={10} color="#fff" />
+                                          ) : (
+                                            <Text style={styles.stepCircleText}>4</Text>
+                                          )}
+                                        </View>
+                                      </View>
+                                      <View style={styles.reviewStepContent}>
+                                        <Text style={styles.reviewStepTitle}>Completion Status</Text>
+                                        
+                                        {app.collaborationStatus === 'completed' ? (
+                                          <Text style={[styles.reviewSuccessText, { marginTop: 4 }]}>
+                                            🎉 Collaboration marked complete.
+                                          </Text>
+                                        ) : app.postLink ? (
+                                          <View style={{ marginTop: 6 }}>
+                                            <Text style={styles.reviewWarningText}>
+                                              ⏱ Deliverables submitted! Review and mark complete to release payout.
+                                            </Text>
+                                            <TouchableOpacity
+                                              style={[styles.completeCollabBtn, { marginTop: 8 }]}
+                                              onPress={() => completeCollabMutation.mutate(app.id)}
+                                              disabled={completeCollabMutation.isPending}
+                                              activeOpacity={0.8}
+                                            >
+                                              <Text style={styles.completeCollabBtnText}>
+                                                {completeCollabMutation.isPending ? 'Completing...' : 'Mark Collaboration Complete'}
+                                              </Text>
+                                            </TouchableOpacity>
+                                          </View>
+                                        ) : (
+                                          <Text style={styles.reviewDescText}>
+                                            Awaiting link submission to mark complete.
+                                          </Text>
+                                        )}
+                                      </View>
+                                    </View>
+                                  </View>
+                                )}
                               </View>
                             )}
                           </View>
@@ -1064,24 +1255,6 @@ export default function CampaignDetailScreen() {
                         keyboardType="numeric"
                         value={storyCount}
                         onChangeText={setStoryCount}
-                      />
-                    </View>
-                    <View style={styles.delivEditCell}>
-                      <Text style={styles.delivEditLabel}>Posts</Text>
-                      <TextInput
-                        style={styles.delivEditInput}
-                        keyboardType="numeric"
-                        value={postCount}
-                        onChangeText={setPostCount}
-                      />
-                    </View>
-                    <View style={styles.delivEditCell}>
-                      <Text style={styles.delivEditLabel}>Live Sessions</Text>
-                      <TextInput
-                        style={styles.delivEditInput}
-                        keyboardType="numeric"
-                        value={liveCount}
-                        onChangeText={setLiveCount}
                       />
                     </View>
                   </View>
@@ -2232,6 +2405,147 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 12,
     color: Colors.white,
+    fontWeight: '700',
+  },
+
+  // Collaboration review panel styles
+  reviewCollabBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.oxblood,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  reviewCollabBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  collabReviewPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    marginTop: 10,
+  },
+  collabReviewHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+    paddingBottom: 6,
+  },
+  collabReviewTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  reviewStep: {
+    flexDirection: 'row',
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.05)',
+  },
+  reviewStepLeft: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  stepCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: Colors.rose,
+  },
+  stepCircleDone: {
+    backgroundColor: Colors.green,
+  },
+  stepCirclePending: {
+    backgroundColor: '#e67e22',
+  },
+  stepCircleText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stepLine: {
+    width: 1.5,
+    flex: 1,
+    backgroundColor: 'rgba(63,3,11,0.05)',
+    marginTop: 4,
+    marginBottom: -10,
+  },
+  reviewStepContent: {
+    flex: 1,
+  },
+  reviewStepTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  reviewSuccessText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.green,
+  },
+  reviewWarningText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: '#e67e22',
+  },
+  reviewConnectedText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.ink,
+    marginTop: 4,
+  },
+  reviewDescText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.5)',
+    marginTop: 4,
+  },
+  reviewLinkText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.roseDeep,
+    textDecorationLine: 'underline',
+  },
+  reviewActionBtn: {
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewActionBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  completeCollabBtn: {
+    backgroundColor: Colors.green,
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completeCollabBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '700',
   },
 });

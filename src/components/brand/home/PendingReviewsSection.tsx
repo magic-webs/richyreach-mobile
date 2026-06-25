@@ -39,7 +39,7 @@ export function PendingReviewsSection() {
               // Navigate to brand chat room
               router.push({
                 pathname: '/brand/chat/[id]' as any,
-                params: { id: room.id, name, avatar: avatar || '' }
+                params: { id: room.id }
               });
             } catch (err: any) {
               console.error("Failed to accept application", err);

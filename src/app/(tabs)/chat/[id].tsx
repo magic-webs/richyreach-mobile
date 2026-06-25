@@ -22,7 +22,7 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Image } from 'expo-image';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { ArrowLeft01Icon, Navigation03Icon, Pin02FreeIcons } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, Navigation03Icon, Pin02FreeIcons, CheckIcon } from '@hugeicons/core-free-icons';
 
 export default function InfluencerChatConversationScreen() {
   const { id: routeId, name: routeName, avatar: routeAvatar } = useLocalSearchParams<{ id: string; name?: string; avatar?: string }>();
@@ -63,6 +63,8 @@ export default function InfluencerChatConversationScreen() {
           resolvedId = room.id;
           if (active) {
             setRoomId(room.id);
+            if (room.companyName) setRoomName(room.companyName);
+            if (room.logo) setRoomAvatar(room.logo);
           }
         }
 
@@ -326,7 +328,8 @@ export default function InfluencerChatConversationScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item: m }) => {
             const isMe = m.senderId === currentUserId;
-            const isCampaign = !!m.campaignId;
+            const isCollabAccepted = !!m.campaignId && m.content && m.content.includes("Collaboration accepted!");
+            const isCampaign = !!m.campaignId && !isCollabAccepted && !(m.content && m.content.startsWith("Application Proposal:"));
 
             return (
               <View style={[
@@ -349,9 +352,33 @@ export default function InfluencerChatConversationScreen() {
                   <View style={[
                     styles.bubble,
                     isMe ? styles.bubbleMe : styles.bubbleThem,
-                    isCampaign && styles.campaignBubble
+                    (isCampaign || isCollabAccepted) && styles.campaignBubble
                   ]}>
-                    {isCampaign ? (
+                    {isCollabAccepted ? (
+                      <View style={styles.campaignCard}>
+                        <View style={styles.campaignCardHeader}>
+                          <HugeiconsIcon icon={CheckIcon} size={16} color={Colors.green} strokeWidth={2} />
+                          <Text style={[styles.campaignLabel, { color: Colors.green }]}>Collaboration Accepted</Text>
+                        </View>
+                        <Text style={styles.campaignTitle}>{m.campaignTitle}</Text>
+                        <Text style={[styles.campaignDesc, { color: Colors.ink, marginTop: 8 }]}>
+                          {m.content}
+                        </Text>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { backgroundColor: Colors.oxblood, marginTop: 12, width: '100%', height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }]}
+                          onPress={() => {
+                            router.push({
+                              pathname: '/collab/[id]' as any,
+                              params: { id: m.campaignId }
+                            });
+                          }}
+                        >
+                          <Text style={{ color: Colors.cream, fontWeight: '700', fontSize: 13 }}>
+                            View Collaboration Steps
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : isCampaign ? (
                       <View style={styles.campaignCard}>
                         <View style={styles.campaignCardHeader}>
                           <HugeiconsIcon icon={Pin02FreeIcons} size={16} color={Colors.roseSoft} strokeWidth={2} />

@@ -15,17 +15,13 @@ export interface CampaignWizardState {
   // Step 2
   reelCount: number;
   storyCount: number;
-  postCount: number;
   carouselCount: number;
   ytShortCount: number;
   ytVideoCount: number;
-  liveCount: number;
 
   paymentType: 'Paid' | 'Barter' | 'Hybrid';
   costPerCreator: string;
   numCreators: string;
-  paymentMethod: 'Bank Transfer' | 'UPI' | 'Wallet';
-  paymentTimeline: 'Before Posting' | 'After Approval' | '15 Days' | '30 Days';
 
   // Barter product
   prodName: string;
@@ -119,17 +115,13 @@ const initialValues: CampaignWizardState = {
 
   reelCount: 0,
   storyCount: 0,
-  postCount: 0,
   carouselCount: 0,
   ytShortCount: 0,
   ytVideoCount: 0,
-  liveCount: 0,
 
   paymentType: 'Paid',
   costPerCreator: '5000',
   numCreators: '5',
-  paymentMethod: 'Bank Transfer',
-  paymentTimeline: 'After Approval',
 
   prodName: '',
   prodValue: '',

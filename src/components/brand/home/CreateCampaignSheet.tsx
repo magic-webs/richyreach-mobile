@@ -58,13 +58,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       campPriority: 'Normal',
       reelCount: 1,
       storyCount: 0,
-      liveCount: 0,
-      postCount: 0,
       paymentType: 'Paid',
       costPerCreator: '5000',
       numCreators: '5',
-      paymentMethod: 'Bank Transfer',
-      paymentTimeline: 'After Approval',
       prodName: '',
       prodValue: '',
       prodDescription: '',
@@ -105,13 +101,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         campPriority: 'Normal',
         reelCount: 1,
         storyCount: 0,
-        liveCount: 0,
-        postCount: 0,
         paymentType: 'Paid',
         costPerCreator: '5000',
         numCreators: '5',
-        paymentMethod: 'Bank Transfer',
-        paymentTimeline: 'After Approval',
         prodName: '',
         prodValue: '',
         prodDescription: '',
@@ -212,8 +204,6 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       const selectedDeliverables: string[] = [];
       if (data.reelCount > 0) selectedDeliverables.push(`${data.reelCount} Reel(s)`);
       if (data.storyCount > 0) selectedDeliverables.push(`${data.storyCount} Story(ies)`);
-      if (data.postCount > 0) selectedDeliverables.push(`${data.postCount} Post(s)`);
-      if (data.liveCount > 0) selectedDeliverables.push(`${data.liveCount} Live Session(s)`);
 
       const deliverablesDesc = selectedDeliverables.join(', ') || 'General Deliverables';
 
@@ -238,11 +228,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         deliverables: [
           { type: 'reel', quantity: data.reelCount },
           { type: 'story', quantity: data.storyCount },
-          { type: 'post', quantity: data.postCount },
-          { type: 'live', quantity: data.liveCount },
         ].filter((d) => d.quantity > 0),
-        paymentMethod: data.paymentMethod,
-        paymentTimeline: data.paymentTimeline,
         costPerCreator: data.paymentType === 'Paid' ? (parseInt(data.costPerCreator) || 0) : 0,
         numCreators: data.paymentType === 'Paid' ? (parseInt(data.numCreators) || 0) : 1,
         productInfo:
