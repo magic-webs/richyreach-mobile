@@ -375,7 +375,7 @@ export default function ProfileScreen() {
           {/* Settings */}
           <View style={{ marginTop: 24 }}>
             <Text style={styles.settingsLabel}>Settings</Text>
-            <View style={styles.settingsList}>
+            <View style={{ gap: 4 }}>
               {SETTINGS.map(([icon, label, value, key], k) => {
                 const displayVal = key === 'wallet' ? (loadingEarnings ? '...' : displayAvailable) : value;
                 return (
@@ -389,32 +389,43 @@ export default function ProfileScreen() {
                       }
                     }}
                     activeOpacity={0.8}
-                    style={[styles.settingRow, k < SETTINGS.length - 1 && styles.settingBorder]}
+                    style={styles.menuItemRow}
                   >
-                    <View style={styles.settingIcon}><Icon name={icon} size={17} color={Colors.oxblood} /></View>
-                    <Text style={styles.settingLabel}>{label}</Text>
-                    {displayVal ? <Text style={styles.settingValue}>{displayVal}</Text> : null}
-                    <Icon name="chevron" size={16} color="rgba(63,3,11,0.3)" />
+                    <View style={styles.menuItemLeft}>
+                      <Icon name={icon} size={16} color={Colors.oxblood} />
+                      <Text style={styles.menuItemText}>{label}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {displayVal ? <Text style={styles.menuItemValue}>{displayVal}</Text> : null}
+                      <Icon name="chevron" size={14} color="rgba(63,3,11,0.3)" />
+                    </View>
                   </TouchableOpacity>
                 );
               })}
-            </View>
-            <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.switchAccountBtn} activeOpacity={0.8}>
-              <Icon name="swap" size={18} color={Colors.oxblood} />
-              <Text style={styles.switchAccountText}>Switch or add creator profile</Text>
-            </TouchableOpacity>
+              
+              <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.menuItemRow} activeOpacity={0.8}>
+                <View style={styles.menuItemLeft}>
+                  <Icon name="swap" size={16} color={Colors.oxblood} />
+                  <Text style={styles.menuItemText}>Switch or add creator profile</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Icon name="chevron" size={14} color="rgba(63,3,11,0.3)" />
+                </View>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={async () => {
-                await logout();
-                router.replace('/(auth)');
-              }}
-              style={[styles.switchAccountBtn, { borderColor: 'rgba(255,59,48,0.3)', marginTop: 8 }]}
-              activeOpacity={0.8}
-            >
-              <Icon name="logout" size={18} color="#FF3B30" />
-              <Text style={[styles.switchAccountText, { color: '#FF3B30' }]}>Logout</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  setSheet(null);
+                  await logout();
+                  router.replace('/(auth)');
+                }}
+                style={styles.menuLogoutBtn}
+                activeOpacity={0.8}
+              >
+                <Icon name="logout" size={16} color="#FF3B30" />
+                <Text style={styles.menuLogoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -556,14 +567,48 @@ const styles = StyleSheet.create({
   tabIndicator: { position: 'absolute', bottom: -0.5, left: 0, right: 0, height: 2.5, backgroundColor: Colors.oxblood, borderRadius: 99 },
 
   settingsLabel: { fontSize: 12, fontWeight: '700', color: Colors.rose, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
-  settingsList: { backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', ...Shadow.card },
-  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 16, paddingVertical: 13 },
-  settingBorder: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
-  settingIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(180,106,116,0.12)', alignItems: 'center', justifyContent: 'center' },
-  settingLabel: { flex: 1, fontSize: 14.5, color: Colors.ink, fontWeight: '600' },
-  settingValue: { fontSize: 13, color: Colors.rose, fontWeight: '700' },
-  switchAccountBtn: { marginTop: 12, height: 48, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(63,3,11,0.25)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  switchAccountText: { fontWeight: '700', fontSize: 14, color: Colors.oxblood },
+  menuItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.06)'
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  menuItemText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    color: Colors.ink,
+    fontWeight: '600'
+  },
+  menuItemValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.rose,
+    fontWeight: '700'
+  },
+  menuLogoutBtn: {
+    marginTop: 12,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,59,48,0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8
+  },
+  menuLogoutText: {
+    fontFamily: FontFamily.sansMedium,
+    fontWeight: '700',
+    fontSize: 13.5,
+    color: '#FF3B30'
+  },
   coinPill: {
     flexDirection: 'row',
     alignItems: 'center',
