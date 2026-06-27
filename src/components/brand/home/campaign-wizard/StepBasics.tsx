@@ -50,7 +50,10 @@ export function StepBasics() {
         <Controller
           control={control}
           name="campName"
-          rules={{ required: 'Campaign name is required' }}
+          rules={{
+            required: 'Campaign name is required',
+            minLength: { value: 5, message: 'Campaign name must be at least 5 characters' }
+          }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               style={[styles.formInput, errors.campName && styles.formInputError]}
@@ -134,7 +137,10 @@ export function StepBasics() {
         <Controller
           control={control}
           name="campDescription"
-          rules={{ required: 'Campaign description is required' }}
+          rules={{
+            required: 'Campaign description is required',
+            minLength: { value: 10, message: 'Campaign description must be at least 10 characters' }
+          }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               style={[styles.formInput, styles.textArea, errors.campDescription && styles.formInputError]}

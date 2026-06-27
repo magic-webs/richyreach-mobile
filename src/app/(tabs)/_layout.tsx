@@ -138,6 +138,7 @@ function CustomTabBar({ state, navigation }: any) {
     'referral',
     'arena/[id]',
     'brand/analytics',
+    'brand/wallet',
   ];
 
   if (activeRouteName && hiddenRoutes.some((r) => activeRouteName.startsWith(r))) {

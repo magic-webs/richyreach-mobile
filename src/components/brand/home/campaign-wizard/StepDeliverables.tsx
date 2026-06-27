@@ -11,29 +11,27 @@ export function StepDeliverables() {
   const { updateField } = useCampaignWizardStore();
   const { control, setValue, trigger, watch, formState: { errors } } = useFormContext();
 
-  const reelCount = watch('reelCount');
-  const storyCount = watch('storyCount');
   const paymentType = watch('paymentType');
-  const costPerCreator = watch('costPerCreator');
+  const campaignBudget = watch('campaignBudget');
   const numCreators = watch('numCreators');
 
-  const cost = parseInt(costPerCreator) || 0;
+  const totalBudget = parseInt(campaignBudget) || 0;
   const creators = parseInt(numCreators) || 0;
-  const totalBudget = cost * creators;
-
-  const isDeliverablesInvalid = reelCount === 0 && storyCount === 0;
+  const platformFee = totalBudget > 0 ? 1000 : 0;
+  const netPayout = Math.max(0, totalBudget - platformFee);
+  const costPerCreatorCalculated = creators > 0 ? Math.floor(netPayout / creators) : 0;
 
   const handleNext = async () => {
     const fieldsToValidate = [];
     if (paymentType === 'Paid' || paymentType === 'Hybrid') {
-      fieldsToValidate.push('costPerCreator', 'numCreators');
+      fieldsToValidate.push('campaignBudget', 'numCreators');
     }
     if (paymentType === 'Barter' || paymentType === 'Hybrid') {
       fieldsToValidate.push('prodName', 'prodValue');
     }
 
     const isValid = await trigger(fieldsToValidate);
-    if (isValid && !isDeliverablesInvalid) {
+    if (isValid) {
       updateField('createStep', 3);
     }
   };
@@ -44,43 +42,6 @@ export function StepDeliverables() {
 
   return (
     <View style={{ gap: 16 }}>
-      {/* Deliverables Card */}
-      <View style={[styles.sectionCard, isDeliverablesInvalid && styles.sectionCardError]}>
-        <Text style={styles.sectionHeader}>Deliverables Quantity *</Text>
-
-        {/* Reels */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>Instagram Reel</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('reelCount', Math.max(0, reelCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{reelCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('reelCount', reelCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Stories */}
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>Instagram Story</Text>
-          <View style={styles.counterControls}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('storyCount', Math.max(0, storyCount - 1))}>
-              <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.counterValue}>{storyCount}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => setValue('storyCount', storyCount + 1)}>
-              <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {isDeliverablesInvalid && (
-          <Text style={styles.errorText}>Please select at least 1 deliverable quantity</Text>
-        )}
-      </View>
-
       {/* Campaign Type Selector */}
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Campaign Type *</Text>
@@ -231,19 +192,20 @@ export function StepDeliverables() {
           <Text style={styles.sectionHeader}>Budget Configuration</Text>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Cost per Creator (₹) *</Text>
+            <Text style={styles.formLabel}>Total Campaign Budget (₹) *</Text>
             <Controller
               control={control}
-              name="costPerCreator"
+              name="campaignBudget"
               rules={{
-                required: 'Cost per creator is required',
-                pattern: { value: /^\d+$/, message: 'Must be a valid number' }
+                required: 'Total campaign budget is required',
+                pattern: { value: /^\d+$/, message: 'Must be a valid number' },
+                validate: (val) => parseInt(val) >= 1000 || 'Minimum budget is ₹1,000 to cover platform fee'
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextInput
-                  style={[styles.formInput, errors.costPerCreator && styles.formInputError]}
+                  style={[styles.formInput, errors.campaignBudget && styles.formInputError]}
                   keyboardType="numeric"
-                  placeholder="e.g. 5000"
+                  placeholder="e.g. 10000"
                   placeholderTextColor="rgba(63,3,11,0.35)"
                   onBlur={onBlur}
                   onChangeText={onChange}
@@ -251,7 +213,7 @@ export function StepDeliverables() {
                 />
               )}
             />
-            {errors.costPerCreator && <Text style={styles.errorText}>{errors.costPerCreator.message as string}</Text>}
+            {errors.campaignBudget && <Text style={styles.errorText}>{errors.campaignBudget.message as string}</Text>}
           </View>
 
           <View style={styles.formGroup}>
@@ -261,7 +223,8 @@ export function StepDeliverables() {
               name="numCreators"
               rules={{
                 required: 'Number of creators is required',
-                pattern: { value: /^\d+$/, message: 'Must be a valid number' }
+                pattern: { value: /^\d+$/, message: 'Must be a valid number' },
+                validate: (val) => parseInt(val) > 0 || 'Must be at least 1 creator'
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextInput
@@ -279,10 +242,22 @@ export function StepDeliverables() {
           </View>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Auto Calculated Budget</Text>
+            <Text style={styles.summaryTitle}>Budget Breakdown</Text>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Budget</Text>
-              <Text style={styles.totalBudgetPrice}>₹{totalBudget.toLocaleString('en-IN')}</Text>
+              <Text style={styles.summaryLabel}>Total Campaign Budget</Text>
+              <Text style={styles.summaryVal}>₹{totalBudget.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Platform Fee (Deducted)</Text>
+              <Text style={[styles.summaryVal, { color: '#e74c3c' }]}>-₹{platformFee.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Net Creators Payout</Text>
+              <Text style={styles.summaryVal}>₹{netPayout.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={[styles.summaryRow, { borderTopWidth: 0.5, borderTopColor: 'rgba(63,3,11,0.08)', marginTop: 6, paddingTop: 6 }]}>
+              <Text style={styles.summaryLabel}>Estimated Pay per Creator</Text>
+              <Text style={styles.totalBudgetPrice}>₹{costPerCreatorCalculated.toLocaleString('en-IN')}</Text>
             </View>
           </View>
         </View>
@@ -448,6 +423,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 12.5,
     color: 'rgba(63,3,11,0.55)',
+  },
+  summaryVal: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    fontWeight: '600',
   },
   totalBudgetPrice: {
     fontFamily: FontFamily.sans,

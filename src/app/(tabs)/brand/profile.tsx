@@ -279,10 +279,10 @@ export default function BrandProfileScreen() {
     enabled: !!activeProfileId,
   });
 
-  // Fetch real wallet transactions/balance for billing
+  // Fetch brand wallet balance for billing section
   const { data: walletData } = useQuery<any>({
     queryKey: ['brandWallet', activeProfileId],
-    queryFn: () => api.wallet.balance().catch(() => null),
+    queryFn: () => api.brands.wallet.balance(activeProfileId).catch(() => null),
     enabled: !!activeProfileId,
   });
 
@@ -418,6 +418,28 @@ export default function BrandProfileScreen() {
             {profile?.description || 'No profile description set up. Setup your profile details to connect with creators.'}
           </Text>
 
+          {/* Wallet Card */}
+          <TouchableOpacity
+            style={styles.walletCard}
+            onPress={() => router.push('/brand/wallet' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.walletLeft}>
+              <View style={styles.walletIconBox}>
+                <Icon name="wallet" size={18} color={Colors.cream} />
+              </View>
+              <View>
+                <Text style={styles.walletLabel}>Wallet Balance</Text>
+                <Text style={styles.walletValue}>
+                  ₹{walletData?.balance?.rupees?.toLocaleString('en-IN') ?? '0'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.walletAddBtn}>
+              <Text style={styles.walletAddText}>+ Add Money</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Stats Grid */}
           <View style={styles.statsCard}>
             <View style={styles.statCol}>
@@ -540,7 +562,7 @@ export default function BrandProfileScreen() {
             {[
               { icon: 'edit', label: 'Edit brand profile', value: '', key: 'edit_profile' },
               { icon: 'gift', label: 'Refer & earn', value: '₹100 + Points', key: 'referral' },
-              { icon: 'wallet', label: 'Invoices & billing', value: '₹11.8L', key: 'billing' },
+              { icon: 'wallet', label: 'Invoices & billing', value: walletData?.balance?.rupees != null ? `₹${walletData.balance.rupees.toLocaleString('en-IN')}` : '', key: 'billing' },
               { icon: 'users', label: 'Team management', value: '3 members', key: 'team' },
               { icon: 'bell', label: 'Notifications', value: '', key: 'notifications' },
               { icon: 'lock', label: 'Privacy & security', value: '', key: 'security' },
@@ -593,27 +615,35 @@ export default function BrandProfileScreen() {
         <BottomSheet visible={true} title="Invoices & billing" icon="wallet" onClose={() => setSheet('menu')}>
           <View style={{ gap: 14 }}>
             <View style={styles.sheetInfoCard}>
-              <Text style={styles.sheetInfoTitle}>Billing Overview</Text>
+              <Text style={styles.sheetInfoTitle}>Brand Wallet</Text>
               <Text style={styles.sheetInfoText}>
-                Wallet Balance: {walletData ? `₹${walletData.rupeeValue.toLocaleString()}` : '₹0'} ({walletData ? walletData.coinBalance.toLocaleString() : 0} coins)
+                Balance: {walletData ? `₹${walletData.balance?.rupees?.toLocaleString('en-IN') ?? '0'}` : '₹0'}
               </Text>
             </View>
+            <TouchableOpacity
+              style={[styles.sheetInfoCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              onPress={() => { setSheet(null); router.push('/brand/wallet' as any); }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.sheetInfoTitle, { marginBottom: 0 }]}>Open Wallet</Text>
+              <Text style={{ fontSize: 16, color: Colors.oxblood }}>→</Text>
+            </TouchableOpacity>
             <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
               {walletData?.transactions && walletData.transactions.length > 0 ? (
-                walletData.transactions.map((tx: any) => (
+                walletData.transactions.slice(0, 5).map((tx: any) => (
                   <View key={tx.id} style={styles.invoiceItem}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.invoiceTitle}>{tx.description || tx.type.toUpperCase()}</Text>
+                      <Text style={styles.invoiceTitle}>{tx.description || tx.transactionType}</Text>
                       <Text style={styles.invoiceDate}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
                     </View>
                     <Text style={[styles.invoiceAmount, { color: tx.type === 'credit' ? '#2a7a5a' : Colors.oxblood }]}>
-                      {tx.type === 'credit' ? '+' : '-'}₹{(tx.amount / 100).toLocaleString()}
+                      {tx.type === 'credit' ? '+' : '-'}₹{(tx.amount / 100).toLocaleString('en-IN')}
                     </Text>
                   </View>
                 ))
               ) : (
                 <Text style={{ textAlign: 'center', color: 'rgba(63,3,11,0.45)', marginVertical: 24, fontSize: 13.5 }}>
-                  No transaction history found.
+                  No transactions yet. Add money to get started.
                 </Text>
               )}
             </ScrollView>
@@ -845,12 +875,64 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansRegular
   },
 
+  walletCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.oxblood,
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginTop: 20,
+    ...Shadow.card,
+  },
+  walletLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  walletIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(232,216,204,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(232,216,204,0.6)',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  walletValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  walletAddBtn: {
+    backgroundColor: 'rgba(232,216,204,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(232,216,204,0.28)',
+  },
+  walletAddText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: Colors.cream,
+  },
+
   statsCard: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderRadius: 18,
     paddingVertical: 16,
-    marginTop: 20,
+    marginTop: 14,
     alignItems: 'center',
     justifyContent: 'space-around',
     borderWidth: 1,

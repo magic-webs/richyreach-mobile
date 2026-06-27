@@ -64,7 +64,7 @@ export function StepGuidelines() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Brand Tone</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['Professional', 'Fun', 'Luxury', 'Casual'] as const).map((tone) => {
+          {(['Professional', 'Fun', 'Luxury', 'Casual', 'Bold', 'Inspirational', 'Humorous', 'Authentic'] as const).map((tone) => {
             const active = brandTone === tone;
             return (
               <TouchableOpacity

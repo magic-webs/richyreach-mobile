@@ -6,6 +6,8 @@ import { Colors, FontFamily } from '@/constants/brand';
 import { Calendar03Icon, Image01Icon, ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useFormContext, Controller } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 import { useCampaignWizardStore } from '@/store/campaignWizard';
 
@@ -86,12 +88,12 @@ function CalendarModal({ visible, onClose, onApply, initialStart, initialEnd }: 
     const firstDay = new Date(year, month, 1);
     const startDayOfWeek = firstDay.getDay(); // 0 = Sun, 6 = Sat
     const days = [];
-    
+
     // Padding
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     const tempDate = new Date(year, month, 1);
     while (tempDate.getMonth() === month) {
       days.push(new Date(tempDate));
@@ -107,7 +109,7 @@ function CalendarModal({ visible, onClose, onApply, initialStart, initialEnd }: 
           {/* Header */}
           <View style={styles.calendarHeader}>
             <View>
-              <Text style={styles.calendarHeaderTitle}>Select Travel Dates</Text>
+              <Text style={styles.calendarHeaderTitle}>Select Campaign Dates</Text>
               <Text style={styles.calendarRangeLabel}>
                 {start ? formatDisplayDate(start) : 'Start'} to {end ? formatDisplayDate(end) : 'End'}
               </Text>
@@ -124,7 +126,7 @@ function CalendarModal({ visible, onClose, onApply, initialStart, initialEnd }: 
               return (
                 <View key={index} style={styles.monthSection}>
                   <Text style={styles.monthName}>{monthsLong[month]} {year}</Text>
-                  
+
                   {/* Weekday labels */}
                   <View style={styles.weekdayRow}>
                     {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w) => (
@@ -138,7 +140,7 @@ function CalendarModal({ visible, onClose, onApply, initialStart, initialEnd }: 
                       if (!day) {
                         return <View key={dIdx} style={styles.dayCellEmpty} />;
                       }
-                      
+
                       const dateStr = formatDateString(day);
                       const isPast = isDateInPast(day);
                       const isStart = dateStr === start;
@@ -246,7 +248,7 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
   const campNiche = watch('campNiche');
   const campObjective = watch('campObjective');
   const paymentType = watch('paymentType');
-  const costPerCreator = watch('costPerCreator');
+  const campaignBudget = watch('campaignBudget');
   const numCreators = watch('numCreators');
   const campLocationValue = watch('campLocationValue');
   const campLocationType = watch('campLocationType');
@@ -254,9 +256,31 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
 
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const cost = parseInt(costPerCreator) || 0;
-  const creators = parseInt(numCreators) || 0;
-  const totalBudget = cost * creators;
+  // Fetch campaign image templates
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ['campaignTemplates'],
+    queryFn: async () => {
+      const res = await api.campaigns.getTemplates();
+      return res || [];
+    },
+  });
+
+  // Filter templates by selected campaign niche
+  const filteredTemplates = templates.filter(
+    (t) => t.category?.toLowerCase() === campNiche?.toLowerCase()
+  );
+  // Fallback to "General" or show all if niche matches nothing
+  const templatesToShow = filteredTemplates.length > 0
+    ? filteredTemplates
+    : templates.filter((t) => t.category?.toLowerCase() === 'general').length > 0
+      ? templates.filter((t) => t.category?.toLowerCase() === 'general')
+      : templates;
+
+  const totalBudget = parseInt(campaignBudget) || 0;
+  const creators = parseInt(numCreators) || 1;
+  const platformFee = totalBudget > 0 ? 1000 : 0;
+  const netPayout = Math.max(0, totalBudget - platformFee);
+  const costPerCreatorCalculated = creators > 0 ? Math.floor(netPayout / creators) : 0;
 
   const handleBack = () => {
     updateField('createStep', 4);
@@ -295,23 +319,51 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
     <View style={{ gap: 16 }}>
       <View style={styles.sectionCard}>
         <Text style={styles.sectionHeader}>Media Guidelines & Links</Text>
-        
+
         {/* Campaign Banner Picker */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Campaign Banner Image</Text>
-          {campaignBannerUri ? (
-            <View style={styles.imagePreviewContainer}>
+
+          {campaignBannerUri && (
+            <View style={[styles.imagePreviewContainer, { marginBottom: 12 }]}>
               <Image source={{ uri: campaignBannerUri }} style={styles.imagePreview} />
               <TouchableOpacity style={styles.clearImageBtn} onPress={() => clearImage('campaignBannerUri')}>
                 <HugeiconsIcon icon={Cancel01Icon} size={12} color="#fff" />
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity style={styles.imagePickerBtn} onPress={() => pickImage('campaignBannerUri')} activeOpacity={0.8}>
-              <HugeiconsIcon icon={Image01Icon} size={20} color={Colors.roseDeep} />
-              <Text style={styles.imagePickerText}>Select from device</Text>
-            </TouchableOpacity>
           )}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.templatesScroll}>
+            {/* Device Picker Card */}
+            <TouchableOpacity
+              style={[styles.templateCard, styles.devicePickerCard]}
+              onPress={() => pickImage('campaignBannerUri')}
+              activeOpacity={0.8}
+            >
+              <HugeiconsIcon icon={Image01Icon} size={20} color={Colors.roseDeep} />
+              <Text style={styles.devicePickerText}>Upload custom</Text>
+            </TouchableOpacity>
+
+            {/* Template Cards */}
+            {templatesToShow.map((tmpl) => {
+              const active = campaignBannerUri === tmpl.imageUrl;
+              return (
+                <TouchableOpacity
+                  key={tmpl.id}
+                  style={[styles.templateCard, active && styles.templateCardActive]}
+                  onPress={() => setValue('campaignBannerUri', tmpl.imageUrl, { shouldValidate: true })}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: tmpl.imageUrl }} style={styles.templateImage} />
+                  {active && (
+                    <View style={styles.activeOverlay}>
+                      <Text style={styles.activeCheck}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         <View style={styles.formGroup}>
@@ -336,13 +388,13 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
       {/* Campaign Timeline section with Range Calendar select */}
       <View style={styles.sectionCard}>
         <Text style={styles.sectionHeader}>Campaign Timeline Dates *</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[
-            styles.dateRangePickerBtn, 
+            styles.dateRangePickerBtn,
             (errors.startDate || errors.endDate || errors.applicationDeadline) && styles.dateRangePickerBtnError
-          ]} 
-          activeOpacity={0.85} 
+          ]}
+          activeOpacity={0.85}
           onPress={() => setCalendarOpen(true)}
         >
           <HugeiconsIcon icon={Calendar03Icon} size={18} color={Colors.oxblood} />
@@ -388,10 +440,24 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
           <Text style={styles.summaryValue}>{paymentType}</Text>
         </View>
         {paymentType !== 'Barter' && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Calculated Budget</Text>
-            <Text style={styles.summaryValue}>₹{totalBudget.toLocaleString('en-IN')}</Text>
-          </View>
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Budget</Text>
+              <Text style={styles.summaryValue}>₹{totalBudget.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Platform Fee (Deducted)</Text>
+              <Text style={[styles.summaryValue, { color: '#e74c3c' }]}>-₹{platformFee.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Net Creators Payout</Text>
+              <Text style={styles.summaryValue}>₹{netPayout.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Est. Pay per Creator</Text>
+              <Text style={[styles.summaryValue, { color: Colors.oxblood, fontWeight: '700' }]}>₹{costPerCreatorCalculated.toLocaleString('en-IN')}</Text>
+            </View>
+          </>
         )}
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Target Location</Text>
@@ -588,7 +654,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 10,
   },
-  
+
   // Custom Range Calendar Modal styles
   modalOverlay: {
     flex: 1,
@@ -734,5 +800,52 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     marginTop: 4,
     marginBottom: 4,
+  },
+  templatesScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  templateCard: {
+    width: 100,
+    height: 70,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  templateCardActive: {
+    borderColor: Colors.oxblood,
+    borderWidth: 2,
+  },
+  templateImage: {
+    width: '100%',
+    height: '100%',
+  },
+  devicePickerCard: {
+    borderStyle: 'dashed',
+    borderColor: Colors.roseDeep,
+    gap: 4,
+  },
+  devicePickerText: {
+    fontSize: 9.5,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.roseDeep,
+    textAlign: 'center',
+  },
+  activeOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(180, 106, 116, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeCheck: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

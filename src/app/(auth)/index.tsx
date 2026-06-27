@@ -201,12 +201,12 @@ export default function AuthScreen() {
         showsVerticalScrollIndicator={false}
       >
         <PageWrapper>
-          <View className="flex-1 justify-center px-2 py-10">
+          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 40 }}>
 
             {step === 'request' ? (
               <>
                 {/* Header / Logo */}
-                <View className="items-center mb-8">
+                <View style={{ alignItems: 'center', marginBottom: 32 }}>
                   <Image
                     source={require('@/assets/images/richyreach-logo.png')}
                     style={{ width: 100, height: 100 }}
@@ -221,7 +221,7 @@ export default function AuthScreen() {
                 </View>
 
                 {/* Login / Signup Selector */}
-                <View className="flex-row mb-6 relative w-56 self-center">
+                <View style={{ flexDirection: 'row', marginBottom: 24, position: 'relative', width: 224, alignSelf: 'center' }}>
                   <Animated.View
                     style={{
                       position: 'absolute',
@@ -234,7 +234,7 @@ export default function AuthScreen() {
                   />
                   <TouchableOpacity
                     onPress={() => setMode('login')}
-                    className="flex-1 py-2 items-center"
+                    style={{ flex: 1, paddingVertical: 8, alignItems: 'center' }}
                     activeOpacity={0.8}
                   >
                     <Text style={{
@@ -247,7 +247,7 @@ export default function AuthScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setMode('signup')}
-                    className="flex-1 py-2 items-center"
+                    style={{ flex: 1, paddingVertical: 8, alignItems: 'center' }}
                     activeOpacity={0.8}
                   >
                     <Text style={{
@@ -262,8 +262,8 @@ export default function AuthScreen() {
 
                 {/* Role Toggle */}
                 {mode === 'signup' && (
-                  <View className="mb-6 bg-white rounded-full p-1.5" style={Shadow.card}>
-                    <View className="flex-row relative">
+                  <View style={[{ marginBottom: 24, backgroundColor: 'white', borderRadius: 999, padding: 6 }, Shadow.card]}>
+                    <View style={{ flexDirection: 'row', position: 'relative' }}>
                       <Animated.View
                         style={{
                           position: 'absolute',
@@ -276,7 +276,7 @@ export default function AuthScreen() {
                         }}
                       />
                       <TouchableOpacity
-                        className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 999, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', zIndex: 10 }}
                         onPress={() => setLocalRole('influencer')}
                         activeOpacity={0.8}
                       >
@@ -284,7 +284,7 @@ export default function AuthScreen() {
                         <Text style={{ fontFamily: FontFamily.sans, fontSize: 13, marginLeft: 6, color: role === 'influencer' ? Colors.cream : Colors.oxblood }}>Creator</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        className="flex-1 py-3 rounded-full items-center justify-center flex-row z-10"
+                        style={{ flex: 1, paddingVertical: 12, borderRadius: 999, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', zIndex: 10 }}
                         onPress={() => setLocalRole('brand')}
                         activeOpacity={0.8}
                       >
@@ -296,8 +296,8 @@ export default function AuthScreen() {
                 )}
 
                 {/* Method Selector (Email vs WhatsApp) */}
-                <View className="mb-6 bg-white rounded-xl p-1" style={Shadow.card}>
-                  <View className="flex-row relative">
+                <View style={[{ marginBottom: 24, backgroundColor: 'white', borderRadius: 12, padding: 4 }, Shadow.card]}>
+                  <View style={{ flexDirection: 'row', position: 'relative' }}>
                     <Animated.View
                       style={{
                         position: 'absolute',
@@ -310,7 +310,7 @@ export default function AuthScreen() {
                       }}
                     />
                     <TouchableOpacity
-                      className="flex-1 py-2.5 rounded-lg items-center justify-center flex-row z-10"
+                      style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', zIndex: 10 }}
                       onPress={() => setMethod('email')}
                       activeOpacity={0.8}
                     >
@@ -318,7 +318,7 @@ export default function AuthScreen() {
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, marginLeft: 6, color: method === 'email' ? '#fff' : Colors.rose }}>Email OTP</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      className="flex-1 py-2.5 rounded-lg items-center justify-center flex-row z-10"
+                      style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', zIndex: 10 }}
                       onPress={() => setMethod('whatsapp')}
                       activeOpacity={0.8}
                     >
@@ -329,15 +329,14 @@ export default function AuthScreen() {
                 </View>
 
                 {/* Form Input Fields */}
-                <View className="gap-4 mb-8">
+                <View style={{ gap: 16, marginBottom: 32 }}>
                   {mode === 'signup' && (
                     <View>
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Full Name</Text>
-                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                      <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 20, height: 56 }, Shadow.card]}>
                         <Icon name="user" size={18} color={Colors.rose} />
                         <TextInput
-                          className="flex-1 ml-3 h-full"
-                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          style={{ flex: 1, marginLeft: 12, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
                           placeholder="Enter your name"
                           placeholderTextColor="rgba(63,3,11,0.3)"
                           value={name}
@@ -351,11 +350,10 @@ export default function AuthScreen() {
                   {method === 'email' ? (
                     <View>
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Email Address</Text>
-                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                      <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 20, height: 56 }, Shadow.card]}>
                         <Icon name="mail" size={18} color={Colors.rose} />
                         <TextInput
-                          className="flex-1 ml-3 h-full"
-                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          style={{ flex: 1, marginLeft: 12, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
                           placeholder="Enter your email"
                           placeholderTextColor="rgba(63,3,11,0.3)"
                           value={email}
@@ -369,11 +367,10 @@ export default function AuthScreen() {
                   ) : (
                     <View>
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>WhatsApp Number</Text>
-                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                      <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 20, height: 56 }, Shadow.card]}>
                         <Icon name="phone" size={18} color={Colors.rose} />
                         <TextInput
-                          className="flex-1 ml-3 h-full"
-                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          style={{ flex: 1, marginLeft: 12, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
                           placeholder="+91 XXXXX XXXXX"
                           placeholderTextColor="rgba(63,3,11,0.3)"
                           value={phone}
@@ -388,11 +385,10 @@ export default function AuthScreen() {
                   {mode === 'signup' && (
                     <View>
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>Referral Code (Optional)</Text>
-                      <View className="flex-row items-center bg-white rounded-2xl px-5 h-14" style={Shadow.card}>
+                      <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 20, height: 56 }, Shadow.card]}>
                         <Icon name="gift" size={18} color={Colors.rose} />
                         <TextInput
-                          className="flex-1 ml-3 h-full"
-                          style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          style={{ flex: 1, marginLeft: 12, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
                           placeholder="e.g. RR_ALEX1234"
                           placeholderTextColor="rgba(63,3,11,0.3)"
                           value={referralCode}
@@ -431,7 +427,7 @@ export default function AuthScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
 
-                <View className="items-center mt-8">
+                <View style={{ alignItems: 'center', marginTop: 32 }}>
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', textAlign: 'center', lineHeight: 18 }}>
                     By continuing, you agree to {"RichyReach's"}{'\n'}
                     <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Terms of Service</Text> and <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Privacy Policy</Text>
@@ -443,15 +439,14 @@ export default function AuthScreen() {
                 {/* Back Button */}
                 <TouchableOpacity
                   onPress={() => setStep('request')}
-                  className="absolute top-12 left-6 p-2 rounded-full bg-white/40"
-                  style={Shadow.card}
+                  style={[{ position: 'absolute', top: 48, left: 24, padding: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.4)' }, Shadow.card]}
                 >
                   <Icon name="back" size={20} color={Colors.oxblood} />
                 </TouchableOpacity>
 
                 {/* Verification Header */}
-                <View className="items-center mb-8">
-                  <View className="w-16 h-16 bg-white rounded-full items-center justify-center mb-6" style={Shadow.card}>
+                <View style={{ alignItems: 'center', marginBottom: 32 }}>
+                  <View style={[{ width: 64, height: 64, backgroundColor: 'white', borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }, Shadow.card]}>
                     <Icon name={method === 'email' ? 'mail' : 'phone'} size={28} color={Colors.rose} />
                   </View>
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 32, color: Colors.ink, textAlign: 'center', lineHeight: 38 }}>
@@ -464,18 +459,18 @@ export default function AuthScreen() {
                 </View>
 
                 {/* OTP Box Inputs */}
-                <View className="items-center w-full">
+                <View style={{ alignItems: 'center', width: '100%' }}>
                   <View style={{ position: 'relative', width: '100%', height: 64, marginVertical: 24 }}>
                     {/* The OTP Box display */}
-                    <View className="flex-row justify-between w-full h-full px-1" pointerEvents="none">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', height: '100%', paddingHorizontal: 4 }} pointerEvents="none">
                       {codeArray.map((_, index) => {
                         const char = otp[index] || '';
                         const isFocused = otp.length === index;
                         return (
                           <View
                             key={index}
-                            className="w-[44px] h-16 bg-white rounded-2xl items-center justify-center border"
                             style={[
+                              { width: 44, height: 64, backgroundColor: 'white', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
                               Shadow.card,
                               {
                                 borderColor: isFocused ? Colors.oxblood : 'rgba(63,3,11,0.06)',
@@ -524,8 +519,7 @@ export default function AuthScreen() {
                   onPress={handleVerifyOtp}
                   activeOpacity={0.85}
                   disabled={loading}
-                  style={[Shadow.button, { borderRadius: Radius.xl }]}
-                  className="mt-6"
+                  style={[Shadow.button, { borderRadius: Radius.xl, marginTop: 24 }]}
                 >
                   <LinearGradient
                     colors={[Colors.oxblood, Colors.oxbloodDeep]}
@@ -547,7 +541,7 @@ export default function AuthScreen() {
                 </TouchableOpacity>
 
                 {/* Resend Actions */}
-                <View className="flex-row justify-center mt-8 items-center">
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32, alignItems: 'center' }}>
                   <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 13, color: 'rgba(63,3,11,0.5)' }}>
                     {"Didn't"} receive the code?
                   </Text>

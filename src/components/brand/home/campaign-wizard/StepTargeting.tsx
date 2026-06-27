@@ -36,7 +36,7 @@ export function StepTargeting() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Size Preference</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['Nano (1K-10K)', 'Micro (10K-100K)', 'Mid-tier (100K-500K)', 'Macro (500K-1M)', 'Mega (1M+)'] as const).map((size) => {
+          {(['Any', 'Nano (1K-10K)', 'Micro (10K-100K)', 'Mid-tier (100K-500K)', 'Macro (500K-1M)', 'Mega (1M+)'] as const).map((size) => {
             const active = creatorSize === size;
             return (
               <TouchableOpacity

@@ -31,8 +31,24 @@ async function request<T>(path: string, options?: RequestInit & { activeProfileI
     headers,
     ...options,
   });
-  const json = await res.json();
-  if (!res.ok || !json.success) throw new Error(json.error ?? 'Request failed');
+
+  const raw = await res.text();
+  let json: any;
+  try {
+    json = raw ? JSON.parse(raw) : {};
+  } catch {
+    // Response was not JSON (404 page, proxy/tunnel error, server crash, etc.)
+    const snippet = raw.slice(0, 120).trim();
+    throw new Error(`Server error (${res.status})${snippet ? `: ${snippet}` : ''}`);
+  }
+
+  if (!res.ok || !json.success) {
+    const msg =
+      typeof json.error === 'string'
+        ? json.error
+        : json.error?.message ?? json.message ?? `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
   return json.data as T;
 }
 
@@ -49,6 +65,7 @@ export const api = {
     list: () => request('/campaigns'),
     get: (id: string) => request(`/campaigns/${id}`),
     getPublic: (id: string) => request(`/campaigns/public/${id}`),
+    getTemplates: () => request<any[]>('/campaigns/templates'),
     create: (data: FormData | any, activeProfileId?: string | null) => {
       const isFormData = data instanceof FormData;
       return request('/campaigns/create', {
@@ -83,8 +100,8 @@ export const api = {
         body: isFormData ? data : JSON.stringify(data),
       });
     },
-    apply: (campaignId: string, proposal: string, bidAmount: number) =>
-      request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal, bidAmount }) }),
+    apply: (campaignId: string, proposal: string, bidAmount: number, reelCount?: number, storyCount?: number) =>
+      request(`/influencers/apply/${campaignId}`, { method: 'POST', body: JSON.stringify({ proposal, bidAmount, reelCount, storyCount }) }),
     acceptCounterOffer: (id: string) =>
       request(`/influencers/applications/${id}/accept-counter`, { method: 'POST' }),
     counterOffer: (id: string, bidAmount: number) =>
@@ -129,6 +146,16 @@ export const api = {
       request(`/brands/applications/${id}/review-script`, { method: 'POST', body: JSON.stringify({ status }), activeProfileId }),
     completeCollaboration: (id: string, activeProfileId?: string | null) =>
       request(`/brands/applications/${id}/complete`, { method: 'POST', activeProfileId }),
+    wallet: {
+      balance: (activeProfileId?: string | null) =>
+        request<any>('/brands/wallet', { activeProfileId }),
+      createOrder: (coins: number, activeProfileId?: string | null) =>
+        request<any>('/brands/wallet/create-order', { method: 'POST', body: JSON.stringify({ coins }), activeProfileId }),
+      verifyPayment: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; baseCoins: number; gstCoins: number }, activeProfileId?: string | null) =>
+        request<any>('/brands/wallet/verify', { method: 'POST', body: JSON.stringify(data), activeProfileId }),
+      transactions: (filter?: string, page?: number, activeProfileId?: string | null) =>
+        request<any>(`/brands/wallet/transactions?filter=${filter ?? 'all'}&page=${page ?? 1}`, { activeProfileId }),
+    },
   },
   chat: {
     rooms: () => request<any[]>('/chat/rooms'),

@@ -136,7 +136,7 @@ export default function CollabDetail() {
     }
     const numCreators = c.numCreators || 1;
     const costPerCreator = c.costPerCreator || (typeof c.budget === 'number' ? (c.budget / 100) / Math.max(1, numCreators) : 10000);
-    
+
     let brief = {};
     if (c.briefDetails) {
       try {
@@ -145,7 +145,7 @@ export default function CollabDetail() {
         brief = {};
       }
     }
-    
+
     let deliverables: string[] = [];
     // @ts-ignore
     if (brief.deliverables && Array.isArray(brief.deliverables)) {
@@ -242,8 +242,8 @@ export default function CollabDetail() {
   };
 
   const applyMutation = useMutation({
-    mutationFn: ({ proposal, bidAmount }: { proposal: string; bidAmount: number }) =>
-      api.influencers.apply(id, proposal, bidAmount),
+    mutationFn: ({ proposal, bidAmount, reelCount, storyCount }: { proposal: string; bidAmount: number; reelCount: number; storyCount: number }) =>
+      api.influencers.apply(id, proposal, bidAmount, reelCount, storyCount),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['collab', id] });
       const previousCollab = queryClient.getQueryData<any>(['collab', id]);
@@ -398,9 +398,9 @@ export default function CollabDetail() {
     setApplySheetOpen(true);
   };
 
-  const handleApplySubmit = (proposal: string, bidAmount: number) => {
+  const handleApplySubmit = (proposal: string, bidAmount: number, reelCount: number, storyCount: number) => {
     setApplySheetOpen(false);
-    applyMutation.mutate({ proposal, bidAmount });
+    applyMutation.mutate({ proposal, bidAmount, reelCount, storyCount });
   };
 
   if (isLoading || !cm) {
@@ -408,8 +408,6 @@ export default function CollabDetail() {
   }
 
   const facts = [
-    { icon: InstagramIcon, label: 'Platform', value: cm.platform },
-    { icon: Camera01Icon, label: 'Deliverables', value: cm.type },
     { icon: UserGroupIcon, label: 'Min. audience', value: cm.followers },
     { icon: Calendar01Icon, label: 'Timeline', value: cm.deadline },
   ];
@@ -671,7 +669,7 @@ export default function CollabDetail() {
                 <Icon name="gift" size={18} color={Colors.roseDeep} />
                 <Text style={styles.barterCardTitle}>Barter Product Details</Text>
               </View>
-              
+
               <View style={styles.barterDetailsGrid}>
                 <View style={styles.barterDetailRow}>
                   <Text style={styles.barterLabel}>Product Name</Text>
@@ -707,8 +705,8 @@ export default function CollabDetail() {
                 )}
 
                 {cm.prodUrl && (
-                  <TouchableOpacity 
-                    style={styles.barterLinkBtn} 
+                  <TouchableOpacity
+                    style={styles.barterLinkBtn}
                     onPress={() => Linking.openURL(cm.prodUrl)}
                     activeOpacity={0.8}
                   >
@@ -865,7 +863,9 @@ export default function CollabDetail() {
         onSubmit={handleApplySubmit}
         submitting={loading}
         campaignTitle={cm.title}
-        suggestedBudget={cm.budgetNum}
+        campaignCategory={cm.category}
+        suggestedBudget={Math.round(cm.costPerCreator * 100)}
+        totalBudget={cm.budgetNum}
       />
 
       {myApplication && (

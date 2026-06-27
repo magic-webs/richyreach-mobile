@@ -21,6 +21,7 @@ export interface CampaignWizardState {
 
   paymentType: 'Paid' | 'Barter' | 'Hybrid';
   costPerCreator: string;
+  campaignBudget: string;
   numCreators: string;
 
   // Barter product
@@ -35,7 +36,7 @@ export interface CampaignWizardState {
   selectedPlatforms: string[];
   minFollowers: string;
   minEngagementRate: string;
-  targetGender: 'Male' | 'Female' | 'All';
+  targetGender: 'Male' | 'Female' | 'Any';
   targetAgeRange: '18–24' | '25–34' | '35–44' | 'Custom';
   creatorSize: string;
   targetLanguage: string;
@@ -121,6 +122,7 @@ const initialValues: CampaignWizardState = {
 
   paymentType: 'Paid',
   costPerCreator: '5000',
+  campaignBudget: '5000',
   numCreators: '5',
 
   prodName: '',
@@ -133,9 +135,9 @@ const initialValues: CampaignWizardState = {
   selectedPlatforms: ['Instagram'],
   minFollowers: '10K',
   minEngagementRate: '3%',
-  targetGender: 'All',
+  targetGender: 'Any',
   targetAgeRange: '25–34',
-  creatorSize: 'Micro (10K-100K)',
+  creatorSize: 'Any',
   targetLanguage: 'English',
   audienceGenderPct: '60% Female',
   audienceAgePct: '70% 18-34',

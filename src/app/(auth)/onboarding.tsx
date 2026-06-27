@@ -55,7 +55,7 @@ function AnimatedDot({ active }: { active: boolean }) {
 
 function DotsRow({ current, total }: { current: number; total: number }) {
   return (
-    <View className="flex-row items-center gap-2">
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       {Array.from({ length: total }).map((_, i) => (
         <AnimatedDot key={i} active={i === current} />
       ))}
@@ -113,7 +113,7 @@ export default function OnboardingScreen() {
   const isFirst = currentIndex === 0;
 
   return (
-    <View className="flex-1 bg-[#f4ece4]">
+    <View style={{ flex: 1, backgroundColor: '#f4ece4' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#f4ece4" />
 
       {/*Skip button*/}
@@ -121,8 +121,13 @@ export default function OnboardingScreen() {
         <TouchableOpacity
           onPress={skip}
           activeOpacity={0.7}
-          className="absolute right-6 z-50 px-3 py-1.5 rounded-full"
           style={{
+            position: 'absolute',
+            right: 24,
+            zIndex: 50,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
             top: insets.top + 10,
             backgroundColor: Colors.oxblood + '12',
           }}
@@ -157,11 +162,10 @@ export default function OnboardingScreen() {
 
       {/*Bottom bar ─*/}
       <View
-        className="px-7 bg-[#f4ece4]"
-        style={{ paddingBottom: insets.bottom + 20, paddingTop: 16 }}
+        style={{ paddingHorizontal: 28, backgroundColor: '#f4ece4', paddingBottom: insets.bottom + 20, paddingTop: 16 }}
       >
         {/* Dots */}
-        <View className="items-center mb-5">
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <DotsRow current={currentIndex} total={SLIDES.length} />
         </View>
 
@@ -205,7 +209,7 @@ export default function OnboardingScreen() {
         {(isFirst || isLast) && (
           <TouchableOpacity
             onPress={skip}
-            className="items-center mt-4"
+            style={{ alignItems: 'center', marginTop: 16 }}
             activeOpacity={0.7}
           >
             <Text style={{ fontFamily: FontFamily.sansRegular, fontSize: 13, color: Colors.rose }}>

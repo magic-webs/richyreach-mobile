@@ -1,5 +1,3 @@
-import '../global.css';
-
 import { SplashLoader } from '@/components/splash-loader';
 import { ActionModal } from '@/components/ui/action-modal';
 import { api } from '@/lib/api';

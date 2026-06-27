@@ -2,7 +2,7 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const GENDERS = ['All', 'Male', 'Female'];
+const GENDERS = ['Any', 'Male', 'Female'];
 
 interface Props {
   minFollowers: string;

@@ -61,10 +61,11 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       campLocationValue: '',
       campNiche: 'Fashion',
       campPriority: 'Normal',
-      reelCount: 1,
+      reelCount: 0,
       storyCount: 0,
       paymentType: 'Paid',
       costPerCreator: '5000',
+      campaignBudget: '5000',
       numCreators: '5',
       prodName: '',
       prodValue: '',
@@ -72,8 +73,8 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       prodSku: '',
       prodUrl: '',
       prodShipping: '',
-      creatorSize: 'Micro (10K-100K)',
-      targetGender: 'All',
+      creatorSize: 'Any',
+      targetGender: 'Any',
       targetAgeRange: '25-34',
       customAgeRange: '',
       targetLanguage: 'English',
@@ -104,10 +105,11 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         campLocationValue: '',
         campNiche: 'Fashion',
         campPriority: 'Normal',
-        reelCount: 1,
+        reelCount: 0,
         storyCount: 0,
         paymentType: 'Paid',
         costPerCreator: '5000',
+        campaignBudget: '5000',
         numCreators: '5',
         prodName: '',
         prodValue: '',
@@ -115,7 +117,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         prodSku: '',
         prodUrl: '',
         prodShipping: '',
-        creatorSize: 'Micro (10K-100K)',
+        creatorSize: 'Any',
         targetGender: 'Any',
         targetAgeRange: '25-34',
         customAgeRange: '',
@@ -202,11 +204,11 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       }
 
       // Format deliverables description
-      const selectedDeliverables: string[] = [];
-      if (data.reelCount > 0) selectedDeliverables.push(`${data.reelCount} Reel(s)`);
-      if (data.storyCount > 0) selectedDeliverables.push(`${data.storyCount} Story(ies)`);
-
-      const deliverablesDesc = selectedDeliverables.join(', ') || 'General Deliverables';
+      const deliverablesDesc = 'General Deliverables';
+      const parsedBudget = parseInt(data.campaignBudget) || 0;
+      const parsedCreators = parseInt(data.numCreators) || 1;
+      const netCreatorBudget = Math.max(0, parsedBudget - 1000);
+      const costPerCreator = data.paymentType === 'Barter' ? 0 : Math.floor(netCreatorBudget / parsedCreators);
 
       const briefDetailsObj = {
         brandName: data.brandName,
@@ -226,12 +228,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
         targetAudienceGenderPct: '',
         targetAudienceAgePct: '',
         platforms: ['instagram'],
-        deliverables: [
-          { type: 'reel', quantity: data.reelCount },
-          { type: 'story', quantity: data.storyCount },
-        ].filter((d) => d.quantity > 0),
-        costPerCreator: data.paymentType === 'Paid' ? (parseInt(data.costPerCreator) || 0) : 0,
-        numCreators: data.paymentType === 'Paid' ? (parseInt(data.numCreators) || 0) : 1,
+        deliverables: [],
+        costPerCreator: costPerCreator,
+        numCreators: data.paymentType === 'Barter' ? 0 : parsedCreators,
         productInfo:
           data.paymentType !== 'Paid'
             ? {
@@ -290,7 +289,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess }: CreateCampai
       const finalPayload = {
         title: data.campName,
         description: data.campDescription || `Campaign for ${data.campName} requesting deliverables.`,
-        budget: data.paymentType === 'Barter' ? 0 : totalBudget * 100, // API expects cents
+        budget: data.paymentType === 'Barter' ? 0 : parsedBudget * 100, // API expects cents
         campaignType: 'instagram',
         targetAudience: 'all, any, any',
         requirements: `1. Deliverables: ${deliverablesDesc}`,
