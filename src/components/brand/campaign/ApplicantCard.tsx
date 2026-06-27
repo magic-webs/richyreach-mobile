@@ -2,8 +2,21 @@ import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { Image } from 'expo-image';
-import React from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator, Pressable, Platform } from 'react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useUIStore } from '@/store/ui';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 
 interface CollabReviewPanelProps {
   app: any;
@@ -11,6 +24,349 @@ interface CollabReviewPanelProps {
   onCompleteCollab: (appId: string) => void;
   reviewScriptPending: boolean;
   completeCollabPending: boolean;
+}
+
+function VoiceFeedbackPlayer({ url }: { url: string }) {
+  const player = useAudioPlayer(url);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <View style={styles.voicePlayerCard}>
+      <TouchableOpacity style={styles.voicePlayBtn} onPress={handlePlayPause} activeOpacity={0.8}>
+        <Icon name={playerStatus.playing ? 'pause' : 'play'} size={16} color={Colors.oxblood} />
+      </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.voicePlayerLabel}>Voice Note Feedback</Text>
+        <Text style={styles.voicePlayerDuration}>
+          {playerStatus.playing
+            ? `${formatDuration(playerStatus.currentTime)} / ${formatDuration(playerStatus.duration ?? 0)}`
+            : `Voice note (${formatDuration(playerStatus.duration ?? 0)})`}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function WatermarkedVideoPlayer({ url }: { url: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const player = useVideoPlayer(url, (p) => {
+    p.loop = true;
+  });
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={togglePlay}
+      {...(Platform.OS === 'web' ? { onContextMenu: (e: any) => e.preventDefault() } : {})}
+      style={styles.watermarkedPlayerContainer}
+    >
+      <VideoView
+        player={player}
+        style={{ width: '100%', height: '100%', position: 'absolute' }}
+        contentFit="contain"
+        nativeControls={false}
+        allowsPictureInPicture={false}
+      />
+      {/* Protected Draft Badge */}
+      <View style={styles.protectedBadge}>
+        <Icon name="lock" size={10} color="#fff" />
+        <Text style={styles.protectedBadgeText}>PROTECTED PREVIEW</Text>
+      </View>
+      {/* Repeated semi-transparent watermark overlays */}
+      <View style={styles.watermarkOverlay} pointerEvents="none">
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+        </View>
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>Do Not Share</Text>
+          <Text style={styles.watermarkText}>Do Not Share</Text>
+        </View>
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+        </View>
+      </View>
+      {/* Play/Pause Overlay */}
+      {!isPlaying && (
+        <View style={styles.videoPlayOverlay}>
+          <Icon name="play" size={24} color="#ffffff" />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function VideoReviewWidget({ app, onReviewComplete }: { app: any, onReviewComplete: () => void }) {
+  const queryClient = useQueryClient();
+  const showModal = useUIStore((s) => s.showModal);
+
+  const [mode, setMode] = useState<'none' | 'text' | 'voice'>('none');
+  const [textFeedback, setTextFeedback] = useState('');
+  const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+
+  // Audio Recorder
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder, 250);
+
+  // Audio Player
+  const player = useAudioPlayer(audioUri ?? undefined);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  useEffect(() => {
+    (async () => {
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) return;
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+    })();
+  }, []);
+
+  const startRecording = async () => {
+    await audioRecorder.prepareToRecordAsync();
+    audioRecorder.record();
+  };
+
+  const stopRecording = async () => {
+    await audioRecorder.stop();
+    if (audioRecorder.uri) {
+      setAudioUri(audioRecorder.uri);
+    }
+  };
+
+  const deleteRecording = () => {
+    player.pause();
+    setAudioUri(null);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  // Mutation
+  const reviewVideoMutation = useMutation({
+    mutationFn: (data: { status: 'approved' | 'rejected', feedbackType?: 'none' | 'text' | 'voice', feedbackText?: string, feedbackVoiceUrl?: string }) =>
+      api.brands.reviewVideo(app.id, data.status, data.feedbackType, data.feedbackText, data.feedbackVoiceUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brandCampaign'] });
+      showModal({ title: 'Success', message: 'Video review submitted successfully!' });
+      onReviewComplete();
+    },
+    onError: (err: any) => {
+      showModal({ title: 'Error', message: err.message || 'Failed to submit video review' });
+    }
+  });
+
+  const handleApprove = () => {
+    reviewVideoMutation.mutate({ status: 'approved' });
+  };
+
+  const handleReject = async () => {
+    if (mode === 'text' && !textFeedback.trim()) {
+      showModal({ title: 'Validation Error', message: 'Please write change instructions.' });
+      return;
+    }
+
+    if (mode === 'voice') {
+      if (!audioUri) {
+        showModal({ title: 'Validation Error', message: 'Please record voice feedback.' });
+        return;
+      }
+
+      try {
+        setUploadingVoice(true);
+        showModal({ title: 'Uploading Feedback...', message: 'Saving your voice feedback instructions. Please wait...' });
+
+        const formData = new FormData();
+        const extension = audioUri.split('.').pop() || 'm4a';
+        const filename = `voice_feedback.${extension}`;
+
+        if (Platform.OS === 'web' || audioUri.startsWith('blob:') || audioUri.startsWith('data:')) {
+          const response = await fetch(audioUri);
+          const blob = await response.blob();
+          formData.append('file', blob, filename);
+        } else {
+          let formattedUri = audioUri;
+          if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+            formattedUri = `file://${formattedUri}`;
+          }
+          formData.append('file', {
+            uri: formattedUri,
+            name: filename,
+            type: `audio/${extension}`,
+          } as any);
+        }
+
+        const uploadRes = await api.media.upload(formData);
+        reviewVideoMutation.mutate({
+          status: 'rejected',
+          feedbackType: 'voice',
+          feedbackVoiceUrl: uploadRes.url,
+        });
+      } catch (err: any) {
+        console.error('Failed to upload voice feedback:', err);
+        showModal({ title: 'Upload Failed', message: err.message || 'An error occurred during voice feedback upload.' });
+      } finally {
+        setUploadingVoice(false);
+      }
+    } else {
+      // mode is text
+      reviewVideoMutation.mutate({
+        status: 'rejected',
+        feedbackType: 'text',
+        feedbackText: textFeedback,
+      });
+    }
+  };
+
+  if (reviewVideoMutation.isPending || uploadingVoice) {
+    return (
+      <View style={{ padding: 12, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="small" color={Colors.oxblood} />
+        <Text style={{ marginTop: 8, fontSize: 12, color: 'rgba(63,3,11,0.5)' }}>Submitting review...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.reviewWidgetCard}>
+      {mode === 'none' ? (
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+          <TouchableOpacity
+            style={[styles.reviewActionBtn, { backgroundColor: '#eb5757', flex: 1 }]}
+            onPress={() => setMode('text')}
+          >
+            <Text style={styles.reviewActionBtnText}>Request Changes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reviewActionBtn, { backgroundColor: '#2ecc71', flex: 1 }]}
+            onPress={handleApprove}
+          >
+            <Text style={styles.reviewActionBtnText}>Approve Video</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.feedbackTitle}>Choose Feedback Mode:</Text>
+            <TouchableOpacity onPress={() => setMode('none')}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tabBtn, mode === 'text' && styles.tabActive]}
+              onPress={() => setMode('text')}
+            >
+              <Text style={[styles.tabBtnText, mode === 'text' && styles.tabActiveText]}>Text Instructions</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabBtn, mode === 'voice' && styles.tabActive]}
+              onPress={() => setMode('voice')}
+            >
+              <Text style={[styles.tabBtnText, mode === 'voice' && styles.tabActiveText]}>Voice Note</Text>
+            </TouchableOpacity>
+          </View>
+
+          {mode === 'text' && (
+            <TextInput
+              style={styles.reviewTextInput}
+              placeholder="Provide clear changes requested (e.g. adjust logo size, fix script voiceover at 0:10)..."
+              placeholderTextColor="rgba(63,3,11,0.3)"
+              multiline
+              numberOfLines={3}
+              value={textFeedback}
+              onChangeText={setTextFeedback}
+            />
+          )}
+
+          {mode === 'voice' && (
+            <View style={styles.miniRecorderContainer}>
+              {!audioUri ? (
+                <View style={{ alignItems: 'center', gap: 6 }}>
+                  <TouchableOpacity
+                    style={[styles.micBtn, recorderState.isRecording && styles.micBtnRecording]}
+                    onPress={recorderState.isRecording ? stopRecording : startRecording}
+                  >
+                    {recorderState.isRecording ? (
+                      <View style={styles.stopMicIcon} />
+                    ) : (
+                      <Icon name="mic" size={18} color="#ffffff" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.micStatusText}>
+                    {recorderState.isRecording
+                      ? `Recording: ${formatDuration(recorderState.durationMillis / 1000)}`
+                      : 'Tap mic to start recording'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.miniPlaybackRow}>
+                  <TouchableOpacity style={styles.miniPlayBtn} onPress={handlePlayPause}>
+                    <Icon name={playerStatus.playing ? 'pause' : 'play'} size={14} color={Colors.oxblood} />
+                  </TouchableOpacity>
+                  <Text style={styles.miniDurationText}>
+                    {playerStatus.playing
+                      ? `${formatDuration(playerStatus.currentTime)} / ${formatDuration(playerStatus.duration ?? 0)}`
+                      : `Voice Note (${formatDuration(playerStatus.duration ?? 0)})`}
+                  </Text>
+                  <TouchableOpacity style={styles.miniTrashBtn} onPress={deleteRecording}>
+                    <Icon name="trash" size={15} color={Colors.roseDeep} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.submitFeedbackBtn, { backgroundColor: '#eb5757' }]}
+            onPress={handleReject}
+          >
+            <Text style={styles.submitFeedbackBtnText}>Send Change Request</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 }
 
 function CollabReviewPanel({
@@ -124,7 +480,68 @@ function CollabReviewPanel({
         </View>
       </View>
 
-      {/* Step 3: Live Post Link */}
+      {/* Step 3: Video Draft Review */}
+      <View style={styles.reviewStep}>
+        <View style={styles.reviewStepLeft}>
+          <View
+            style={[
+              styles.stepCircle,
+              app.videoStatus === 'approved'
+                ? styles.stepCircleDone
+                : app.videoStatus === 'pending'
+                  ? styles.stepCirclePending
+                  : styles.stepCircleActive,
+            ]}
+          >
+            {app.videoStatus === 'approved' ? (
+              <Icon name="check" size={10} color="#fff" />
+            ) : (
+              <Text style={styles.stepCircleText}>3</Text>
+            )}
+          </View>
+          <View style={styles.stepLine} />
+        </View>
+        <View style={styles.reviewStepContent}>
+          <Text style={styles.reviewStepTitle}>Video Draft Review</Text>
+          {app.videoStatus === 'approved' ? (
+            <View style={{ gap: 4, marginTop: 4 }}>
+              <Text style={styles.reviewSuccessText}>✓ Approved video draft</Text>
+              {app.videoUrl && <WatermarkedVideoPlayer url={app.videoUrl} />}
+            </View>
+          ) : app.videoStatus === 'pending' ? (
+            <View style={{ marginTop: 6, gap: 8 }}>
+              <Text style={styles.reviewWarningText}>⏱ Awaiting Video Review</Text>
+              {app.videoUrl && <WatermarkedVideoPlayer url={app.videoUrl} />}
+              <VideoReviewWidget
+                app={app}
+                onReviewComplete={() => {}}
+              />
+            </View>
+          ) : app.videoStatus === 'rejected' ? (
+            <View style={{ gap: 6, marginTop: 4 }}>
+              <Text style={styles.reviewDescText}>
+                ✕ Video draft changes requested. Feedback sent to creator.
+              </Text>
+              {app.videoFeedbackType === 'text' && app.videoFeedbackText && (
+                <View style={styles.feedbackContainer}>
+                  <Text style={styles.feedbackLabel}>Changes Requested:</Text>
+                  <Text style={styles.feedbackTextContent}>{app.videoFeedbackText}</Text>
+                </View>
+              )}
+              {app.videoFeedbackType === 'voice' && app.videoFeedbackVoiceUrl && (
+                <View style={styles.feedbackContainer}>
+                  <VoiceFeedbackPlayer url={app.videoFeedbackVoiceUrl} />
+                </View>
+              )}
+              <Text style={styles.reviewDescText}>Awaiting revised video draft from creator.</Text>
+            </View>
+          ) : (
+            <Text style={styles.reviewDescText}>Awaiting video draft upload from creator.</Text>
+          )}
+        </View>
+      </View>
+
+      {/* Step 4: Live Post Link */}
       <View style={styles.reviewStep}>
         <View style={styles.reviewStepLeft}>
           <View
@@ -136,7 +553,7 @@ function CollabReviewPanel({
             {app.postLink ? (
               <Icon name="check" size={10} color="#fff" />
             ) : (
-              <Text style={styles.stepCircleText}>3</Text>
+              <Text style={styles.stepCircleText}>4</Text>
             )}
           </View>
           <View style={styles.stepLine} />
@@ -154,13 +571,13 @@ function CollabReviewPanel({
             </View>
           ) : (
             <Text style={styles.reviewDescText}>
-              Awaiting post upload (unlocked once script is approved).
+              Awaiting post upload (unlocked once video is approved).
             </Text>
           )}
         </View>
       </View>
 
-      {/* Step 4: Completion */}
+      {/* Step 5: Completion */}
       <View style={[styles.reviewStep, { borderBottomWidth: 0, paddingBottom: 0 }]}>
         <View style={styles.reviewStepLeft}>
           <View
@@ -174,7 +591,7 @@ function CollabReviewPanel({
             {app.collaborationStatus === 'completed' ? (
               <Icon name="check" size={10} color="#fff" />
             ) : (
-              <Text style={styles.stepCircleText}>4</Text>
+              <Text style={styles.stepCircleText}>5</Text>
             )}
           </View>
         </View>
@@ -697,6 +1114,267 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   completeCollabBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Voice note player
+  voicePlayerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    marginTop: 4,
+  },
+  voicePlayBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(63,3,11,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voicePlayerLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
+    fontWeight: '600',
+  },
+  voicePlayerDuration: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 10,
+    color: 'rgba(63,3,11,0.5)',
+    marginTop: 1,
+  },
+
+  // Watermarked player
+  watermarkedPlayerContainer: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 6,
+  },
+  protectedBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(235, 87, 87, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 15,
+  },
+  protectedBadgeText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  watermarkOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  watermarkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '120%',
+    transform: [{ rotate: '-15deg' }],
+  },
+  watermarkText: {
+    color: 'rgba(255, 255, 255, 0.15)',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: FontFamily.sansMedium,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  videoPlayOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -25,
+    marginLeft: -25,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    zIndex: 20,
+  },
+
+  // Feedback container
+  feedbackContainer: {
+    backgroundColor: 'rgba(63,3,11,0.03)',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 4,
+    width: '100%',
+  },
+  feedbackLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.6)',
+    fontWeight: '700',
+  },
+  feedbackTextContent: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: Colors.ink,
+    marginTop: 2,
+    lineHeight: 17,
+  },
+
+  // Brand review widget card
+  reviewWidgetCard: {
+    backgroundColor: 'rgba(63,3,11,0.02)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.06)',
+    marginTop: 6,
+    width: '100%',
+  },
+  feedbackTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  cancelText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.5)',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(63,3,11,0.04)',
+    borderRadius: 6,
+    padding: 2,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 5,
+    alignItems: 'center',
+    borderRadius: 4,
+  },
+  tabActive: {
+    backgroundColor: '#ffffff',
+  },
+  tabBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.5)',
+  },
+  tabActiveText: {
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  reviewTextInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 12.5,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.ink,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  miniRecorderContainer: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+  },
+  micBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micBtnRecording: {
+    backgroundColor: Colors.roseDeep,
+  },
+  stopMicIcon: {
+    width: 12,
+    height: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+  },
+  micStatusText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.6)',
+    marginTop: 4,
+  },
+  miniPlaybackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(63,3,11,0.03)',
+    borderRadius: 8,
+    padding: 6,
+    paddingHorizontal: 10,
+    width: '100%',
+  },
+  miniPlayBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniDurationText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.ink,
+    flex: 1,
+  },
+  miniTrashBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(63,3,11,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitFeedbackBtn: {
+    borderRadius: 8,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  submitFeedbackBtnText: {
     fontFamily: FontFamily.sansMedium,
     color: '#fff',
     fontSize: 12,

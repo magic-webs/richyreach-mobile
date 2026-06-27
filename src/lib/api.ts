@@ -108,6 +108,8 @@ export const api = {
       request(`/influencers/applications/${id}/counter`, { method: 'POST', body: JSON.stringify({ bidAmount }) }),
     submitScript: (id: string, scriptUrl: string) =>
       request(`/influencers/applications/${id}/submit-script`, { method: 'POST', body: JSON.stringify({ scriptUrl }) }),
+    submitVideo: (id: string, videoUrl: string) =>
+      request(`/influencers/applications/${id}/submit-video`, { method: 'POST', body: JSON.stringify({ videoUrl }) }),
     submitIgHandle: (id: string, igHandle: string) =>
       request(`/influencers/applications/${id}/submit-ig-handle`, { method: 'POST', body: JSON.stringify({ igHandle }) }),
     submitPostLink: (id: string, postLink: string) =>
@@ -144,6 +146,8 @@ export const api = {
       request(`/brands/applications/${id}/negotiate`, { method: 'POST', body: JSON.stringify({ counterAmount }), activeProfileId }),
     reviewScript: (id: string, status: 'approved' | 'rejected', activeProfileId?: string | null) =>
       request(`/brands/applications/${id}/review-script`, { method: 'POST', body: JSON.stringify({ status }), activeProfileId }),
+    reviewVideo: (id: string, status: 'approved' | 'rejected', feedbackType: 'none' | 'text' | 'voice' = 'none', feedbackText?: string, feedbackVoiceUrl?: string, activeProfileId?: string | null) =>
+      request(`/brands/applications/${id}/review-video`, { method: 'POST', body: JSON.stringify({ status, feedbackType, feedbackText, feedbackVoiceUrl }), activeProfileId }),
     completeCollaboration: (id: string, activeProfileId?: string | null) =>
       request(`/brands/applications/${id}/complete`, { method: 'POST', activeProfileId }),
     wallet: {

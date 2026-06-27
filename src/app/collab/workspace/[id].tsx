@@ -16,11 +16,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 /**
  * Collaboration Workspace Page
@@ -33,6 +37,101 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
  * Route params:
  *   id — campaign ID (used to fetch campaign + the influencer's application)
  */
+function VoiceFeedbackPlayer({ url }: { url: string }) {
+  const player = useAudioPlayer(url);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <View style={styles.voicePlayerCard}>
+      <TouchableOpacity style={styles.voicePlayBtn} onPress={handlePlayPause} activeOpacity={0.8}>
+        <Icon name={playerStatus.playing ? 'pause' : 'play'} size={16} color={Colors.oxblood} />
+      </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.voicePlayerLabel}>Voice Note Feedback</Text>
+        <Text style={styles.voicePlayerDuration}>
+          {playerStatus.playing
+            ? `${formatDuration(playerStatus.currentTime)} / ${formatDuration(playerStatus.duration ?? 0)}`
+            : `Voice note (${formatDuration(playerStatus.duration ?? 0)})`}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function WatermarkedVideoPlayer({ url }: { url: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const player = useVideoPlayer(url, (p) => {
+    p.loop = true;
+  });
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={togglePlay}
+      {...(Platform.OS === 'web' ? { onContextMenu: (e: any) => e.preventDefault() } : {})}
+      style={styles.watermarkedPlayerContainer}
+    >
+      <VideoView
+        player={player}
+        style={{ width: '100%', height: '100%', position: 'absolute' }}
+        contentFit="contain"
+        nativeControls={false}
+        allowsPictureInPicture={false}
+      />
+      {/* Protected Draft Badge */}
+      <View style={styles.protectedBadge}>
+        <Icon name="lock" size={10} color="#fff" />
+        <Text style={styles.protectedBadgeText}>PROTECTED PREVIEW</Text>
+      </View>
+      {/* Repeated semi-transparent watermark overlays */}
+      <View style={styles.watermarkOverlay} pointerEvents="none">
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+        </View>
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>Do Not Share</Text>
+          <Text style={styles.watermarkText}>Do Not Share</Text>
+        </View>
+        <View style={styles.watermarkRow}>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+        </View>
+      </View>
+      {/* Play/Pause Overlay */}
+      {!isPlaying && (
+        <View style={styles.videoPlayOverlay}>
+          <Icon name="play" size={24} color="#ffffff" />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 export default function CollabWorkspacePage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -43,6 +142,75 @@ export default function CollabWorkspacePage() {
   // ── Input state ────────────────────────────────────────────────────────────
   const [scriptInput, setScriptInput] = useState('');
   const [postLinkInput, setPostLinkInput] = useState('');
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  const submitVideoMutation = useMutation({
+    mutationFn: (videoUrl: string) =>
+      api.influencers.submitVideo(myApplication!.id, videoUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', id] });
+      showModal({ title: 'Submitted!', message: 'Video draft submitted for brand review.' });
+    },
+    onError: (err: any) =>
+      showModal({ title: 'Error', message: err.message || 'Failed to submit video draft' }),
+  });
+
+  const handlePickAndUploadVideo = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      setUploadingVideo(true);
+      showModal({ title: 'Uploading Draft...', message: 'Preparing and uploading your draft video. Please wait...' });
+
+      const selectedUri = result.assets[0].uri;
+      const formData = new FormData();
+
+      let extension = 'mp4';
+      const cleanUri = selectedUri.split('?')[0].split('#')[0];
+      const lastSegment = cleanUri.split('/').pop() || '';
+      const dotParts = lastSegment.split('.');
+      if (dotParts.length > 1) {
+        const possibleExt = dotParts.pop()?.toLowerCase();
+        if (possibleExt && ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v'].includes(possibleExt)) {
+          extension = possibleExt;
+        }
+      }
+
+      const filename = `draft_video.${extension}`;
+
+      if (Platform.OS === 'web' || selectedUri.startsWith('blob:') || selectedUri.startsWith('data:')) {
+        const response = await fetch(selectedUri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+      } else {
+        let formattedUri = selectedUri;
+        if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+          formattedUri = `file://${formattedUri}`;
+        }
+        formData.append('file', {
+          uri: formattedUri,
+          name: filename,
+          type: `video/${extension}`,
+        } as any);
+      }
+
+      const uploadRes = await api.media.upload(formData);
+      submitVideoMutation.mutate(uploadRes.url);
+    } catch (err: any) {
+      console.error('Failed to upload video:', err);
+      showModal({ title: 'Upload Failed', message: err.message || 'An error occurred during video upload.' });
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
 
   // ── Confetti state (shown when collab is completed) ────────────────────────
   const [showConfetti, setShowConfetti] = useState(false);
@@ -129,6 +297,13 @@ export default function CollabWorkspacePage() {
   const scriptApproved = myApplication.scriptStatus === 'approved';
   const scriptPending = myApplication.scriptStatus === 'pending';
   const scriptRejected = myApplication.scriptStatus === 'rejected';
+  const videoApproved = myApplication.videoStatus === 'approved';
+  const videoPending = myApplication.videoStatus === 'pending';
+  const videoRejected = myApplication.videoStatus === 'rejected';
+  const videoUrl = myApplication.videoUrl;
+  const videoFeedbackType = myApplication.videoFeedbackType;
+  const videoFeedbackText = myApplication.videoFeedbackText;
+  const videoFeedbackVoiceUrl = myApplication.videoFeedbackVoiceUrl;
   const postSubmitted = !!myApplication.postLink;
 
   return (
@@ -187,9 +362,15 @@ export default function CollabWorkspacePage() {
                 pending: scriptPending,
               },
               {
+                label: 'Video Approved',
+                done: videoApproved,
+                active: scriptApproved && !videoApproved,
+                pending: videoPending,
+              },
+              {
                 label: 'Post Submitted',
                 done: postSubmitted,
-                active: scriptApproved && !postSubmitted,
+                active: videoApproved && !postSubmitted,
                 pending: false,
               },
               {
@@ -312,7 +493,7 @@ export default function CollabWorkspacePage() {
           </View>
 
           {/* ─────────────────────────────────────────────────────────────── */}
-          {/* STEP 2: Submit Live Post Link                                   */}
+          {/* STEP 2: Video Draft Review                                      */}
           {/* ─────────────────────────────────────────────────────────────── */}
           <View style={[styles.stepCard, !scriptApproved && styles.stepCardLocked]}>
             <View style={styles.stepCardHeader}>
@@ -321,25 +502,29 @@ export default function CollabWorkspacePage() {
                   styles.stepBadge,
                   !scriptApproved
                     ? styles.stepBadgeLocked
-                    : postSubmitted
+                    : videoApproved
                       ? styles.stepBadgeDone
-                      : styles.stepBadgeActive,
+                      : videoPending
+                        ? styles.stepBadgePending
+                        : styles.stepBadgeActive,
                 ]}
               >
                 {!scriptApproved ? (
                   <Icon name="lock" size={11} color="#aaa" />
-                ) : postSubmitted ? (
+                ) : videoApproved ? (
                   <Icon name="check" size={12} color="#fff" />
+                ) : videoPending ? (
+                  <Icon name="clock" size={12} color="#fff" />
                 ) : (
                   <Text style={styles.stepBadgeText}>2</Text>
                 )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.stepTitle, !scriptApproved && styles.stepTitleLocked]}>
-                  Submit Live Post Link
+                  Video Draft Review
                 </Text>
                 <Text style={[styles.stepSubtitle, !scriptApproved && styles.stepSubtitleLocked]}>
-                  Once the Reel/Post is live, share the Instagram link here.
+                  Upload your draft video for brand approval.
                 </Text>
               </View>
             </View>
@@ -349,6 +534,109 @@ export default function CollabWorkspacePage() {
                 <Icon name="lock" size={11} color="rgba(63,3,11,0.35)" />
                 <Text style={styles.lockedHintText}>
                   Unlocked after script approval.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 12 }}>
+                {videoApproved && (
+                  <View style={styles.approvedRow}>
+                    <Icon name="check" size={14} color={Colors.green} />
+                    <Text style={styles.approvedText}>Video Approved!</Text>
+                  </View>
+                )}
+
+                {videoPending && (
+                  <View style={styles.pendingBanner}>
+                    <Text style={styles.pendingBannerText}>
+                      ⏳ Video submitted. Awaiting brand review...
+                    </Text>
+                  </View>
+                )}
+
+                {videoRejected && (
+                  <View style={[styles.rejectedBanner, { gap: 8 }]}>
+                    <Text style={styles.rejectedBannerText}>
+                      ✕ Brand requested changes for this video.
+                    </Text>
+                    {videoFeedbackType === 'text' && videoFeedbackText && (
+                      <View style={styles.feedbackContainer}>
+                        <Text style={styles.feedbackLabel}>Instructions:</Text>
+                        <Text style={styles.feedbackTextContent}>{videoFeedbackText}</Text>
+                      </View>
+                    )}
+                    {videoFeedbackType === 'voice' && videoFeedbackVoiceUrl && (
+                      <View style={styles.feedbackContainer}>
+                        <VoiceFeedbackPlayer url={videoFeedbackVoiceUrl} />
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {videoUrl && (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={styles.previewLabel}>Video Preview:</Text>
+                    <WatermarkedVideoPlayer url={videoUrl} />
+                  </View>
+                )}
+
+                {(!videoUrl || videoRejected) && (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, uploadingVideo && styles.actionBtnDisabled]}
+                    onPress={handlePickAndUploadVideo}
+                    disabled={uploadingVideo}
+                    activeOpacity={0.8}
+                  >
+                    {uploadingVideo ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.actionBtnText}>
+                        {videoRejected ? 'Upload Revised Video' : 'Upload Video Draft'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* ─────────────────────────────────────────────────────────────── */}
+          {/* STEP 3: Submit Live Post Link                                   */}
+          {/* ─────────────────────────────────────────────────────────────── */}
+          <View style={[styles.stepCard, !videoApproved && styles.stepCardLocked]}>
+            <View style={styles.stepCardHeader}>
+              <View
+                style={[
+                  styles.stepBadge,
+                  !videoApproved
+                    ? styles.stepBadgeLocked
+                    : postSubmitted
+                      ? styles.stepBadgeDone
+                      : styles.stepBadgeActive,
+                ]}
+              >
+                {!videoApproved ? (
+                  <Icon name="lock" size={11} color="#aaa" />
+                ) : postSubmitted ? (
+                  <Icon name="check" size={12} color="#fff" />
+                ) : (
+                  <Text style={styles.stepBadgeText}>3</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.stepTitle, !videoApproved && styles.stepTitleLocked]}>
+                  Submit Live Post Link
+                </Text>
+                <Text style={[styles.stepSubtitle, !videoApproved && styles.stepSubtitleLocked]}>
+                  Once the Reel/Post is live, share the Instagram link here.
+                </Text>
+              </View>
+            </View>
+
+            {!videoApproved ? (
+              <View style={styles.lockedHint}>
+                <Icon name="lock" size={11} color="rgba(63,3,11,0.35)" />
+                <Text style={styles.lockedHintText}>
+                  Unlocked after video draft approval.
                 </Text>
               </View>
             ) : (
@@ -364,15 +652,38 @@ export default function CollabWorkspacePage() {
                   </View>
                 )}
                 {brandInstagramPage && (
-                  <TouchableOpacity
-                    style={styles.brandHandleHint}
-                    activeOpacity={0.75}
-                    onPress={() => Linking.openURL(`https://www.instagram.com/${brandInstagramPage}`)}
-                  >
-                    <Text style={styles.brandHandleHintTitle}>Tag the brand in your post</Text>
-                    <Text style={styles.brandHandleHintHandle}>@{brandInstagramPage}</Text>
-                    <Text style={styles.brandHandleHintSub}>Tap to open their Instagram profile</Text>
-                  </TouchableOpacity>
+                  <View style={styles.brandHandleHint}>
+                    <Text style={styles.brandHandleHintTitle}>Invite Collaborators on Instagram</Text>
+                    <Text style={styles.brandHandleHintText}>
+                      {brandInstagramPage.toLowerCase() === 'richyreach_official' ? (
+                        <>
+                          You must add <Text style={{ fontWeight: '700', color: Colors.oxblood }}>@richyreach_official</Text> as a collaborator on your Reel/Post so it appears on both profiles.
+                        </>
+                      ) : (
+                        <>
+                          You must add <Text style={{ fontWeight: '700', color: Colors.oxblood }}>@richyreach_official</Text> and <Text style={{ fontWeight: '700', color: Colors.oxblood }}>@{brandInstagramPage}</Text> as collaborators on your Reel/Post so it appears on all profiles.
+                        </>
+                      )}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                      <TouchableOpacity
+                        style={styles.hintActionBtn}
+                        onPress={() => Linking.openURL(`https://www.instagram.com/richyreach_official`)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.hintActionBtnText}>@richyreach_official ↗</Text>
+                      </TouchableOpacity>
+                      {brandInstagramPage.toLowerCase() !== 'richyreach_official' && (
+                        <TouchableOpacity
+                          style={styles.hintActionBtn}
+                          onPress={() => Linking.openURL(`https://www.instagram.com/${brandInstagramPage}`)}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={styles.hintActionBtnText}>@{brandInstagramPage} ↗</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
                 )}
                 <TextInput
                   style={styles.input}
@@ -402,7 +713,7 @@ export default function CollabWorkspacePage() {
           </View>
 
           {/* ─────────────────────────────────────────────────────────────── */}
-          {/* STEP 3: Completion & Payout                                     */}
+          {/* STEP 4: Completion & Payout                                     */}
           {/* ─────────────────────────────────────────────────────────────── */}
           <View style={[styles.stepCard, !postSubmitted && styles.stepCardLocked]}>
             <View style={styles.stepCardHeader}>
@@ -902,16 +1213,158 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.roseDeep,
   },
-  brandHandleHintHandle: {
-    fontFamily: FontFamily.sans,
-    fontSize: 16,
-    color: Colors.oxblood,
+  brandHandleHintText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.65)',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  hintActionBtn: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(225,48,108,0.25)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintActionBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.roseDeep,
     fontWeight: '700',
   },
-  brandHandleHintSub: {
-    fontFamily: FontFamily.sans,
-    fontSize: 11,
-    color: 'rgba(63,3,11,0.45)',
+
+  // Voice note player
+  voicePlayerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    marginTop: 4,
+  },
+  voicePlayBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(63,3,11,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voicePlayerLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
+    fontWeight: '600',
+  },
+  voicePlayerDuration: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 10,
+    color: 'rgba(63,3,11,0.5)',
+    marginTop: 1,
+  },
+
+  // Watermarked player
+  watermarkedPlayerContainer: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 6,
+  },
+  protectedBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(235, 87, 87, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 15,
+  },
+  protectedBadgeText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  watermarkOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  watermarkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '120%',
+    transform: [{ rotate: '-15deg' }],
+  },
+  watermarkText: {
+    color: 'rgba(255, 255, 255, 0.15)',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: FontFamily.sansMedium,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  videoPlayOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -25,
+    marginLeft: -25,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    zIndex: 20,
+  },
+
+  // Feedback container
+  feedbackContainer: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 4,
+    width: '100%',
+  },
+  feedbackLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.6)',
+    fontWeight: '700',
+  },
+  feedbackTextContent: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: Colors.ink,
     marginTop: 2,
+    lineHeight: 17,
+  },
+  previewLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.5)',
+    marginBottom: 2,
   },
 });

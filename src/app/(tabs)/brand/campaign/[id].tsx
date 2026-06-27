@@ -49,6 +49,7 @@ export default function CampaignDetailScreen() {
     queryKey: ['brandCampaign', id],
     queryFn: () => api.campaigns.get(id),
     enabled: !!id,
+    refetchInterval: 15_000,
   });
 
   const campaign = queryData?.campaign || queryData;
