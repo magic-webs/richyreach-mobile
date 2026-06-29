@@ -206,12 +206,15 @@ export const api = {
       request<any>(`/arena/${id}/join`, { method: 'POST', activeProfileId }),
     submit: (
       id: string,
-      data: { collaborationLink?: string; reviewLink?: string; postUrl?: string; submissionUrl?: string; accountReach?: number },
+      data: { collaborationLink?: string; reviewLink?: string; reviewEmail?: string; screenshotUrl?: string; postUrl?: string; submissionUrl?: string; accountReach?: number },
       activeProfileId?: string | null
     ) =>
       request<any>(`/arena/${id}/submit`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          submissionUrl: data.screenshotUrl || data.submissionUrl,
+        }),
         activeProfileId,
       }),
     myParticipations: (activeProfileId?: string | null) =>

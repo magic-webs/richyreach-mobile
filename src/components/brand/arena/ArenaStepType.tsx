@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -7,21 +7,21 @@ import { StarIcon, FlashIcon, BadgeCheckIcon, Coins01Icon } from '@hugeicons/cor
 
 const ARENA_TYPES = [
   {
-    id: 'reel_reach',
-    label: 'Reel Reach Arena',
-    subtitle: 'Influencers post reels. Highest reach wins the prize pool.',
-    icon: StarIcon,
-    gradient: ['#b46a74', '#3f030b'] as [string, string],
-    tag: 'Most Popular',
-  },
-  {
     id: 'google_review',
     label: 'Google Review Arena',
     subtitle: 'Influencers leave verified Google reviews. Earn ₹25 per approved review.',
     icon: BadgeCheckIcon,
     gradient: ['#2a7a5a', '#1a4a38'] as [string, string],
-    tag: 'Fixed Reward',
+    tag: "Most Popular",
   },
+  {
+    id: 'reel_reach',
+    label: 'Reel Reach Arena',
+    subtitle: 'Influencers post reels. Highest reach wins the prize pool.',
+    icon: StarIcon,
+    gradient: ['#b46a74', '#3f030b'] as [string, string],
+    tag: 'Coming Soon',
+  }
 ] as const;
 
 export function ArenaStepType() {
@@ -47,7 +47,20 @@ export function ArenaStepType() {
                 <TouchableOpacity
                   key={type.id}
                   activeOpacity={0.85}
-                  onPress={() => onChange(type.id)}
+                  onPress={() => {
+                    if (type.id === 'reel_reach') {
+                      if (Platform.OS === 'web') {
+                        alert('Coming Soon 🎬\n\nReel Reach Arena is coming soon! For now, you can create a Google Review Arena.');
+                      } else {
+                        Alert.alert(
+                          'Coming Soon 🎬',
+                          'Reel Reach Arena is coming soon! For now, you can create a Google Review Arena.'
+                        );
+                      }
+                      return;
+                    }
+                    onChange(type.id);
+                  }}
                   style={[styles.optionCard, isSelected && styles.optionCardSelected]}
                 >
                   {/* Selection ring */}
@@ -87,16 +100,6 @@ export function ArenaStepType() {
           </View>
         )}
       />
-
-      {/* Coin economy note */}
-      <View style={styles.noteBox}>
-        <View style={styles.noteTitleRow}>
-          <HugeiconsIcon icon={Coins01Icon} size={14} color={Colors.oxblood} strokeWidth={2} />
-          <Text style={styles.noteTitle}>Coin Economy</Text>
-        </View>
-        <Text style={styles.noteText}>1 Rupee = 100 Coins  ·  Entry Fee: 2,000 Coins (₹20)</Text>
-        <Text style={styles.noteText}>Google Review Reward: 2,500 Coins (₹25) per verified review</Text>
-      </View>
     </View>
   );
 }

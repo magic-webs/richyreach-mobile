@@ -6,7 +6,13 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
   GiftIcon,
   ListViewIcon,
+  Coins01Icon,
+  CheckIcon,
+  Cancel01Icon
 } from '@hugeicons/core-free-icons';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useProfilesStore } from '@/store/profiles';
 
 function CoinInput({ label, control, name, description, locked }: {
   label: string;
@@ -55,73 +61,133 @@ function CoinInput({ label, control, name, description, locked }: {
 }
 
 export function ArenaStepBudget() {
-  const { control, watch } = useFormContext();
+  const { control, watch, setValue } = useFormContext();
   const arenaType = watch('arenaType');
-  const totalBudget = watch('totalBudgetCoins') || 0;
   const maxP = watch('maxParticipants') || 1;
-  const entryFee = watch('entryFeeCoins') || 2000;
+
+  const { activeBrandProfileId } = useProfilesStore();
+
+  const { data: walletData } = useQuery({
+    queryKey: ['walletBalance', activeBrandProfileId],
+    queryFn: () => api.brands.wallet.balance(activeBrandProfileId),
+    enabled: !!activeBrandProfileId,
+  });
+
+  const availableCoins = (walletData as any)?.balance?.coins || 0;
+  const calculatedBudget = maxP * 5000;
+
+  // Reactively sync budget fields for google review arenas
+  React.useEffect(() => {
+    if (arenaType === 'google_review') {
+      setValue('totalBudgetCoins', calculatedBudget, { shouldValidate: true, shouldDirty: true });
+      setValue('rewardPerReview', 2500, { shouldValidate: true, shouldDirty: true });
+      setValue('entryFeeCoins', 0, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [arenaType, maxP, calculatedBudget]);
+
+  const isInsufficient = availableCoins < calculatedBudget;
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Budget & Coins</Text>
       <Text style={styles.subheading}>
-        Set the total prize pool. Coins are deducted from your wallet immediately.
+        {arenaType === 'google_review'
+          ? 'Review the auto-calculated budget. Coins are deducted from your wallet immediately.'
+          : 'Set the total prize pool. Coins are deducted from your wallet immediately.'}
       </Text>
 
-      {/* Total Budget */}
-      <CoinInput
-        label="Total Budget (Prize Pool)"
-        control={control}
-        name="totalBudgetCoins"
-        description="Total coins allocated as prize money for winners."
-      />
+      {/* Wallet Balance Display */}
+      <View style={styles.walletDisplayCard}>
+        <View style={styles.walletHeader}>
+          <Text style={styles.walletTitle}>Your Wallet Balance</Text>
+        </View>
+        <Text style={styles.walletBalanceText}>
+          🪙 {availableCoins.toLocaleString()} <Text style={styles.walletRupeeText}>(= ₹{(availableCoins / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })})</Text>
+        </Text>
+      </View>
 
-      {/* Entry Fee — free for Google Review, locked at 2000 for Reel Reach */}
       {arenaType === 'google_review' ? (
-        <View style={styles.field}>
-          <Text style={styles.label}>Entry Fee per Influencer</Text>
-          <Text style={styles.fieldDesc}>Google Review arenas have no entry fee — influencers join for free.</Text>
-          <View style={[styles.coinInputRow, styles.coinInputRowLocked]}>
-            <HugeiconsIcon icon={GiftIcon} size={22} color="rgba(63,3,11,0.4)" strokeWidth={2} />
-            <Text style={[styles.coinInput, { color: 'rgba(63,3,11,0.4)', fontSize: 16 }]}>Free · 0 coins</Text>
+        // Auto-calculated budget layout for Google Review
+        <View style={styles.calcContainer}>
+          <Controller
+            control={control}
+            name="totalBudgetCoins"
+            rules={{
+              validate: () => {
+                if (isInsufficient) {
+                  return `Insufficient coins. Required: ${calculatedBudget.toLocaleString()}, Available: ${availableCoins.toLocaleString()}`;
+                }
+                return true;
+              }
+            }}
+            render={({ fieldState: { error } }) => (
+              <View style={styles.calcCard}>
+                <View style={styles.calcHeader}>
+                  <Text style={styles.calcTitle}>Google Review Arena Cost Breakdown</Text>
+                </View>
+
+                <View style={styles.calcRow}>
+                  <Text style={styles.calcLabel}>Maximum Participants</Text>
+                  <Text style={styles.calcValue}>{maxP} creators</Text>
+                </View>
+                <View style={styles.calcRow}>
+                  <Text style={styles.calcLabel}>Cost per Participant (₹50)</Text>
+                  <Text style={styles.calcValue}>5,000 coins</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.calcRowTotal}>
+                  <Text style={styles.calcLabelTotal}>Total Coins Required</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.calcValueTotal}>🪙 {calculatedBudget.toLocaleString()}</Text>
+                    <Text style={styles.calcValueRupeeTotal}>= ₹{(calculatedBudget / 100).toLocaleString('en-IN')}</Text>
+                  </View>
+                </View>
+
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerText}>{error.message}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          />
+
+          <View style={styles.reviewNoteBox}>
+            <View style={styles.reviewNoteTitleRow}>
+              <HugeiconsIcon icon={ListViewIcon} size={14} color={Colors.green} strokeWidth={2} />
+              <Text style={styles.reviewNoteTitle}>Google Review Payout Model</Text>
+            </View>
+            <Text style={styles.reviewNoteText}>
+              • Influencers join for free (0 coins entry fee).
+            </Text>
+            <Text style={styles.reviewNoteText}>
+              • Each influencer who submits a successfully verified Google review receives <Text style={{ fontWeight: '800' }}>2,500 coins</Text> (₹25).
+            </Text>
+            <Text style={styles.reviewNoteText}>
+              • The total budget covers maximum participant rewards and platform fees.
+            </Text>
           </View>
         </View>
       ) : (
-        <CoinInput
-          label="Entry Fee per Influencer"
-          control={control}
-          name="entryFeeCoins"
-          description="Fixed at 2,000 coins (₹20) per participant. Collected automatically on join."
-          locked
-        />
-      )}
+        // Original inputs for Reel Reach (for schema completeness)
+        <>
+          <CoinInput
+            label="Total Budget (Prize Pool)"
+            control={control}
+            name="totalBudgetCoins"
+            description="Total coins allocated as prize money for winners."
+          />
 
-      {arenaType === 'google_review' && (
-        <CoinInput
-          label="Reward per Verified Review"
-          control={control}
-          name="rewardPerReview"
-          description="Coins credited per successfully verified Google review."
-        />
-      )}
-
-      {arenaType === 'google_review' && (
-        <View style={styles.reviewNoteBox}>
-          <View style={styles.reviewNoteTitleRow}>
-            <HugeiconsIcon icon={ListViewIcon} size={14} color={Colors.green} strokeWidth={2} />
-            <Text style={styles.reviewNoteTitle}>Google Review Payout Model</Text>
-          </View>
-          <Text style={styles.reviewNoteText}>
-            Each influencer who submits a verified Google review receives{' '}
-            <Text style={{ fontWeight: '800' }}>
-              {(watch('rewardPerReview') || 2500).toLocaleString()} coins
-            </Text>
-            {' '}(₹{((watch('rewardPerReview') || 2500) / 100).toLocaleString('en-IN')}).
-          </Text>
-          <Text style={styles.reviewNoteText}>
-            Rewards are paid from your funded budget. Budget must cover all potential rewards.
-          </Text>
-        </View>
+          <CoinInput
+            label="Entry Fee per Influencer"
+            control={control}
+            name="entryFeeCoins"
+            description="Fixed at 2,000 coins (₹20) per participant. Collected automatically on join."
+            locked
+          />
+        </>
       )}
     </View>
   );
@@ -201,53 +267,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansRegular,
     fontSize: 11.5,
     color: Colors.rose,
-  },
-  previewCard: {
-    borderRadius: Radius.lg,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(63,3,11,0.08)',
-  },
-  previewTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  previewTitle: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.oxblood,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  previewRowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(63,3,11,0.08)',
-    paddingTop: 10,
     marginTop: 4,
-  },
-  previewLabelWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    flex: 1,
-  },
-  previewLabelTxt: {
-    fontFamily: FontFamily.sansRegular,
-    fontSize: 12.5,
-    color: 'rgba(63,3,11,0.6)',
-  },
-  previewValue: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.oxblood,
   },
   reviewNoteBox: {
     backgroundColor: 'rgba(42,122,90,0.08)',
@@ -256,6 +276,7 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: 'rgba(42,122,90,0.25)',
+    marginTop: 12,
   },
   reviewNoteTitleRow: {
     flexDirection: 'row',
@@ -274,5 +295,120 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: 'rgba(42,122,90,0.8)',
     lineHeight: 18,
+  },
+  walletDisplayCard: {
+    backgroundColor: '#fff',
+    borderRadius: Radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    gap: 8,
+    ...Shadow.card,
+  },
+  walletHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  walletTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(63,3,11,0.5)',
+    textTransform: 'uppercase',
+  },
+  walletBalanceText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  walletRupeeText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 14,
+    color: 'rgba(63,3,11,0.5)',
+    fontWeight: 'normal',
+  },
+  calcContainer: {
+    gap: 12,
+  },
+  calcCard: {
+    backgroundColor: '#fff',
+    borderRadius: Radius.lg,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(63,3,11,0.1)',
+    gap: 12,
+    ...Shadow.card,
+  },
+  calcHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(63,3,11,0.05)',
+    paddingBottom: 8,
+  },
+  calcTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  calcLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: 'rgba(63,3,11,0.6)',
+  },
+  calcValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(63,3,11,0.08)',
+    marginVertical: 4,
+  },
+  calcRowTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  calcLabelTotal: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  calcValueTotal: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  calcValueRupeeTotal: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.5)',
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(219,68,85,0.08)',
+    borderRadius: Radius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(219,68,85,0.25)',
+    marginTop: 6,
+  },
+  errorBannerText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.rose,
+    fontWeight: '700',
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

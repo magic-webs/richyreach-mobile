@@ -12,6 +12,9 @@ import {
   Location01Icon,
   StarIcon,
 } from '@hugeicons/core-free-icons';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useProfilesStore } from '@/store/profiles';
 
 const ARENA_TYPE_LABELS: Record<string, string> = {
   reel_reach: 'Reel Reach Arena',
@@ -51,6 +54,7 @@ interface ArenaStepReviewProps {
 
 export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) {
   const { watch } = useFormContext();
+  const { activeBrandProfileId } = useProfilesStore();
 
   const arenaType = watch('arenaType') as string;
   const title = watch('title');
@@ -64,12 +68,22 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
   const businessName = watch('businessName');
   const googleMapsLink = watch('googleMapsLink');
 
+  const { data: walletData } = useQuery({
+    queryKey: ['walletBalance', activeBrandProfileId],
+    queryFn: () => api.brands.wallet.balance(activeBrandProfileId),
+    enabled: !!activeBrandProfileId,
+  });
+
+  const availableCoins = (walletData as any)?.balance?.coins || 0;
+  const isInsufficient = availableCoins < totalBudgetCoins;
+
   const arenaIcon = ARENA_TYPE_ICONS[arenaType] || Film01Icon;
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Review & Launch</Text>
       <Text style={styles.subheading}>
+
         Review your arena configuration before launching. Budget coins will be deducted from your wallet.
       </Text>
 
@@ -102,24 +116,39 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
         </SectionCard>
       )}
 
-      {/* Wallet Deduction Warning */}
-      <View style={styles.warningBox}>
-        <View style={styles.warningTitleRow}>
-          <HugeiconsIcon icon={AlertCircleIcon} size={14} color="#7a5a00" strokeWidth={2} />
-          <Text style={styles.warningTitle}>Wallet Deduction</Text>
+      {/* Wallet Deduction Warning / Error */}
+      {isInsufficient ? (
+        <View style={[styles.warningBox, { backgroundColor: 'rgba(219,68,85,0.08)', borderColor: 'rgba(219,68,85,0.2)' }]}>
+          <View style={styles.warningTitleRow}>
+            <HugeiconsIcon icon={AlertCircleIcon} size={14} color={Colors.rose} strokeWidth={2} />
+            <Text style={[styles.warningTitle, { color: Colors.rose }]}>Insufficient Wallet Balance</Text>
+          </View>
+          <Text style={[styles.warningText, { color: Colors.rose }]}>
+            You do not have enough coins to fund this arena. Required:{' '}
+            <Text style={{ fontWeight: '800' }}>{totalBudgetCoins.toLocaleString()} coins</Text>, Available:{' '}
+            <Text style={{ fontWeight: '800' }}>{availableCoins.toLocaleString()} coins</Text>.
+          </Text>
         </View>
-        <Text style={styles.warningText}>
-          Launching this arena will immediately deduct{' '}
-          <Text style={{ fontWeight: '800' }}>{totalBudgetCoins.toLocaleString()} coins (₹{(totalBudgetCoins / 100).toLocaleString('en-IN')})</Text>
-          {' '}from your RichyReach coin wallet as the prize pool.
-        </Text>
-      </View>
+      ) : (
+        <View style={styles.warningBox}>
+          <View style={styles.warningTitleRow}>
+            <HugeiconsIcon icon={AlertCircleIcon} size={14} color="#7a5a00" strokeWidth={2} />
+            <Text style={styles.warningTitle}>Wallet Deduction</Text>
+          </View>
+          <Text style={styles.warningText}>
+            Launching this arena will immediately deduct{' '}
+            <Text style={{ fontWeight: '800' }}>{totalBudgetCoins.toLocaleString()} coins (₹{(totalBudgetCoins / 100).toLocaleString('en-IN')})</Text>
+            {' '}from your RichyReach coin wallet as the prize pool.
+          </Text>
+        </View>
+      )}
 
       {/* Launch CTA */}
       <TactileButton
         onPress={onPublish}
-        text={isLoading ? 'Launching Arena...' : `Launch Arena · ${totalBudgetCoins.toLocaleString()} 🪙`}
-        variant="primary"
+        text={isInsufficient ? 'Insufficient Balance' : (isLoading ? 'Launching Arena...' : `Launch Arena · ${totalBudgetCoins.toLocaleString()} 🪙`)}
+        variant={isInsufficient ? 'secondary' : 'primary'}
+        disabled={isInsufficient || isLoading}
         fullWidth
         style={{ marginTop: 8 }}
       />

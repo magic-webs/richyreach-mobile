@@ -112,8 +112,9 @@ export default function BrandArenaScreen() {
   });
 
   const { data: walletData } = useQuery({
-    queryKey: ['walletBalance'],
-    queryFn: () => api.wallet.balance(),
+    queryKey: ['walletBalance', activeBrandProfileId],
+    queryFn: () => api.brands.wallet.balance(activeBrandProfileId),
+    enabled: !!activeBrandProfileId,
   });
 
   const filtered = typeFilter ? arenas.filter((a: any) => a.arenaType === typeFilter) : arenas;
@@ -146,7 +147,7 @@ export default function BrandArenaScreen() {
           {walletData && (
             <View style={styles.walletPill}>
               <Text style={styles.walletPillText}>
-                <Text style={styles.coinEmojiOverride}>🪙</Text> {(walletData.coinBalance || 0).toLocaleString()}
+                <Text style={styles.coinEmojiOverride}>🪙</Text> {((walletData as any).balance?.coins ?? 0).toLocaleString()}
               </Text>
             </View>
           )}

@@ -36,14 +36,14 @@ const TOTAL_STEPS = 5;
 
 const REEL_DEFAULTS = {
   reviewGuidelines:
-    'Create an authentic Instagram Reel showcasing our brand. Invite @richyreach_official and our brand\'s Instagram as collaborators. Include our brand hashtag in the caption. Minimum 15 seconds. Reel must be public.',
+    'Create an authentic Instagram Reel showcasing our brand. Invite @richyreach_official and our brand\'s Instagram as collaborators. Include our brand hashtag in the caption. Minimum 30 seconds. Reel must be public.',
   verificationRules:
     'Collaboration reel link must be submitted. Both @richyreach_official and brand Instagram must appear as collaborators. Brand hashtag must be in the caption. Reel must be public.',
 };
 
 const GOOGLE_DEFAULTS = {
   reviewGuidelines:
-    'Visit our business and leave an honest 4–5 star Google Review. Mention the service quality, ambience, and staff experience. Include at least one photo. Review must be posted from your real Google account.',
+    'Visit our business and leave an honest 5 star Google Review. Mention the service quality, ambience, and staff experience. Review must be posted from your real Google account.',
   verificationRules:
     'Review must be posted on a real Google account. Minimum 50 words. Google review link must be submitted. Review must remain public and verifiable.',
 };
@@ -75,20 +75,20 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   const methods = useForm({
     mode: 'onChange',
     defaultValues: {
-      arenaType: 'reel_reach',
+      arenaType: 'google_review',
       title: '',
       description: '',
       category: 'General',
       maxParticipants: 100,
       startDate: fmt(today),
       endDate: fmt(future),
-      totalBudgetCoins: 200000,
-      entryFeeCoins: 2000,
+      totalBudgetCoins: 500000,
+      entryFeeCoins: 0,
       rewardPerReview: 2500,
       businessName: '',
       googleMapsLink: '',
-      reviewGuidelines: '',
-      verificationRules: '',
+      reviewGuidelines: GOOGLE_DEFAULTS.reviewGuidelines,
+      verificationRules: GOOGLE_DEFAULTS.verificationRules,
       bannerUrl: '',
     },
   });
@@ -97,20 +97,20 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     if (isOpen) {
       setCurrentStep(1);
       methods.reset({
-        arenaType: 'reel_reach',
+        arenaType: 'google_review',
         title: '',
         description: '',
         category: 'General',
         maxParticipants: 100,
         startDate: fmt(today),
         endDate: fmt(future),
-        totalBudgetCoins: 200000,
-        entryFeeCoins: 2000,
+        totalBudgetCoins: 500000,
+        entryFeeCoins: 0,
         rewardPerReview: 2500,
         businessName: '',
         googleMapsLink: '',
-        reviewGuidelines: REEL_DEFAULTS.reviewGuidelines,
-        verificationRules: REEL_DEFAULTS.verificationRules,
+        reviewGuidelines: GOOGLE_DEFAULTS.reviewGuidelines,
+        verificationRules: GOOGLE_DEFAULTS.verificationRules,
         bannerUrl: '',
       });
     }

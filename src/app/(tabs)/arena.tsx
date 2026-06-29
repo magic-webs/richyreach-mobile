@@ -144,7 +144,7 @@ export default function ArenaScreen() {
 
   // My participations
   const { data: participations = [] } = useQuery({
-    queryKey: ['myParticipations'],
+    queryKey: ['myParticipations', activeInfluencerProfileId],
     queryFn: () => api.arena.myParticipations(activeInfluencerProfileId),
     enabled: !!activeInfluencerProfileId,
   });
@@ -158,13 +158,35 @@ export default function ArenaScreen() {
   // Join mutation
   const joinMutation = useMutation({
     mutationFn: (arenaId: string) => api.arena.join(arenaId, activeInfluencerProfileId),
-    onSuccess: (_, arenaId) => {
+    onSuccess: (newParticipant, arenaId) => {
+      // Optimistically update the participations cache to instantly reflect the joined status
+      queryClient.setQueryData<any[]>(['myParticipations', activeInfluencerProfileId], (old = []) => {
+        if (old.some((p: any) => p.arenaId === arenaId)) return old;
+        const targetArena = arenas.find((a: any) => a.id === arenaId);
+        return [
+          {
+            ...newParticipant,
+            arenaTitle: targetArena?.title,
+            arenaType: targetArena?.arenaType,
+            arenaStatus: targetArena?.status,
+            arenaBannerUrl: targetArena?.bannerUrl,
+            entryFeeCoins: targetArena?.entryFeeCoins,
+          },
+          ...old,
+        ];
+      });
+
       queryClient.invalidateQueries({ queryKey: ['activeArenas'] });
       queryClient.invalidateQueries({ queryKey: ['myParticipations'] });
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+      
+      const targetArena = arenas.find((a: any) => a.id === arenaId);
+      const isGoogleReview = targetArena?.arenaType === 'google_review';
       showModal({
         title: 'Joined!',
-        message: '2,000 coins deducted. Upload your submission to compete for the prize!',
+        message: isGoogleReview
+          ? 'Successfully joined! Submit your Google Review proof to earn coins.'
+          : `${(targetArena?.entryFeeCoins || 2000).toLocaleString()} coins deducted. Upload your submission to compete for the prize!`,
       });
     },
     onError: (err: any) =>

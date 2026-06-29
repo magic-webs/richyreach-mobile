@@ -1,8 +1,10 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
-const CATEGORIES = ['Fashion', 'Beauty', 'Tech', 'Food', 'Travel', 'Fitness', 'Lifestyle', 'Gaming', 'Education', 'General'];
+
+const CATEGORIES = ['General', 'Fashion', 'Beauty', 'Tech', 'Food', 'Travel', 'Fitness', 'Lifestyle', 'Gaming', 'Education'];
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
@@ -70,13 +72,11 @@ function DateField({ label, control, name }: { label: string; control: any; name
 }
 
 export function ArenaStepBasics() {
-  const { control, watch } = useFormContext();
+  const { control, watch, setValue } = useFormContext();
+
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Arena Details</Text>
-      <Text style={styles.subheading}>Set the title, description, dates, and category.</Text>
-
       <InputField
         label="Arena Title"
         control={control}
@@ -101,7 +101,7 @@ export function ArenaStepBasics() {
           control={control}
           name="category"
           render={({ field: { onChange, value } }) => (
-            <View style={styles.pillRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
               {CATEGORIES.map((cat) => (
                 <TouchableOpacity
                   key={cat}
@@ -112,7 +112,7 @@ export function ArenaStepBasics() {
                   <Text style={[styles.pillText, value === cat && styles.pillTextActive]}>{cat}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
         />
       </View>
@@ -125,7 +125,7 @@ export function ArenaStepBasics() {
           name="maxParticipants"
           rules={{ required: true, min: { value: 1, message: 'Min 1' } }}
           render={({ field: { onChange, value } }) => (
-            <View style={styles.counterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.counterRow}>
               {[10, 25, 50, 100, 250, 500].map((n) => (
                 <TouchableOpacity
                   key={n}
@@ -135,16 +135,37 @@ export function ArenaStepBasics() {
                   <Text style={[styles.counterBtnText, value === n && styles.counterBtnTextActive]}>{n}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
         />
       </View>
 
       {/* Dates */}
-      <View style={styles.dateRow}>
-        <DateField label="Start Date" control={control} name="startDate" />
-        <View style={{ width: 12 }} />
-        <DateField label="End Date" control={control} name="endDate" />
+      <View style={styles.field}>
+        <FieldLabel label="Arena Duration" required />
+        <Controller
+          control={control}
+          name="startDate"
+          rules={{ required: 'Duration is required' }}
+          render={({ fieldState: { error } }) => {
+            const startVal = watch('startDate');
+            const endVal = watch('endDate');
+            return (
+              <>
+                <DateRangePicker
+                  startDate={startVal}
+                  endDate={endVal}
+                  onChange={(start, end) => {
+                    setValue('startDate', start, { shouldValidate: true, shouldDirty: true });
+                    setValue('endDate', end, { shouldValidate: true, shouldDirty: true });
+                  }}
+                  label="Select Arena Duration"
+                />
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </>
+            );
+          }}
+        />
       </View>
     </View>
   );
@@ -198,7 +219,6 @@ const styles = StyleSheet.create({
   },
   pillRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   pill: {
@@ -223,7 +243,6 @@ const styles = StyleSheet.create({
   },
   counterRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   counterBtn: {
