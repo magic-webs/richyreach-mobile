@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Image } from 'expo-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import React from 'react';
@@ -29,7 +30,11 @@ export function MarketplaceCreatorCard({ creator, isBookmarked, onToggleBookmark
   return (
     <View style={styles.creatorCard}>
       <View style={styles.cardHeader}>
-        <PlaceholderImage tone={creator.tone} height={44} width={44} borderRadius={22} />
+        <Image
+          source={{ uri: (creator as any).avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+          style={{ width: 44, height: 44, borderRadius: 22 }}
+          contentFit="cover"
+        />
         <View style={styles.cardInfo}>
           <Text style={styles.creatorName}>{creator.name}</Text>
           <Text style={styles.creatorHandle}>{creator.handle}</Text>

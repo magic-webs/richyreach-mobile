@@ -66,11 +66,11 @@ function LeaderboardRow({ rank, participant }: { rank: number; participant: any 
         )}
       </View>
       <View style={styles.lbAvatar}>
-        {participant.avatar ? (
-          <Image source={{ uri: participant.avatar }} style={{ width: '100%', height: '100%', borderRadius: 18 }} contentFit="cover" />
-        ) : (
-          <Text style={styles.lbAvatarText}>{(participant.name || '?').charAt(0)}</Text>
-        )}
+        <Image
+          source={{ uri: participant.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+          style={{ width: '100%', height: '100%', borderRadius: 18 }}
+          contentFit="cover"
+        />
       </View>
       <View style={styles.lbInfo}>
         <Text style={styles.lbName}>{participant.name || 'Influencer'}</Text>
@@ -139,8 +139,8 @@ export default function BrandArenaDetailScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={20} color={Colors.cream} strokeWidth={2} />
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/(tabs)/brand/arena')} activeOpacity={0.7}>
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={20} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle} numberOfLines={1}>{arena.title}</Text>
@@ -193,7 +193,7 @@ export default function BrandArenaDetailScreen() {
         {arena.arenaType === 'google_review' && arena.businessName && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <HugeiconsIcon icon={Location01Icon} size={16} color={Colors.cream} strokeWidth={2} />
+              <HugeiconsIcon icon={Location01Icon} size={16} color={Colors.oxblood} strokeWidth={2} />
               <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Business Info</Text>
             </View>
             <View style={styles.rewardCard}>
@@ -216,7 +216,7 @@ export default function BrandArenaDetailScreen() {
         {/* Leaderboard */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Icon name="trophy" size={16} color={Colors.cream} />
+            <Icon name="trophy" size={16} color={Colors.oxblood} />
             <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Leaderboard</Text>
           </View>
           {leaderboard.length === 0 ? (
@@ -237,8 +237,8 @@ export default function BrandArenaDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.oxbloodDeep },
-  loadingText: { fontFamily: FontFamily.sansMedium, fontSize: 16, color: Colors.cream },
+  root: { flex: 1, backgroundColor: Colors.creamLite },
+  loadingText: { fontFamily: FontFamily.sansMedium, fontSize: 16, color: Colors.oxblood },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,13 +246,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232,216,204,0.1)',
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(232,216,204,0.08)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   headerStatus: {
     fontFamily: FontFamily.sansRegular,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   actionBtn: {
-    backgroundColor: 'rgba(232,216,204,0.12)',
+    backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -279,35 +279,37 @@ const styles = StyleSheet.create({
     color: Colors.cream,
     fontWeight: '700',
   },
-  body: { paddingHorizontal: 18, paddingTop: 16 },
+  body: { paddingHorizontal: 18, paddingTop: 4 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.md,
     padding: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.15)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
     gap: 2,
+    ...Shadow.card,
   },
-  statLabel: { fontFamily: FontFamily.sansRegular, fontSize: 9.5, color: 'rgba(232,216,204,0.45)' },
-  statValue: { fontFamily: FontFamily.sansMedium, fontSize: 17, fontWeight: '700', color: Colors.cream },
-  statSub: { fontFamily: FontFamily.sansRegular, fontSize: 10, color: 'rgba(232,216,204,0.4)' },
+  statLabel: { fontFamily: FontFamily.sansRegular, fontSize: 9.5, color: 'rgba(63, 3, 11, 0.5)' },
+  statValue: { fontFamily: FontFamily.sansMedium, fontSize: 17, fontWeight: '700', color: Colors.oxblood },
+  statSub: { fontFamily: FontFamily.sansRegular, fontSize: 10, color: 'rgba(63, 3, 11, 0.4)' },
   section: { marginBottom: 20 },
   sectionTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
     marginBottom: 10,
   },
   rewardCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 14,
     gap: 10,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   rewardRow: {
     flexDirection: 'row',
@@ -315,9 +317,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  rewardLabel: { fontFamily: FontFamily.sansRegular, fontSize: 12.5, color: 'rgba(232,216,204,0.55)', flex: 1 },
-  rewardValue: { fontFamily: FontFamily.sansMedium, fontSize: 13, fontWeight: '700', color: Colors.cream },
-  businessName: { fontFamily: FontFamily.sansMedium, fontSize: 16, fontWeight: '700', color: Colors.cream },
+  rewardLabel: { fontFamily: FontFamily.sansRegular, fontSize: 12.5, color: 'rgba(63, 3, 11, 0.55)', flex: 1 },
+  rewardValue: { fontFamily: FontFamily.sansMedium, fontSize: 13, fontWeight: '700', color: Colors.oxblood },
+  businessName: { fontFamily: FontFamily.sansMedium, fontSize: 16, fontWeight: '700', color: Colors.oxbloodDeep },
   mapsLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,24 +333,25 @@ const styles = StyleSheet.create({
   },
   mapsLinkText: { fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.green, fontWeight: '700' },
   guidelinesCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 14,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
   },
   guidelinesText: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13,
-    color: 'rgba(232,216,204,0.75)',
+    color: 'rgba(63, 3, 11, 0.75)',
     lineHeight: 20,
   },
   leaderboard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   lbRow: {
     flexDirection: 'row',
@@ -356,34 +359,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232,216,204,0.08)',
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
     gap: 10,
   },
   lbRank: { width: 28, alignItems: 'center' },
-  lbRankText: { fontSize: 15 },
+  lbRankText: { fontSize: 15, color: 'rgba(63, 3, 11, 0.5)' },
   lbAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(232,216,204,0.15)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  lbAvatarText: { fontFamily: FontFamily.sans, fontSize: 14, fontWeight: '800', color: Colors.cream },
+  lbAvatarText: { fontFamily: FontFamily.sans, fontSize: 14, fontWeight: '800', color: Colors.oxblood },
   lbInfo: { flex: 1 },
-  lbName: { fontFamily: FontFamily.sansMedium, fontSize: 13.5, color: Colors.cream },
-  lbHandle: { fontFamily: FontFamily.sansRegular, fontSize: 11, color: 'rgba(232,216,204,0.45)' },
+  lbName: { fontFamily: FontFamily.sansMedium, fontSize: 13.5, color: Colors.oxblood },
+  lbHandle: { fontFamily: FontFamily.sansRegular, fontSize: 11, color: 'rgba(63, 3, 11, 0.5)' },
   lbRight: { alignItems: 'flex-end', gap: 2 },
   lbStatus: { fontSize: 16 },
-  lbCoins: { fontFamily: FontFamily.sansMedium, fontSize: 11, color: Colors.gold, fontWeight: '700' },
+  lbCoins: { fontFamily: FontFamily.sansMedium, fontSize: 11, color: Colors.oxblood, fontWeight: '700' },
   emptyLb: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
-  emptyLbText: { fontFamily: FontFamily.sansRegular, fontSize: 14, color: 'rgba(232,216,204,0.4)' },
+  emptyLbText: { fontFamily: FontFamily.sansRegular, fontSize: 14, color: 'rgba(63, 3, 11, 0.45)' },
   coinEmojiOverride: {
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),
   },

@@ -223,7 +223,11 @@ export default function CreatorProfileDetail() {
           {loadingCreator ? (
             <Skeleton width="100%" height={200} borderRadius={0} />
           ) : (
-            <PlaceholderImage tone={creator.tone} height={200} borderRadius={0} />
+            <Image
+              source={{ uri: 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/cover-image.png' }}
+              style={{ width: '100%', height: 200 }}
+              contentFit="cover"
+            />
           )}
           <LinearGradient
             colors={['rgba(42,2,7,0.45)', 'transparent', 'rgba(42,2,7,0.75)']}
@@ -235,10 +239,12 @@ export default function CreatorProfileDetail() {
             <View style={styles.avatarRing}>
               {loadingCreator ? (
                 <Skeleton width={80} height={80} borderRadius={40} />
-              ) : creator.avatar ? (
-                <Image source={{ uri: creator.avatar }} style={{ width: 80, height: 80, borderRadius: 40 }} contentFit="cover" />
               ) : (
-                <PlaceholderImage tone={creator.tone} height={80} width={80} borderRadius={40} />
+                <Image
+                  source={{ uri: creator?.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                  contentFit="cover"
+                />
               )}
             </View>
           </View>

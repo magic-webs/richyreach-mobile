@@ -234,11 +234,11 @@ export default function ShortlistScreen() {
             activeOpacity={0.8}
             onPress={() => router.push({ pathname: '/brand/marketplace/creator/[id]', params: { id: item.creator.id } })}
           >
-            {item.creator?.avatar ? (
-              <Image source={{ uri: item.creator.avatar }} style={styles.creatorAvatar} contentFit="cover" />
-            ) : (
-              <PlaceholderImage tone={item.creator?.tone} height={36} width={36} borderRadius={18} />
-            )}
+            <Image
+              source={{ uri: item.creator?.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+              style={styles.creatorAvatar}
+              contentFit="cover"
+            />
             <View style={styles.creatorMeta}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={styles.creatorName}>{item.creator?.name}</Text>

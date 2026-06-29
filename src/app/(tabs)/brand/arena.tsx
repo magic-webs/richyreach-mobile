@@ -30,7 +30,7 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
       <View style={{ position: 'absolute', top: 12, right: 12 }}>
-        <Icon name={icon} size={13} color="rgba(232, 216, 204, 0.4)" />
+        <Icon name={icon} size={13} color="rgba(63, 3, 11, 0.4)" />
       </View>
     </View>
   );
@@ -54,18 +54,18 @@ function ArenaCard({ arena, onManage }: { arena: any; onManage: () => void }) {
             <Icon name={typeConf.icon} size={22} color={typeConf.color} />
           )}
         </View>
- 
-         <View style={styles.arenaMeta}>
-           {/* Type badge */}
-           <View style={[styles.typeBadge, { backgroundColor: typeConf.bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-             <Icon name={typeConf.icon} size={10} color={typeConf.color} />
-             <Text style={[styles.typeBadgeText, { color: typeConf.color }]}>{typeConf.label}</Text>
-           </View>
-           <Text style={styles.arenaTitle} numberOfLines={2}>{arena.title}</Text>
-           <Text style={styles.arenaStats}>
-             {arena.participantCount || 0}/{arena.maxParticipants} participants · {daysLeft}d left
-           </Text>
-         </View>
+
+        <View style={styles.arenaMeta}>
+          {/* Type badge */}
+          <View style={[styles.typeBadge, { backgroundColor: typeConf.bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+            <Icon name={typeConf.icon} size={10} color={typeConf.color} />
+            <Text style={[styles.typeBadgeText, { color: typeConf.color }]}>{typeConf.label}</Text>
+          </View>
+          <Text style={styles.arenaTitle} numberOfLines={2}>{arena.title}</Text>
+          <Text style={styles.arenaStats}>
+            {arena.participantCount || 0}/{arena.maxParticipants} participants · {daysLeft}d left
+          </Text>
+        </View>
 
         {/* Status */}
         <View style={styles.statusRow}>
@@ -156,7 +156,7 @@ export default function BrandArenaScreen() {
             activeOpacity={0.8}
             onPress={() => setIsCreateArenaOpen(true)}
           >
-            <Icon name="plus" size={14} color={Colors.oxblood} />
+            <Icon name="plus" size={14} color={Colors.cream} />
             <Text style={styles.launchBtnText}>Launch</Text>
           </TouchableOpacity>
         </View>
@@ -170,7 +170,7 @@ export default function BrandArenaScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refetch}
-            tintColor={Colors.cream}
+            tintColor={Colors.oxblood}
           />
         }
       >
@@ -190,7 +190,7 @@ export default function BrandArenaScreen() {
               <TouchableOpacity
                 key={String(f)}
                 style={[
-                  styles.filterPill, 
+                  styles.filterPill,
                   isActive && styles.filterPillActive,
                   { flexDirection: 'row', alignItems: 'center', gap: 6 }
                 ]}
@@ -198,10 +198,10 @@ export default function BrandArenaScreen() {
                 activeOpacity={0.8}
               >
                 {conf?.icon && (
-                  <Icon 
-                    name={conf.icon} 
-                    size={12} 
-                    color={isActive ? Colors.oxblood : 'rgba(232,216,204,0.7)'} 
+                  <Icon
+                    name={conf.icon}
+                    size={12}
+                    color={isActive ? Colors.cream : 'rgba(63,3,11,0.5)'}
                   />
                 )}
                 <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
@@ -222,7 +222,7 @@ export default function BrandArenaScreen() {
         ) : filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={{ marginBottom: 10 }}>
-              <Icon name="arena" size={44} color="rgba(232,216,204,0.2)" />
+              <Icon name="arena" size={44} color="rgba(63,3,11,0.15)" />
             </View>
             <Text style={styles.emptyStateText}>No arenas yet</Text>
             <Text style={styles.emptyStateSub}>
@@ -266,7 +266,7 @@ export default function BrandArenaScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.oxbloodDeep,
+    backgroundColor: Colors.creamLite,
   },
   glow1: {
     position: 'absolute',
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(180, 106, 116, 0.2)',
+    backgroundColor: 'rgba(180, 106, 116, 0.1)',
   },
   glow2: {
     position: 'absolute',
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(141, 71, 80, 0.15)',
+    backgroundColor: 'rgba(141, 71, 80, 0.06)',
   },
   header: {
     flexDirection: 'row',
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232, 216, 204, 0.1)',
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -311,35 +311,35 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontFamily: FontFamily.sans,
     fontSize: 9.5,
-    color: Colors.roseSoft,
+    color: 'rgba(63, 3, 11, 0.5)',
     letterSpacing: 0.5,
   },
   headerTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 20,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
     marginTop: -2,
   },
   walletPill: {
-    backgroundColor: 'rgba(232,216,204,0.12)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
     borderRadius: Radius.full,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.2)',
+    borderColor: 'rgba(63, 3, 11, 0.12)',
   },
   walletPillText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 11,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
   },
   launchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.cream,
+    backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -347,30 +347,31 @@ const styles = StyleSheet.create({
   launchBtnText: {
     fontFamily: FontFamily.sans,
     fontSize: 12,
-    color: Colors.oxblood,
+    color: Colors.cream,
     fontWeight: '700',
   },
   body: { paddingHorizontal: 20, paddingTop: 16 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(232, 216, 204, 0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.md,
     padding: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(232, 216, 204, 0.15)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   statLabel: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 9.5,
-    color: 'rgba(232, 216, 204, 0.5)',
+    color: 'rgba(63, 3, 11, 0.5)',
     letterSpacing: 0.3,
     paddingRight: 16,
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 18,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
     marginTop: 4,
   },
@@ -379,37 +380,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: Radius.full,
-    backgroundColor: 'rgba(232,216,204,0.08)',
+    backgroundColor: 'rgba(63, 3, 11, 0.04)',
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.2)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
   },
   filterPillActive: {
-    backgroundColor: Colors.cream,
-    borderColor: Colors.cream,
+    backgroundColor: Colors.oxblood,
+    borderColor: Colors.oxblood,
   },
   filterPillText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
-    color: 'rgba(232,216,204,0.7)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   filterPillTextActive: {
-    color: Colors.oxblood,
+    color: Colors.cream,
     fontWeight: '700',
   },
   sectionTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 18,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
     marginBottom: 14,
   },
   arenaList: { gap: 14 },
   arenaCard: {
-    backgroundColor: 'rgba(232, 216, 204, 0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 0.5,
-    borderColor: 'rgba(232, 216, 204, 0.15)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   arenaCardHeader: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   arenaThumbnail: {
@@ -436,21 +438,21 @@ const styles = StyleSheet.create({
   arenaTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 15,
-    color: Colors.cream,
+    color: Colors.oxbloodDeep,
     fontWeight: '700',
     lineHeight: 20,
   },
   arenaStats: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11.5,
-    color: 'rgba(232,216,204,0.5)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontFamily: FontFamily.sansMedium, fontSize: 10.5, fontWeight: '700' },
   divider: {
     height: 0.5,
-    backgroundColor: 'rgba(232, 216, 204, 0.15)',
+    backgroundColor: 'rgba(63, 3, 11, 0.08)',
     marginVertical: 12,
   },
   arenaCardFooter: {
@@ -462,29 +464,29 @@ const styles = StyleSheet.create({
   prizeCoinLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   prizeCoin: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.gold,
+    color: Colors.oxblood,
   },
   prizeRupee: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11,
-    color: 'rgba(243,201,105,0.6)',
+    color: 'rgba(63, 3, 11, 0.6)',
   },
   manageBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.oxblood2,
+    backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 0.5,
-    borderColor: 'rgba(232, 216, 204, 0.15)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
   },
   manageBtnText: {
     fontFamily: FontFamily.sansMedium,
@@ -500,20 +502,20 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 17,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
   },
   emptyStateSub: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13,
-    color: 'rgba(232,216,204,0.5)',
+    color: 'rgba(63, 3, 11, 0.6)',
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 20,
   },
   emptyLaunchBtn: {
     marginTop: 16,
-    backgroundColor: Colors.cream,
+    backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.oxblood,
+    color: Colors.cream,
   },
   coinEmojiOverride: {
     fontFamily: Platform.select({ ios: 'System', android: 'sans-serif' }),

@@ -302,11 +302,11 @@ export default function InfluencerChatConversationScreen() {
           />
         </TouchableOpacity>
         <View style={{ position: 'relative' }}>
-          {roomAvatar ? (
-            <Image source={{ uri: roomAvatar }} style={styles.headerAvatar} />
-          ) : (
-            <PlaceholderImage tone="rose" height={40} width={40} borderRadius={99} />
-          )}
+          <Image
+            source={{ uri: roomAvatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+            style={styles.headerAvatar}
+            contentFit="cover"
+          />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.convName} numberOfLines={1}>{roomName || "Brand Support"}</Text>
@@ -340,11 +340,11 @@ export default function InfluencerChatConversationScreen() {
                 {!isMe && (
                   <View style={styles.bubbleAvatarWrap}>
                     {m.showAvatar ? (
-                      m.senderAvatar ? (
-                        <Image source={{ uri: m.senderAvatar }} style={styles.bubbleAvatar} />
-                      ) : (
-                        <PlaceholderImage tone="rose" height={32} width={32} borderRadius={99} />
-                      )
+                      <Image
+                        source={{ uri: m.senderAvatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                        style={styles.bubbleAvatar}
+                        contentFit="cover"
+                      />
                     ) : null}
                   </View>
                 )}

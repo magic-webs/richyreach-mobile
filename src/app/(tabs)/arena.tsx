@@ -55,7 +55,7 @@ function ArenaCard({
       onPress={onPress}
       style={[
         styles.arenaCard,
-        isJoined && { borderColor: 'rgba(95,211,155,0.25)', backgroundColor: 'rgba(95,211,155,0.03)' }
+        isJoined && { borderColor: '#2a7a5a', backgroundColor: '#e2f4ec' }
       ]}
     >
       {/* Top strip */}
@@ -104,11 +104,11 @@ function ArenaCard({
         <View style={styles.entryBlock}>
           <Text style={styles.entryLabel}>Entry</Text>
           <Text style={styles.entryCoins}>
-            {(arena.entryFeeCoins || 2000).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
+            {(arena.entryFeeCoins).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
           </Text>
           {isJoined ? (
             <View style={styles.joinedBadge}>
-              <Icon name="check" size={11} color="#fff" />
+              <Icon name="check" size={11} color="#2a7a5a" />
               <Text style={styles.joinedBadgeText}>Joined</Text>
             </View>
           ) : (
@@ -179,7 +179,7 @@ export default function ArenaScreen() {
       queryClient.invalidateQueries({ queryKey: ['activeArenas'] });
       queryClient.invalidateQueries({ queryKey: ['myParticipations'] });
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
-      
+
       const targetArena = arenas.find((a: any) => a.id === arenaId);
       const isGoogleReview = targetArena?.arenaType === 'google_review';
       showModal({
@@ -240,7 +240,7 @@ export default function ArenaScreen() {
               refetch();
               queryClient.invalidateQueries({ queryKey: ['myParticipations'] });
             }}
-            tintColor={Colors.cream}
+            tintColor={Colors.oxblood}
           />
         }
       >
@@ -254,12 +254,12 @@ export default function ArenaScreen() {
             <Text style={styles.statLabel}>Total Earned</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="arena" size={16} color={Colors.roseSoft} />
+            <Icon name="arena" size={16} color={Colors.roseDeep} />
             <Text style={styles.statValue}>{participations.length}</Text>
             <Text style={styles.statLabel}>Joined</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="bolt" size={16} color="#5fd39b" />
+            <Icon name="bolt" size={16} color="#2a7a5a" />
             <Text style={styles.statValue}>{activeParticipations}</Text>
             <Text style={styles.statLabel}>Active</Text>
           </View>
@@ -269,7 +269,7 @@ export default function ArenaScreen() {
         {participations.filter((p: any) => p.arenaStatus === 'active').length > 0 && (
           <View style={styles.myArenasSection}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <Icon name="pin" size={13} color={Colors.cream} />
+              <Icon name="pin" size={13} color={Colors.oxblood} />
               <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>My Active Arenas</Text>
             </View>
             <ScrollView
@@ -299,8 +299,8 @@ export default function ArenaScreen() {
                             p.verificationStatus === 'approved'
                               ? '#2a7a5a'
                               : p.verificationStatus === 'rejected'
-                              ? '#b46a74'
-                              : '#f3c969',
+                                ? '#b46a74'
+                                : '#f3c969',
                         },
                       ]}
                     />
@@ -312,16 +312,16 @@ export default function ArenaScreen() {
                         p.verificationStatus === 'approved'
                           ? 'check'
                           : p.verificationStatus === 'rejected'
-                          ? 'x'
-                          : 'clock'
+                            ? 'x'
+                            : 'clock'
                       }
                       size={12}
                       color={
                         p.verificationStatus === 'approved'
                           ? '#2a7a5a'
                           : p.verificationStatus === 'rejected'
-                          ? '#b46a74'
-                          : '#f3c969'
+                            ? '#b46a74'
+                            : '#f3c969'
                       }
                     />
                   </TouchableOpacity>
@@ -352,7 +352,7 @@ export default function ArenaScreen() {
                 <Icon
                   name={tab.icon}
                   size={12}
-                  color={typeFilter === tab.key ? Colors.oxblood : 'rgba(232,216,204,0.65)'}
+                  color={typeFilter === tab.key ? Colors.cream : 'rgba(63,3,11,0.5)'}
                 />
               )}
               <Text
@@ -413,7 +413,7 @@ export default function ArenaScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.oxbloodDeep },
+  root: { flex: 1, backgroundColor: Colors.creamLite },
   glow1: {
     position: 'absolute',
     top: 30,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(180,106,116,0.25)',
+    backgroundColor: 'rgba(180,106,116,0.1)',
   },
   glow2: {
     position: 'absolute',
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(141,71,80,0.18)',
+    backgroundColor: 'rgba(141,71,80,0.06)',
   },
   header: {
     flexDirection: 'row',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232,216,204,0.1)',
+    borderBottomColor: 'rgba(63,3,11,0.08)',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerIcon: {
@@ -454,29 +454,29 @@ const styles = StyleSheet.create({
   headerSub: {
     fontFamily: FontFamily.sans,
     fontSize: 9.5,
-    color: 'rgba(232,216,204,0.5)',
+    color: 'rgba(63,3,11,0.5)',
     letterSpacing: 0.8,
   },
   headerTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
     marginTop: -2,
   },
   walletPill: {
-    backgroundColor: 'rgba(243,201,105,0.15)',
+    backgroundColor: 'rgba(63,3,11,0.05)',
     borderRadius: Radius.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 0.5,
-    borderColor: 'rgba(243,201,105,0.3)',
+    borderColor: 'rgba(63,3,11,0.12)',
   },
   walletPillText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.gold,
+    color: Colors.oxblood,
   },
   statsRow: {
     flexDirection: 'row',
@@ -487,32 +487,33 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.md,
     padding: 12,
     alignItems: 'center',
     gap: 4,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63,3,11,0.1)',
+    ...Shadow.card,
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 14,
     fontWeight: '800',
-    color: Colors.cream,
+    color: Colors.oxblood,
     marginTop: 4,
   },
   statLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63,3,11,0.5)',
   },
   myArenasSection: { paddingHorizontal: 18, marginTop: 16 },
   sectionLabel: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
     marginBottom: 10,
   },
   myArenasRow: { gap: 8, paddingRight: 4 },
@@ -520,13 +521,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(232,216,204,0.1)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.full,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.18)',
+    borderColor: 'rgba(63,3,11,0.1)',
     maxWidth: 180,
+    ...Shadow.card,
   },
   verificationDot: {
     width: 7,
@@ -536,7 +538,7 @@ const styles = StyleSheet.create({
   myArenaChipText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
-    color: Colors.cream,
+    color: Colors.oxblood,
     flex: 1,
   },
   myArenaStatus: { fontSize: 13 },
@@ -545,21 +547,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: Radius.full,
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: 'rgba(63,3,11,0.04)',
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.15)',
+    borderColor: 'rgba(63,3,11,0.1)',
   },
   filterTabActive: {
-    backgroundColor: Colors.cream,
-    borderColor: Colors.cream,
+    backgroundColor: Colors.oxblood,
+    borderColor: Colors.oxblood,
   },
   filterTabText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
-    color: 'rgba(232,216,204,0.65)',
+    color: 'rgba(63,3,11,0.5)',
   },
   filterTabTextActive: {
-    color: Colors.oxblood,
+    color: Colors.cream,
     fontWeight: '700',
   },
   listSection: { paddingHorizontal: 18 },
@@ -587,12 +589,13 @@ const styles = StyleSheet.create({
   },
   arenaList: { gap: 14 },
   arenaCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.14)',
+    borderColor: 'rgba(63,3,11,0.1)',
     gap: 8,
+    ...Shadow.card,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -613,7 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(232,216,204,0.06)',
+    backgroundColor: 'rgba(63,3,11,0.06)',
     borderRadius: Radius.full,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -621,20 +624,20 @@ const styles = StyleSheet.create({
   daysText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 10.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
   },
   arenaTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxbloodDeep,
     lineHeight: 22,
   },
   brandInfo: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11.5,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63,3,11,0.6)',
     marginTop: -4,
   },
   barRow: {
@@ -646,19 +649,19 @@ const styles = StyleSheet.create({
   barBg: {
     flex: 1,
     height: 5,
-    backgroundColor: 'rgba(232,216,204,0.1)',
+    backgroundColor: 'rgba(63,3,11,0.08)',
     borderRadius: 3,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
-    backgroundColor: Colors.rose,
+    backgroundColor: Colors.roseDeep,
     borderRadius: 3,
   },
   barLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63,3,11,0.5)',
     minWidth: 70,
     textAlign: 'right',
   },
@@ -669,39 +672,39 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 10,
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(232,216,204,0.08)',
+    borderTopColor: 'rgba(63,3,11,0.1)',
   },
   prizeSmallLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 9.5,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63,3,11,0.5)',
   },
   prizeCoins: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '800',
-    color: Colors.gold,
+    color: Colors.oxblood,
     marginTop: 2,
   },
   prizeRupee: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10.5,
-    color: 'rgba(243,201,105,0.5)',
+    color: 'rgba(63,3,11,0.6)',
   },
   entryBlock: { alignItems: 'flex-end', gap: 4 },
   entryLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 9.5,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63,3,11,0.5)',
   },
   entryCoins: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   joinBtn: {
-    backgroundColor: Colors.rose,
+    backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -717,7 +720,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(42,122,90,0.25)',
+    backgroundColor: 'rgba(42,122,90,0.12)',
     borderRadius: Radius.full,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -727,7 +730,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 11,
     fontWeight: '700',
-    color: '#5fd39b',
+    color: '#2a7a5a',
   },
   emptyState: {
     alignItems: 'center',
@@ -738,12 +741,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   emptySubText: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63,3,11,0.6)',
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 20,

@@ -1,5 +1,6 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { Image } from 'expo-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Briefcase01Icon, ChatIcon } from '@hugeicons/core-free-icons';
@@ -36,7 +37,11 @@ export function InviteCreatorSheet({ isOpen, onClose, creator, onMessageFirst, o
       <View style={styles.sheetBody}>
         {/* Creator Mini Card */}
         <View style={styles.sheetCreatorCard}>
-          <PlaceholderImage tone={creator?.tone || 'rose'} height={40} width={40} borderRadius={20} />
+          <Image
+            source={{ uri: (creator as any)?.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+            style={{ width: 40, height: 40, borderRadius: 20 }}
+            contentFit="cover"
+          />
           <View style={{ flex: 1 }}>
             <Text style={styles.sheetCreatorName}>{creator?.name}</Text>
             <Text style={styles.sheetCreatorStats}>

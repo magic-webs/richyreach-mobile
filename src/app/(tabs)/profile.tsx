@@ -15,7 +15,6 @@ import { HelpContent } from '@/components/influencer/profile/HelpContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
-import { RoleToggle } from '@/components/ui/role-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -223,11 +222,11 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.handleBtn} activeOpacity={0.8}>
           <View style={{ position: 'relative' }}>
-            {infProfile?.avatar ? (
-              <Image source={{ uri: infProfile.avatar }} style={{ width: 38, height: 38, borderRadius: 19 }} contentFit="cover" />
-            ) : (
-              <PlaceholderImage tone="ox" height={38} width={38} borderRadius={99} />
-            )}
+            <Image
+              source={{ uri: infProfile?.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+              style={{ width: 38, height: 38, borderRadius: 19 }}
+              contentFit="cover"
+            />
             {displayVerified && <View style={[styles.verifiedDot, { backgroundColor: Colors.gold }]}><Icon name="verified" size={11} color={Colors.oxblood} /></View>}
           </View>
           <Text style={styles.handleText}>{displayHandle}</Text>
@@ -246,15 +245,18 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Cover + avatar */}
         <View style={{ position: 'relative' }}>
-          <PlaceholderImage tone="ox" height={120} borderRadius={0} />
-          <View style={styles.coverGradient} />
+          <Image
+            source={{ uri: 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/cover-image.png' }}
+            style={{ width: '100%', height: 150 }}
+            contentFit="cover"
+          />
           <View style={styles.avatarWrap}>
             <View style={styles.avatarRing}>
-              {infProfile?.avatar ? (
-                <Image source={{ uri: infProfile.avatar }} style={{ width: 80, height: 80, borderRadius: 40 }} contentFit="cover" />
-              ) : (
-                <PlaceholderImage tone="rose" height={80} width={80} borderRadius={99} />
-              )}
+              <Image
+                source={{ uri: infProfile?.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                style={{ width: 80, height: 80, borderRadius: 40 }}
+                contentFit="cover"
+              />
             </View>
           </View>
         </View>
@@ -402,7 +404,7 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 );
               })}
-              
+
               <TouchableOpacity onPress={() => setSwitcherOpen(true)} style={styles.menuItemRow} activeOpacity={0.8}>
                 <View style={styles.menuItemLeft}>
                   <Icon name="swap" size={16} color={Colors.oxblood} />

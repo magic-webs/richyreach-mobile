@@ -1,6 +1,7 @@
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { Image } from 'expo-image';
 import { api } from '@/lib/api';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -53,7 +54,9 @@ export function SuggestedCreatorsSection({ onInviteCreator }: SuggestedCreatorsS
 
         return {
           id: rawId,
-          name: c.name || c.instagramHandle || 'Creator',
+          name: c.name || (c.instagramHandle ? `@${c.instagramHandle}` : 'Creator'),
+          instagramHandle: c.instagramHandle ? `@${c.instagramHandle}` : '@creator',
+          avatar: c.avatar || null,
           tone: (c.niche === 'Beauty' ? 'rose' : 'ox') as 'rose' | 'ox',
           followers: fStr,
           engagement: c.engagementRate ? `${Number(c.engagementRate).toFixed(1)}%` : '5.0%',
@@ -94,9 +97,14 @@ export function SuggestedCreatorsSection({ onInviteCreator }: SuggestedCreatorsS
           creators.map((creator: any, idx: number) => (
             <View key={`${creator.id}-${idx}`} style={styles.creatorCard}>
               <View style={styles.creatorAvatarWrap}>
-                <PlaceholderImage tone={creator.tone} height={60} width={60} borderRadius={30} />
+                <Image
+                  source={{ uri: creator.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                  style={{ width: 60, height: 60, borderRadius: 30 }}
+                  contentFit="cover"
+                />
               </View>
               <Text style={styles.creatorName} numberOfLines={1}>{creator.name}</Text>
+              <Text style={styles.creatorHandle} numberOfLines={1}>{creator.instagramHandle}</Text>
               <Text style={styles.creatorStats}>
                 {creator.followers}  <Text style={styles.creatorEngText}>{creator.engagement}</Text>
               </Text>
@@ -161,6 +169,13 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: Colors.oxblood,
     textAlign: 'center',
+  },
+  creatorHandle: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: Colors.roseDeep,
+    textAlign: 'center',
+    marginTop: 1,
   },
   creatorStats: {
     fontFamily: FontFamily.sansMedium,

@@ -1,6 +1,7 @@
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Edit, Gift, Wallet, Users, Bell, Lock, HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
@@ -351,13 +352,7 @@ export default function BrandProfileScreen() {
           <Icon name="chevDown" size={16} color={Colors.ink} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.themeToggleBtn}
-          activeOpacity={0.8}
-          onPress={() => setSheet('menu')}
-        >
-          <Icon name="settings" size={16} color={Colors.ink} />
-        </TouchableOpacity>
+
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
@@ -366,16 +361,13 @@ export default function BrandProfileScreen() {
             <ProfileSkeleton />
           </View>
         ) : null}
-        {/* Cover with Stripes */}
+        {/* Cover with Image */}
         <View style={[styles.coverContainer, loadingProfile && { opacity: 0 }]}>
-          <Stripes id="cover-stripes" stripeColor="rgba(63,3,11,0.05)" backgroundColor="rgba(180, 106, 116, 0.12)" />
-          {/* Floating spark stars */}
-          <View style={styles.sparklesContainer}>
-            <Icon name="sparkle" size={12} color="rgba(63,3,11,0.12)" />
-            <Icon name="sparkle" size={14} color="rgba(63,3,11,0.16)" />
-            <Icon name="sparkle" size={18} color="rgba(63,3,11,0.2)" />
-            <Icon name="sparkle" size={14} color="rgba(63,3,11,0.16)" />
-          </View>
+          <Image
+            source={{ uri: 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/cover-image.png' }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
         </View>
 
         {/* Squircle Avatar Overlapping Cover */}
@@ -553,66 +545,67 @@ export default function BrandProfileScreen() {
               )}
             </View>
           )}
+
+          {/* Settings Section */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.settingsSectionTitle}>Brand Settings</Text>
+            <View style={{ gap: 4 }}>
+              {[
+                { icon: Edit, label: 'Edit brand profile', value: '', key: 'edit_profile' },
+                { icon: Gift, label: 'Refer & earn', value: '₹100 + Points', key: 'referral' },
+                { icon: Wallet, label: 'Invoices & billing', value: walletData?.balance?.rupees != null ? `₹${walletData.balance.rupees.toLocaleString('en-IN')}` : '', key: 'billing' },
+                { icon: Users, label: 'Team management', value: '3 members', key: 'team' },
+                { icon: Bell, label: 'Notifications', value: '', key: 'notifications' },
+                { icon: Lock, label: 'Privacy & security', value: '', key: 'security' },
+                { icon: HelpCircle, label: 'Help & support', value: '', key: 'support' },
+              ].map((item, idx) => {
+                const IconComponent = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      if (item.key === 'edit_profile') {
+                        setIsEditSheetOpen(true);
+                      } else if (item.key === 'referral') {
+                        router.push('/brand/referral');
+                      } else {
+                        setSheet(item.key as SheetType);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                    style={styles.menuItemRow}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <IconComponent size={16} color={Colors.oxblood} strokeWidth={2} />
+                      <Text style={styles.menuItemText}>{item.label}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {item.value ? <Text style={styles.menuItemValue}>{item.value}</Text> : null}
+                      <ChevronRight size={14} color="rgba(63,3,11,0.3)" strokeWidth={2} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                onPress={async () => {
+                  await logout();
+                  router.replace('/(auth)');
+                }}
+                style={styles.menuLogoutBtn}
+                activeOpacity={0.8}
+              >
+                <LogOut size={16} color="#FF3B30" strokeWidth={2} />
+                <Text style={styles.menuLogoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
-      {/* Settings Options Bottom Sheet (Triggered by dropdown) */}
-      {sheet === 'menu' && (
-        <BottomSheet visible={true} title="Brand settings" icon="settings" onClose={() => setSheet(null)}>
-          <View style={{ gap: 4 }}>
-            {[
-              { icon: 'edit', label: 'Edit brand profile', value: '', key: 'edit_profile' },
-              { icon: 'gift', label: 'Refer & earn', value: '₹100 + Points', key: 'referral' },
-              { icon: 'wallet', label: 'Invoices & billing', value: walletData?.balance?.rupees != null ? `₹${walletData.balance.rupees.toLocaleString('en-IN')}` : '', key: 'billing' },
-              { icon: 'users', label: 'Team management', value: '3 members', key: 'team' },
-              { icon: 'bell', label: 'Notifications', value: '', key: 'notifications' },
-              { icon: 'lock', label: 'Privacy & security', value: '', key: 'security' },
-              { icon: 'settings', label: 'Help & support', value: '', key: 'support' },
-            ].map((item, idx) => (
-              <TouchableOpacity
-                key={idx}
-                onPress={() => {
-                  if (item.key === 'edit_profile') {
-                    setSheet(null);
-                    setIsEditSheetOpen(true);
-                  } else if (item.key === 'referral') {
-                    setSheet(null);
-                    router.push('/brand/referral');
-                  } else {
-                    setSheet(item.key as SheetType);
-                  }
-                }}
-                activeOpacity={0.8}
-                style={styles.menuItemRow}
-              >
-                <View style={styles.menuItemLeft}>
-                  <Icon name={item.icon} size={16} color={Colors.oxblood} />
-                  <Text style={styles.menuItemText}>{item.label}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {item.value ? <Text style={styles.menuItemValue}>{item.value}</Text> : null}
-                  <Icon name="chevron" size={14} color="rgba(63,3,11,0.3)" />
-                </View>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={async () => {
-                setSheet(null);
-                await logout();
-                router.replace('/(auth)');
-              }}
-              style={styles.menuLogoutBtn}
-              activeOpacity={0.8}
-            >
-              <Icon name="logout" size={16} color="#FF3B30" />
-              <Text style={styles.menuLogoutText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </BottomSheet>
-      )}
+
 
       {/* Individual settings bottom sheets */}
       {sheet === 'billing' && (
-        <BottomSheet visible={true} title="Invoices & billing" icon="wallet" onClose={() => setSheet('menu')}>
+        <BottomSheet visible={true} title="Invoices & billing" icon="wallet" onClose={() => setSheet(null)}>
           <View style={{ gap: 14 }}>
             <View style={styles.sheetInfoCard}>
               <Text style={styles.sheetInfoTitle}>Brand Wallet</Text>
@@ -652,7 +645,7 @@ export default function BrandProfileScreen() {
       )}
 
       {sheet === 'team' && (
-        <BottomSheet visible={true} title="Team management" icon="users" onClose={() => setSheet('menu')}>
+        <BottomSheet visible={true} title="Team management" icon="users" onClose={() => setSheet(null)}>
           <View style={{ gap: 14 }}>
             <View style={styles.sheetInfoCard}>
               <Text style={styles.sheetInfoTitle}>Portal Authentication Required</Text>
@@ -662,7 +655,7 @@ export default function BrandProfileScreen() {
             </View>
             <View style={styles.memberRow}>
               <View style={styles.memberAvatar}>
-                <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{session?.user?.name ? session.user.name.substring(0,2).toUpperCase() : 'B'}</Text>
+                <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : 'B'}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.memberName}>{session?.user?.name || 'Owner'}</Text>
@@ -674,7 +667,7 @@ export default function BrandProfileScreen() {
       )}
 
       {sheet === 'notifications' && (
-        <BottomSheet visible={true} title="Notifications" icon="bell" onClose={() => setSheet('menu')}>
+        <BottomSheet visible={true} title="Notifications" icon="bell" onClose={() => setSheet(null)}>
           <View style={{ gap: 14 }}>
             <View style={styles.toggleRow}>
               <View style={{ flex: 1 }}>
@@ -717,13 +710,13 @@ export default function BrandProfileScreen() {
       )}
 
       {sheet === 'security' && (
-        <BottomSheet visible={true} title="Privacy & security" icon="lock" onClose={() => setSheet('menu')}>
+        <BottomSheet visible={true} title="Privacy & security" icon="lock" onClose={() => setSheet(null)}>
           <Text style={{ color: Colors.ink, fontSize: 14 }}>Security, password management, and MFA configurations are accessible from the web portal dashboard.</Text>
         </BottomSheet>
       )}
 
       {sheet === 'support' && (
-        <BottomSheet visible={true} title="Help & support" icon="settings" onClose={() => setSheet('menu')}>
+        <BottomSheet visible={true} title="Help & support" icon="settings" onClose={() => setSheet(null)}>
           <Text style={{ color: Colors.ink, fontSize: 14, lineHeight: 20 }}>
             For help with your Brand Account, invoice inquiries, or resolving disputes with creators, please contact our brand assistance hotline at brandsupport@richyreach.com.
           </Text>
@@ -1244,5 +1237,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: Colors.cream,
+  },
+  settingsSection: {
+    marginTop: 28,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.03)',
+    ...Shadow.card,
+  },
+  settingsSectionTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.ink,
+    marginBottom: 10,
   },
 });

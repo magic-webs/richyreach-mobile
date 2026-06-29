@@ -71,11 +71,11 @@ export function ServicesTab({
         </ScrollView>
       ) : services.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Image
+          {/* <Image
             source={require('@/assets/images/empty_services.png')}
             style={styles.emptyStateImage}
             contentFit="contain"
-          />
+          /> */}
           <Text style={styles.emptyStateText}>No services listed yet</Text>
           <Text style={styles.emptyStateSub}>
             Offer specialized services (like reviews, sponsored posts) directly to brands.

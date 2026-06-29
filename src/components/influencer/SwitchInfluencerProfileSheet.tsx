@@ -96,13 +96,11 @@ export function SwitchInfluencerProfileSheet({
                 >
                   {/* Avatar */}
                   <View style={styles.avatarWrap}>
-                    {p.avatar ? (
-                      <Image source={{ uri: p.avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    ) : (
-                      <View style={styles.avatarFallback}>
-                        <Text style={styles.avatarText}>{letter}</Text>
-                      </View>
-                    )}
+                    <Image
+                      source={{ uri: p.avatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                    />
                   </View>
 
                   {/* Details */}

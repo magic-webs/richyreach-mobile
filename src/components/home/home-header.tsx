@@ -40,15 +40,11 @@ export function HomeHeader({
           style={styles.profileSwitchTrigger}
         >
           <View style={styles.avatarContainer}>
-            {activeProfileAvatar ? (
-              <Image source={{ uri: activeProfileAvatar }} style={styles.avatarImage} contentFit="cover" />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarFallbackText}>
-                  {activeProfileHandle ? activeProfileHandle.charAt(0).toUpperCase() : 'U'}
-                </Text>
-              </View>
-            )}
+            <Image
+              source={{ uri: activeProfileAvatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+              style={styles.avatarImage}
+              contentFit="cover"
+            />
           </View>
           <View style={styles.textContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
