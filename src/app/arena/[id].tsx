@@ -17,7 +17,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { ArrowLeft, MapPin, ExternalLink, Trophy, Coins, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award } from 'lucide-react-native';
+import { ArrowLeft, MapPin, ExternalLink, Trophy, Coins, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award, Sparkles } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
@@ -81,6 +82,7 @@ export default function ArenaDetailScreen() {
 
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const submitForm = useForm<{
     collaborationLink: string;
@@ -249,6 +251,26 @@ export default function ArenaDetailScreen() {
       showModal({ title: 'Upload Failed', message: err.message || 'An error occurred during upload.' });
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleGenerateReview = async () => {
+    if (!arena) return;
+    setIsGenerating(true);
+    try {
+      const { review } = await api.arena.generateReview(id, activeInfluencerProfileId);
+      await Clipboard.setStringAsync(review);
+      showModal({
+        title: '✅ Review Copied!',
+        message: 'Your AI-generated review has been copied to the clipboard. Opening Google Maps so you can paste and post it!',
+      });
+      if (arena.googleMapsLink) {
+        setTimeout(() => Linking.openURL(arena.googleMapsLink).catch(() => {}), 800);
+      }
+    } catch (err: any) {
+      showModal({ title: 'Generation Failed', message: err.message || 'Could not generate review. Please try again.' });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -676,6 +698,32 @@ export default function ArenaDetailScreen() {
               </View>
             )}
           </View>
+
+        {/* AI Review Generator — only for google_review arenas after joining */}
+        {isJoined && isGoogleReview && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.aiReviewBtn, isGenerating && { opacity: 0.72 }]}
+              onPress={handleGenerateReview}
+              activeOpacity={0.85}
+              disabled={isGenerating}
+            >
+              <View style={styles.aiReviewBtnIcon}>
+                <Sparkles size={20} color="#fff" strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.aiReviewBtnTitle}>
+                  {isGenerating ? 'Generating…' : '✨ Write Review with AI'}
+                </Text>
+                <Text style={styles.aiReviewBtnSub}>
+                  {isGenerating
+                    ? 'GPT-4o is crafting your review…'
+                    : 'Tap to generate, copy & open Google Maps'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
         </ScrollView>
 
         {/* Join CTA */}
@@ -1127,5 +1175,36 @@ const styles = StyleSheet.create({
   heroBannerImage: {
     width: '100%',
     height: '100%',
+  },
+  aiReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#2a7a5a',
+    borderRadius: Radius.md,
+    padding: 16,
+    ...Shadow.button,
+    shadowColor: '#2a7a5a',
+  },
+  aiReviewBtnIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiReviewBtnTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  aiReviewBtnSub: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 2,
   },
 });

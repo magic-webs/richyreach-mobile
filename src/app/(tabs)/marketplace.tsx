@@ -7,7 +7,7 @@ import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, FlatList, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,16 +77,6 @@ function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: 
 
       {/* Bottom badges */}
       <View style={styles.bannerBadges}>
-        <View style={styles.platformBadge}>
-          <HugeiconsIcon
-            icon={InstagramIcon}
-            size={13}
-            color="#fff"
-            strokeWidth={2}
-          />
-          <Text style={styles.platformText}>Instagram</Text>
-        </View>
-
         <View style={styles.payBadge}>
           <Text style={styles.payAmount}>
             {numCreators && numCreators > 1 && costPerCreator
@@ -105,6 +95,20 @@ function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: 
 function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+
+  const handleShare = async () => {
+    const pay = cm.numCreators > 1 && cm.costPerCreator
+      ? `\u20b9${cm.costPerCreator.toLocaleString('en-IN')} per spot`
+      : cm.budget;
+    const shareUrl = `https://app.richyreach.com/shared/${cm.id}`;
+    try {
+      await Share.share({
+        title: cm.title,
+        message: `\ud83c\udfaf *${cm.title}*\n\n\ud83c\udfe2 Brand: ${cm.brand}\n\ud83d\udcb0 Pay: ${pay}\n\u23f0 Deadline: ${cm.deadline}\n\n\ud83d\udd17 View & apply here:\n${shareUrl}\n\n_Powered by RichyReach_`,
+        url: shareUrl,   // iOS picks this up as a separate URL (opens in browser)
+      });
+    } catch (_) {}
+  };
 
   // Dynamic hashtags based on category & reach
   const hashtags = React.useMemo(() => {
@@ -180,7 +184,7 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
               color={Colors.oxblood}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
             <HugeiconsIcon
               icon={Navigation03FreeIcons}
               size={22}

@@ -221,6 +221,11 @@ export const api = {
     myParticipations: (activeProfileId?: string | null) =>
       request<any[]>('/arena/influencer/participations', { activeProfileId }),
     leaderboard: (id: string) => request<any[]>(`/arena/${id}/leaderboard`),
+    generateReview: (id: string, activeProfileId?: string | null) =>
+      request<{ review: string }>(`/arena/${id}/generate-review`, {
+        method: 'POST',
+        activeProfileId,
+      }),
     adminAll: () => request<any[]>('/arena/admin/all'),
     verifySubmission: (participantId: string, action: 'approve' | 'reject', notes?: string) =>
       request<any>(`/arena/submissions/${participantId}/verify`, {

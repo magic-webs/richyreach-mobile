@@ -1,4 +1,6 @@
 import { Chip } from '@/components/ui/chip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Coins, Swords, Zap } from 'lucide-react-native';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { Image } from 'expo-image';
@@ -56,16 +58,23 @@ function ArenaCard({
       onPress={onPress}
       style={[
         styles.arenaCard,
-        isJoined && { borderColor: '#2a7a5a', backgroundColor: '#e2f4ec' }
+        isJoined && { borderColor: '#2a7a5a', borderWidth: 1.5 }
       ]}
     >
+      {/* Banner */}
       {arena.bannerUrl ? (
         <View style={styles.cardBannerContainer}>
           <Image source={{ uri: arena.bannerUrl }} style={styles.cardBannerImage} contentFit="cover" />
+          {/* Overlay gradient hint */}
+          <View style={styles.bannerOverlay} />
         </View>
-      ) : null}
+      ) : (
+        <View style={[styles.cardBannerContainer, styles.cardBannerPlaceholder]}>
+          <Icon name={typeConf.icon} size={32} color={typeConf.color} />
+        </View>
+      )}
 
-      {/* Top strip */}
+      {/* Type badge + days chip */}
       <View style={styles.cardHeader}>
         <View style={[styles.typeBadge, { backgroundColor: typeConf.bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
           <Icon name={typeConf.icon} size={10} color={typeConf.color} />
@@ -96,41 +105,53 @@ function ArenaCard({
         </Text>
       </View>
 
-      {/* Footer */}
+      {/* Footer — join action only */}
       <View style={styles.cardFooter}>
-        <View>
-          <Text style={styles.prizeSmallLabel}>Prize Pool</Text>
-          <Text style={styles.prizeCoins}>
-            {(arena.totalBudgetCoins || 0).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
-          </Text>
-          <Text style={styles.prizeRupee}>
-            = ₹{((arena.totalBudgetCoins || 0) / 100).toLocaleString('en-IN')}
-          </Text>
-        </View>
-
-        <View style={styles.entryBlock}>
-          <Text style={styles.entryLabel}>Entry</Text>
-          <Text style={styles.entryCoins}>
-            {(arena.entryFeeCoins).toLocaleString()} <Text style={styles.coinEmojiOverride}>🪙</Text>
-          </Text>
-          {isJoined ? (
-            <View style={styles.joinedBadge}>
-              <Icon name="check" size={11} color="#2a7a5a" />
-              <Text style={styles.joinedBadgeText}>Joined</Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.joinBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-              activeOpacity={0.85}
-              onPress={onPress}
-            >
-              <Text style={styles.joinBtnText}>Join</Text>
-              <Icon name="arrow" size={10} color={Colors.cream} />
-            </TouchableOpacity>
-          )}
-        </View>
+        {isJoined ? (
+          <View style={styles.joinedFullBadge}>
+            <Icon name="check" size={14} color="#2a7a5a" />
+            <Text style={styles.joinedFullBadgeText}>You're In! Tap to view</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.joinFullBtn}
+            activeOpacity={0.85}
+            onPress={onPress}
+          >
+            <Text style={styles.joinFullBtnText}>Join Arena</Text>
+            <Icon name="arrow" size={12} color={Colors.cream} />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
+  );
+}
+
+function ArenaCardSkeleton() {
+  return (
+    <View style={styles.arenaCard}>
+      {/* Banner */}
+      <Skeleton width="100%" height={150} borderRadius={12} />
+      {/* Type badge + days chip */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton width={90} height={22} borderRadius={7} />
+        <Skeleton width={64} height={22} borderRadius={99} />
+      </View>
+      {/* Title */}
+      <Skeleton variant="text" width="80%" height={16} />
+      <Skeleton variant="text" width="55%" height={12} />
+      {/* Brand */}
+      <Skeleton variant="text" width="50%" height={11} />
+      {/* Bar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Skeleton width="100%" height={5} borderRadius={3} style={{ flex: 1 }} />
+        <Skeleton width={70} height={10} borderRadius={3} />
+      </View>
+      {/* Join button */}
+      <View style={{ marginTop: 4, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: 'rgba(63,3,11,0.1)' }}>
+        <Skeleton width="100%" height={42} borderRadius={99} />
+      </View>
+    </View>
   );
 }
 
@@ -254,21 +275,31 @@ export default function ArenaScreen() {
         {/* Your stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Icon name="wallet" size={16} color={Colors.gold} />
-            <Text style={styles.statValue}>
-              {totalCoinsWon.toLocaleString()} 🪙
-            </Text>
-            <Text style={styles.statLabel}>Total Earned</Text>
+            <View style={[styles.statIconPill, { backgroundColor: 'rgba(212,175,55,0.12)' }]}>
+              <Coins size={18} color={Colors.gold} strokeWidth={2} />
+            </View>
+            <View style={styles.statTextBlock}>
+              <Text style={styles.statValue}>{totalCoinsWon.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Coins Earned</Text>
+            </View>
           </View>
           <View style={styles.statCard}>
-            <Icon name="arena" size={16} color={Colors.roseDeep} />
-            <Text style={styles.statValue}>{participations.length}</Text>
-            <Text style={styles.statLabel}>Joined</Text>
+            <View style={[styles.statIconPill, { backgroundColor: 'rgba(180,106,116,0.12)' }]}>
+              <Swords size={18} color={Colors.roseDeep} strokeWidth={2} />
+            </View>
+            <View style={styles.statTextBlock}>
+              <Text style={styles.statValue}>{participations.length}</Text>
+              <Text style={styles.statLabel}>Arenas Joined</Text>
+            </View>
           </View>
           <View style={styles.statCard}>
-            <Icon name="bolt" size={16} color="#2a7a5a" />
-            <Text style={styles.statValue}>{activeParticipations}</Text>
-            <Text style={styles.statLabel}>Active</Text>
+            <View style={[styles.statIconPill, { backgroundColor: 'rgba(42,122,90,0.12)' }]}>
+              <Zap size={18} color="#2a7a5a" strokeWidth={2} />
+            </View>
+            <View style={styles.statTextBlock}>
+              <Text style={styles.statValue}>{activeParticipations}</Text>
+              <Text style={styles.statLabel}>Active Now</Text>
+            </View>
           </View>
         </View>
 
@@ -385,8 +416,10 @@ export default function ArenaScreen() {
           </View>
 
           {isLoading ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Loading arenas...</Text>
+            <View style={styles.arenaList}>
+              <ArenaCardSkeleton />
+              <ArenaCardSkeleton />
+              <ArenaCardSkeleton />
             </View>
           ) : arenas.length === 0 ? (
             <View style={styles.emptyState}>
@@ -496,24 +529,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.cream,
     borderRadius: Radius.md,
-    padding: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 13,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 9,
     borderWidth: 0.5,
     borderColor: 'rgba(63,3,11,0.1)',
     ...Shadow.card,
   },
+  statIconPill: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statTextBlock: {
+    flex: 1,
+    gap: 1,
+  },
   statValue: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: Colors.oxblood,
-    marginTop: 4,
   },
   statLabel: {
     fontFamily: FontFamily.sansRegular,
-    fontSize: 10,
+    fontSize: 9.5,
     color: 'rgba(63,3,11,0.5)',
+    lineHeight: 13,
   },
   myArenasSection: { paddingHorizontal: 18, marginTop: 16 },
   sectionLabel: {
@@ -598,18 +644,27 @@ const styles = StyleSheet.create({
   arenaCard: {
     backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
-    padding: 16,
+    padding: 18,
     borderWidth: 0.5,
     borderColor: 'rgba(63,3,11,0.1)',
-    gap: 8,
+    gap: 10,
     ...Shadow.card,
   },
   cardBannerContainer: {
-    height: 100,
+    height: 150,
     width: '100%',
     borderRadius: Radius.md,
     overflow: 'hidden',
     marginBottom: 4,
+  },
+  cardBannerPlaceholder: {
+    backgroundColor: 'rgba(180,106,116,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(63,3,11,0.12)',
   },
   cardBannerImage: {
     width: '100%',
@@ -684,69 +739,40 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
     marginTop: 4,
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(63,3,11,0.1)',
   },
-  prizeSmallLabel: {
-    fontFamily: FontFamily.sansRegular,
-    fontSize: 9.5,
-    color: 'rgba(63,3,11,0.5)',
-  },
-  prizeCoins: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.oxblood,
-    marginTop: 2,
-  },
-  prizeRupee: {
-    fontFamily: FontFamily.sansRegular,
-    fontSize: 10.5,
-    color: 'rgba(63,3,11,0.6)',
-  },
-  entryBlock: { alignItems: 'flex-end', gap: 4 },
-  entryLabel: {
-    fontFamily: FontFamily.sansRegular,
-    fontSize: 9.5,
-    color: 'rgba(63,3,11,0.5)',
-  },
-  entryCoins: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.oxblood,
-  },
-  joinBtn: {
+  joinFullBtn: {
     backgroundColor: Colors.oxblood,
     borderRadius: Radius.full,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginTop: 4,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  joinBtnText: {
+  joinFullBtnText: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: Colors.cream,
   },
-  joinedBadge: {
+  joinedFullBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(42,122,90,0.12)',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(42,122,90,0.1)',
     borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 4,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42,122,90,0.3)',
   },
-  joinedBadgeText: {
+  joinedFullBadgeText: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
     color: '#2a7a5a',
   },
