@@ -8,6 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 
 export default function BrandAnalyticsScreen() {
   const router = useRouter();
@@ -58,11 +60,9 @@ export default function BrandAnalyticsScreen() {
         <TouchableOpacity
           style={styles.backBtn}
           activeOpacity={0.8}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/(tabs)/brand/profile")}
         >
-          <View style={{ transform: [{ rotate: '180deg' }] }}>
-            <Icon name="chevron" size={18} color={Colors.ink} />
-          </View>
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={20} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Analytics Dashboard</Text>
         <View style={{ width: 36 }} />

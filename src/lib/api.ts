@@ -251,6 +251,10 @@ export const api = {
         activeProfileId,
       }),
   },
+  places: {
+    autocomplete: (input: string) =>
+      request<{ predictions: any[] }>(`/places/autocomplete?input=${encodeURIComponent(input)}`),
+  },
   wallet: {
     balance: () => request<{ coinBalance: number; rupeeValue: number; transactions: any[] }>('/wallet'),
     createOrder: (coins: number) =>

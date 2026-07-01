@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -19,7 +19,8 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
-
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 const GST_RATE = 0.18;
 
 const PRESETS = [
@@ -253,8 +254,8 @@ export default function BrandWalletScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-            <Text style={styles.backArrow}>←</Text>
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/brand/profile')} style={styles.backBtn} activeOpacity={0.7}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={20} color={Colors.oxblood} strokeWidth={2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Brand Wallet</Text>
           <View style={{ width: 36 }} />

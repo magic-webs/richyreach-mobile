@@ -57,7 +57,7 @@ function LeaderboardRow({ rank, p }: { rank: number; p: any }) {
           ) : p.verificationStatus === 'rejected' ? (
             <XCircle size={16} color={Colors.rose} />
           ) : (
-            <Clock size={16} color="rgba(232,216,204,0.45)" />
+            <Clock size={16} color="rgba(63, 3, 11, 0.45)" />
           )}
         </View>
         {p.accountReach > 0 && (
@@ -293,12 +293,12 @@ export default function ArenaDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-            <ArrowLeft size={20} color={Colors.cream} />
+            <ArrowLeft size={20} color={Colors.oxblood} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle} numberOfLines={1}>{arena.title}</Text>
             <Text style={styles.headerMeta}>
-              {TYPE_LABELS[arena.arenaType] || arena.arenaType}  ·  {daysLeft}d left
+              {TYPE_LABELS[arena.arenaType] || arena.arenaType} · {daysLeft}d left
             </Text>
           </View>
         </View>
@@ -337,7 +337,7 @@ export default function ArenaDetailScreen() {
           {/* Prize breakdown */}
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Trophy size={16} color={Colors.cream} />
+              <Trophy size={16} color={Colors.oxblood} />
               <Text style={styles.sectionTitle}>Prize Breakdown</Text>
             </View>
             <View style={styles.prizeCard}>
@@ -371,7 +371,7 @@ export default function ArenaDetailScreen() {
           {isGoogleReview && arena.businessName && (
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <MapPin size={16} color={Colors.cream} />
+                <MapPin size={16} color={Colors.oxblood} />
                 <Text style={styles.sectionTitle}>Business to Review</Text>
               </View>
               <View style={styles.businessCard}>
@@ -395,7 +395,7 @@ export default function ArenaDetailScreen() {
           {arena.reviewGuidelines && (
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <FileText size={16} color={Colors.cream} />
+                <FileText size={16} color={Colors.oxblood} />
                 <Text style={styles.sectionTitle}>Guidelines</Text>
               </View>
               <View style={styles.guideCard}>
@@ -408,7 +408,7 @@ export default function ArenaDetailScreen() {
           {isJoined && myParticipation && (
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Trophy size={16} color={Colors.cream} />
+                <Trophy size={16} color={Colors.oxblood} />
                 <Text style={styles.sectionTitle}>My Status</Text>
               </View>
               <View style={styles.myStatusCard}>
@@ -420,7 +420,7 @@ export default function ArenaDetailScreen() {
                     ) : myParticipation.verificationStatus === 'rejected' ? (
                       <XCircle size={14} color={Colors.rose} />
                     ) : (
-                      <Clock size={14} color="rgba(232,216,204,0.45)" />
+                      <Clock size={14} color="rgba(63, 3, 11, 0.45)" />
                     )}
                     <Text style={styles.statusValue}>
                       {myParticipation.verificationStatus === 'approved'
@@ -701,11 +701,14 @@ export default function ArenaDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.oxbloodDeep },
+  root: {
+    flex: 1,
+    backgroundColor: Colors.creamLite,
+  },
   loadingText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   header: {
     flexDirection: 'row',
@@ -714,13 +717,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232,216,204,0.1)',
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(232,216,204,0.08)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -728,100 +731,106 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   headerMeta: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11,
-    color: 'rgba(232,216,204,0.45)',
-    marginTop: 2,
+    color: 'rgba(63, 3, 11, 0.5)',
+    marginTop: 1,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 10,
-    padding: 18,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    marginBottom: 20,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.md,
     padding: 12,
-    gap: 2,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    gap: 2,
+    ...Shadow.card,
   },
   statLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 9.5,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.cream,
-    marginTop: 2,
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.oxblood,
   },
   statSub: {
     fontFamily: FontFamily.sansRegular,
-    fontSize: 9.5,
-    color: 'rgba(232,216,204,0.35)',
+    fontSize: 10,
+    color: 'rgba(63, 3, 11, 0.4)',
   },
-  section: { paddingHorizontal: 18, marginBottom: 20 },
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
   sectionTitle: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: Colors.cream,
-    marginBottom: 10,
+    color: Colors.oxblood,
   },
   prizeCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
-    padding: 16,
-    gap: 10,
+    padding: 14,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    gap: 8,
+    ...Shadow.card,
   },
   prizeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
   prizeRowLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13,
-    color: 'rgba(232,216,204,0.6)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   prizeRowValue: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   businessCard: {
-    backgroundColor: 'rgba(42,122,90,0.12)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
-    padding: 16,
-    gap: 10,
+    padding: 14,
     borderWidth: 0.5,
-    borderColor: 'rgba(42,122,90,0.25)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    gap: 10,
+    ...Shadow.card,
   },
   businessName: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxbloodDeep,
   },
   mapsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(42,122,90,0.2)',
+    backgroundColor: 'rgba(42,122,90,0.15)',
     borderRadius: Radius.md,
     paddingHorizontal: 10,
     paddingVertical: 7,
     alignSelf: 'flex-start',
+    marginTop: 4,
   },
   mapsBtnText: {
     fontFamily: FontFamily.sansMedium,
@@ -830,25 +839,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   guideCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
-    padding: 16,
+    padding: 14,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   guideText: {
     fontFamily: FontFamily.sansRegular,
-    fontSize: 13.5,
-    color: 'rgba(232,216,204,0.8)',
-    lineHeight: 21,
+    fontSize: 13,
+    color: 'rgba(63, 3, 11, 0.7)',
+    lineHeight: 19,
   },
   myStatusCard: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 16,
-    gap: 10,
+    gap: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   statusRow: {
     flexDirection: 'row',
@@ -858,16 +869,16 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13,
-    color: 'rgba(232,216,204,0.55)',
+    color: 'rgba(63, 3, 11, 0.55)',
   },
   statusValue: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   toggleSubmitBtn: {
-    backgroundColor: 'rgba(232,216,204,0.1)',
+    backgroundColor: 'rgba(63, 3, 11, 0.06)',
     borderRadius: Radius.full,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -878,21 +889,22 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   submitForm: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 16,
     gap: 14,
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   formField: { gap: 6 },
   formHint: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11.5,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63, 3, 11, 0.45)',
     lineHeight: 17,
   },
   formError: {
@@ -907,25 +919,26 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
     fontWeight: '700',
-    color: 'rgba(232,216,204,0.7)',
+    color: 'rgba(63, 3, 11, 0.7)',
   },
   formInput: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: 'rgba(63, 3, 11, 0.03)',
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(232,216,204,0.15)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontFamily: FontFamily.sansRegular,
     fontSize: 13.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   lbList: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: 0.5,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   lbRow: {
     flexDirection: 'row',
@@ -934,14 +947,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(232,216,204,0.07)',
+    borderBottomColor: 'rgba(63, 3, 11, 0.07)',
   },
-  lbRank: { fontSize: 16, minWidth: 28, textAlign: 'center' },
+  lbRank: { fontSize: 16, minWidth: 28, textAlign: 'center', color: 'rgba(63, 3, 11, 0.5)' },
   lbAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(232,216,204,0.15)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -949,40 +962,43 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: 14,
     fontWeight: '800',
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   lbName: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   lbHandle: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 11,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63, 3, 11, 0.4)',
   },
   lbStatus: { fontSize: 15 },
   lbReach: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10.5,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63, 3, 11, 0.4)',
   },
   lbCoins: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.gold,
+    color: Colors.oxblood,
   },
   emptyLb: {
-    backgroundColor: 'rgba(232,216,204,0.07)',
+    backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.1)',
+    ...Shadow.card,
   },
   emptyLbText: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 13.5,
-    color: 'rgba(232,216,204,0.4)',
+    color: 'rgba(63, 3, 11, 0.4)',
     textAlign: 'center',
   },
   joinCta: {
@@ -997,27 +1013,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: 'rgba(42,2,7,0.95)',
+    backgroundColor: 'rgba(244, 236, 228, 0.96)',
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(232,216,204,0.1)',
+    borderTopColor: 'rgba(63, 3, 11, 0.08)',
   },
   joinCtaInfo: { gap: 2 },
   joinCtaLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 10,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63, 3, 11, 0.5)',
   },
   joinCtaCoins: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.gold,
+    color: Colors.oxblood,
   },
   screenshotPreviewCard: {
-    backgroundColor: 'rgba(232,216,204,0.04)',
+    backgroundColor: 'rgba(63, 3, 11, 0.03)',
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(232,216,204,0.12)',
+    borderColor: 'rgba(63, 3, 11, 0.1)',
     padding: 10,
     alignItems: 'center',
     gap: 10,
@@ -1028,7 +1044,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   changeScreenshotBtn: {
-    backgroundColor: 'rgba(232,216,204,0.12)',
+    backgroundColor: 'rgba(63, 3, 11, 0.08)',
     borderRadius: Radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1036,14 +1052,14 @@ const styles = StyleSheet.create({
   changeScreenshotBtnText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
-    color: Colors.cream,
+    color: Colors.oxblood,
   },
   uploadBox: {
-    backgroundColor: 'rgba(232,216,204,0.05)',
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: 'rgba(232,216,204,0.25)',
+    borderColor: 'rgba(63, 3, 11, 0.2)',
     paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1054,21 +1070,21 @@ const styles = StyleSheet.create({
   uploadBoxText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
   },
   submissionDetails: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(232,216,204,0.1)',
+    borderTopColor: 'rgba(63, 3, 11, 0.08)',
     gap: 8,
   },
   detailsTitle: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,
     fontWeight: '700',
-    color: 'rgba(232,216,204,0.7)',
+    color: 'rgba(63, 3, 11, 0.7)',
     marginBottom: 4,
   },
   detailsRow: {
@@ -1080,20 +1096,20 @@ const styles = StyleSheet.create({
   detailsLabel: {
     fontFamily: FontFamily.sansRegular,
     fontSize: 12.5,
-    color: 'rgba(232,216,204,0.45)',
+    color: 'rgba(63, 3, 11, 0.45)',
     minWidth: 90,
   },
   detailsVal: {
     flex: 1,
     fontFamily: FontFamily.sansMedium,
     fontSize: 12.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
     textAlign: 'right',
   },
   detailsScreenshot: {
     width: 120,
     height: 120,
     borderRadius: Radius.sm,
-    backgroundColor: 'rgba(232,216,204,0.05)',
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
   },
 });

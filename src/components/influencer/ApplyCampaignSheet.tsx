@@ -1,4 +1,5 @@
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BidSlider } from '@/components/influencer/BidSlider';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily } from '@/constants/brand';
 import React, { useEffect, useRef, useState } from 'react';
@@ -12,7 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { useUIStore } from '@/store/ui';
 
@@ -81,6 +81,9 @@ function pickProposal(niche: string | null | undefined): string {
   return matched[Math.floor(Math.random() * matched.length)];
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 interface ApplyCampaignSheetProps {
   isOpen: boolean;
@@ -260,14 +263,12 @@ export function ApplyCampaignSheet({
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.formInput}
-              placeholder={`e.g. ${spotPrice}`}
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              value={bidPrice}
-              onChangeText={handleBidChange}
-              keyboardType="numeric"
-              editable={!submitting}
+            <BidSlider
+              value={Number(bidPrice) || spotPrice}
+              minValue={Math.max(1, Math.floor(spotPrice * 0.5))}
+              maxValue={maxPrice}
+              onChange={(v) => handleBidChange(String(v))}
+              disabled={submitting}
             />
           </View>
 

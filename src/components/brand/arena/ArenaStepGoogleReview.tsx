@@ -1,41 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TextInput, View, Linking, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, TextInput, View, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { BadgeCheckIcon, CheckIcon, ExternalLinkIcon, Film01Icon, Location01Icon, Search01Icon } from '@hugeicons/core-free-icons';
+import { ExternalLinkIcon, Film01Icon, Location01Icon, Search01Icon } from '@hugeicons/core-free-icons';
+import { api } from '@/lib/api';
 
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-
+// ─── fetchSuggestions ─────────────────────────────────────────────────────────
+// Calls the backend API route (/places/autocomplete) which proxies
+// Google Places server-side.
+// Falls back to OpenStreetMap Nominatim if the proxy fails.
 const fetchSuggestions = async (input: string) => {
-  if (!input || input.length < 3) return [];
+  if (!input || input.length < 2) return [];
 
-  if (GOOGLE_API_KEY) {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=establishment&key=${GOOGLE_API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.status === 'OK' && data.predictions) {
-        return data.predictions.map((p: any) => ({
-          id: p.place_id,
-          title: p.structured_formatting?.main_text || p.description,
-          subtitle: p.structured_formatting?.secondary_text || '',
-          placeId: p.place_id,
-          isGoogle: true,
-        }));
-      }
-    } catch (e) {
-      console.warn('Google Places Autocomplete error:', e);
+  // ── Backend proxy → Google Places (all platforms) ──────────────────────────
+  try {
+    const data = await api.places.autocomplete(input);
+    if (Array.isArray(data.predictions) && data.predictions.length > 0) {
+      return data.predictions.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        subtitle: p.subtitle,
+        placeId: p.placeId,
+        isGoogle: true,
+      }));
     }
+  } catch (e) {
+    console.warn('Places proxy fetch error:', e);
   }
 
-  // Fallback to OpenStreetMap Nominatim
+  // ── Nominatim fallback ───────────────────────────────────────────────────
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=5`;
+    const url =
+      `https://nominatim.openstreetmap.org/search` +
+      `?q=${encodeURIComponent(input)}` +
+      `&format=json&limit=6&addressdetails=1`;
     const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'RichyReachMobileApp/1.0',
-      },
+      headers: { 'User-Agent': 'RichyReachMobileApp/1.0' },
     });
     const data = await res.json();
     if (Array.isArray(data)) {
@@ -54,6 +55,15 @@ const fetchSuggestions = async (input: string) => {
   return [];
 };
 
+
+/** Simple UUID v4 generator (no external dep) */
+function uuid4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export function ArenaStepGoogleReview() {
   const { control, watch, setValue } = useFormContext();
   const arenaType = watch('arenaType');
@@ -63,7 +73,9 @@ export function ArenaStepGoogleReview() {
   const [inputValue, setInputValue] = useState(businessNameValue);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeSearchTimer, setActiveSearchTimer] = useState<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Session token groups autocomplete + place-detail calls for billing efficiency
+  const sessionTokenRef = useRef<string>(uuid4());
 
   // Sync state if form value updates from outside
   useEffect(() => {
@@ -76,27 +88,28 @@ export function ArenaStepGoogleReview() {
     setInputValue(text);
     setValue('businessName', text, { shouldValidate: true, shouldDirty: true });
 
-    if (activeSearchTimer) {
-      clearTimeout(activeSearchTimer);
-    }
+    if (timerRef.current) clearTimeout(timerRef.current);
 
-    if (text.length < 3) {
+    if (text.length < 2) {
       setSuggestions([]);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
-    const timer = setTimeout(async () => {
+    timerRef.current = setTimeout(async () => {
       const results = await fetchSuggestions(text);
       setSuggestions(results);
       setLoading(false);
-    }, 500);
-    setActiveSearchTimer(timer);
+    }, 400);
   };
 
   const handleSelectSuggestion = (item: any) => {
     setInputValue(item.title);
     setValue('businessName', item.title, { shouldValidate: true, shouldDirty: true });
+
+    // Refresh session token — each autocomplete session should end with a selection
+    sessionTokenRef.current = uuid4();
 
     // Automatically generate direct Google Review link
     let generatedLink = '';
@@ -151,13 +164,18 @@ export function ArenaStepGoogleReview() {
             <Text style={styles.required}>*</Text>
           </View>
           <View style={styles.inputContainer}>
+            <View style={styles.searchIconWrap} pointerEvents="none">
+              <HugeiconsIcon icon={Search01Icon} size={15} color="rgba(63,3,11,0.4)" strokeWidth={2} />
+            </View>
             <TextInput
-              style={styles.input}
-              placeholder="Start typing business name (e.g. Starbucks Connaught Place)"
+              style={[styles.input, styles.inputWithIcon]}
+              placeholder="Type a business name…"
               placeholderTextColor="rgba(63,3,11,0.35)"
               onChangeText={handleInputChange}
               value={inputValue}
               autoCorrect={false}
+              autoCapitalize="words"
+              returnKeyType="search"
             />
             {loading && (
               <ActivityIndicator style={styles.inputLoader} size="small" color={Colors.oxblood} />
@@ -270,6 +288,14 @@ const styles = StyleSheet.create({
   inputContainer: {
     position: 'relative',
     justifyContent: 'center',
+  },
+  searchIconWrap: {
+    position: 'absolute',
+    left: 14,
+    zIndex: 1,
+  },
+  inputWithIcon: {
+    paddingLeft: 38,
   },
   input: {
     backgroundColor: '#fff',
