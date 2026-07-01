@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, TextInput, View, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Controller, useFormContext } from 'react-hook-form';
+import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ExternalLinkIcon, Film01Icon, Location01Icon, Search01Icon } from '@hugeicons/core-free-icons';
@@ -65,10 +65,10 @@ function uuid4(): string {
 }
 
 export function ArenaStepGoogleReview() {
-  const { control, watch, setValue } = useFormContext();
-  const arenaType = watch('arenaType');
-  const mapsLink = watch('googleMapsLink');
-  const businessNameValue = watch('businessName') || '';
+  const { control, setValue } = useFormContext();
+  const arenaType = useWatch({ control, name: 'arenaType' });
+  const mapsLink = useWatch({ control, name: 'googleMapsLink' });
+  const businessNameValue = useWatch({ control, name: 'businessName' }) || '';
 
   const [inputValue, setInputValue] = useState(businessNameValue);
   const [suggestions, setSuggestions] = useState<any[]>([]);

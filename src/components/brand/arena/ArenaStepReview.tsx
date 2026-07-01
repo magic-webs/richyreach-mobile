@@ -15,6 +15,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useProfilesStore } from '@/store/profiles';
+import { Image } from 'expo-image';
+
 
 const ARENA_TYPE_LABELS: Record<string, string> = {
   reel_reach: 'Reel Reach Arena',
@@ -67,6 +69,7 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
   const entryFeeCoins = watch('entryFeeCoins') || 2000;
   const businessName = watch('businessName');
   const googleMapsLink = watch('googleMapsLink');
+  const bannerUrl = watch('bannerUrl');
 
   const { data: walletData } = useQuery({
     queryKey: ['walletBalance', activeBrandProfileId],
@@ -87,6 +90,14 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
         Review your arena configuration before launching. Budget coins will be deducted from your wallet.
       </Text>
 
+      {/* Banner Preview */}
+      {bannerUrl ? (
+        <View style={styles.bannerPreviewContainer}>
+          <Image source={{ uri: bannerUrl }} style={styles.bannerImage} contentFit="cover" />
+          <View style={styles.bannerOverlay} />
+        </View>
+      ) : null}
+
       {/* Arena Type Badge */}
       <View style={styles.typeBadge}>
         <HugeiconsIcon icon={arenaIcon} size={14} color={Colors.cream} strokeWidth={2} />
@@ -100,12 +111,6 @@ export function ArenaStepReview({ onPublish, isLoading }: ArenaStepReviewProps) 
         <ReviewRow label="Category" value={category || '—'} />
         <ReviewRow label="Max Participants" value={String(maxParticipants)} />
         <ReviewRow label="Duration" value={startDate && endDate ? `${startDate} → ${endDate}` : '—'} />
-      </SectionCard>
-
-      {/* Coin Economy */}
-      <SectionCard icon={Coins01Icon} title="Coin Economy">
-        <ReviewRow label="Prize Pool" value={`${totalBudgetCoins.toLocaleString()} 🪙 = ₹${(totalBudgetCoins / 100).toLocaleString('en-IN')}`} />
-        <ReviewRow label="Entry Fee" value={`${entryFeeCoins.toLocaleString()} 🪙 = ₹${(entryFeeCoins / 100).toLocaleString('en-IN')} per influencer`} />
       </SectionCard>
 
       {/* Google Review Info */}
@@ -256,5 +261,27 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: 'rgba(100,75,0,0.85)',
     lineHeight: 18,
+  },
+  bannerPreviewContainer: {
+    height: 120,
+    width: '100%',
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+    position: 'relative',
+    backgroundColor: '#fff',
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
 });

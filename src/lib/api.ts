@@ -181,6 +181,7 @@ export const api = {
   arena: {
     list: (type?: string) =>
       request<any[]>(`/arena${type ? `?type=${type}` : ''}`),
+    getTemplates: () => request<any[]>('/arena/templates'),
     mine: (activeProfileId?: string | null) =>
       request<any[]>('/arena/brand/mine', { activeProfileId }),
     get: (id: string) => request<any>(`/arena/${id}`),

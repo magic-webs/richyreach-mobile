@@ -21,7 +21,6 @@ import { useUIStore } from '@/store/ui';
 
 import { ArenaStepType } from '../arena/ArenaStepType';
 import { ArenaStepBasics } from '../arena/ArenaStepBasics';
-import { ArenaStepBudget } from '../arena/ArenaStepBudget';
 import { ArenaStepGoogleReview } from '../arena/ArenaStepGoogleReview';
 import { ArenaStepReview } from '../arena/ArenaStepReview';
 import { TactileButton } from '@/components/ui/tactile-button';
@@ -32,7 +31,7 @@ interface CreateArenaSheetProps {
   onSuccess: () => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 const REEL_DEFAULTS = {
   reviewGuidelines:
@@ -51,9 +50,8 @@ const GOOGLE_DEFAULTS = {
 const stepTitles = [
   'Step 1: Arena Type',
   'Step 2: Basic Details',
-  'Step 3: Budget & Coins',
-  'Step 4: Guidelines',
-  'Step 5: Review & Launch',
+  'Step 3: Guidelines',
+  'Step 4: Review & Launch',
 ];
 
 export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaSheetProps) {
@@ -63,7 +61,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   const showModal = useUIStore((s) => s.showModal);
   const { activeBrandProfileId, brandProfiles } = useProfilesStore();
   const scrollViewRef = useRef<ScrollView>(null);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get today + 30 days as default dates
@@ -117,14 +115,24 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   }, [isOpen]);
 
   // When arena type changes, update entry fee and pre-fill type-appropriate defaults
+  // When arena type or maxParticipants changes, update entry fee, default budget, guidelines, etc.
   useEffect(() => {
     const sub = methods.watch((value, { name }) => {
-      if (name !== 'arenaType') return;
-      const type = value.arenaType;
-      const defaults = type === 'google_review' ? GOOGLE_DEFAULTS : REEL_DEFAULTS;
-      methods.setValue('entryFeeCoins', type === 'google_review' ? 0 : 2000, { shouldDirty: false });
-      methods.setValue('reviewGuidelines', defaults.reviewGuidelines, { shouldDirty: false });
-      methods.setValue('verificationRules', defaults.verificationRules, { shouldDirty: false });
+      if (name === 'arenaType' || name === 'maxParticipants') {
+        const type = value.arenaType;
+        const maxP = value.maxParticipants || 100;
+        if (type === 'google_review') {
+          methods.setValue('entryFeeCoins', 0, { shouldDirty: false });
+          methods.setValue('rewardPerReview', 2500, { shouldDirty: false });
+          methods.setValue('totalBudgetCoins', maxP * 5000, { shouldDirty: false });
+        }
+      }
+      if (name === 'arenaType') {
+        const type = value.arenaType;
+        const defaults = type === 'google_review' ? GOOGLE_DEFAULTS : REEL_DEFAULTS;
+        methods.setValue('reviewGuidelines', defaults.reviewGuidelines, { shouldDirty: false });
+        methods.setValue('verificationRules', defaults.verificationRules, { shouldDirty: false });
+      }
     });
     return () => sub.unsubscribe();
   }, [methods]);
@@ -135,14 +143,13 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
 
   const STEP_FIELDS: Record<number, string[]> = {
     1: ['arenaType'],
-    2: ['title', 'description', 'startDate', 'endDate'],
-    3: ['totalBudgetCoins'],
-    4: [],
+    2: ['title', 'description', 'startDate', 'endDate', 'bannerUrl'],
+    3: [],
   };
 
   const nextStep = async () => {
     let fields: string[] = STEP_FIELDS[currentStep] || [];
-    if (currentStep === 4) {
+    if (currentStep === 3) {
       const type = methods.getValues('arenaType');
       fields = type === 'google_review'
         ? ['businessName', 'googleMapsLink', 'reviewGuidelines', 'verificationRules']
@@ -161,6 +168,34 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     }
   };
 
+  const handleStepClick = async (step: number) => {
+    if (step === currentStep) return;
+    if (step < currentStep) {
+      setCurrentStep(step as any);
+    } else {
+      // Validate intermediate steps before jumping forward
+      let valid = true;
+      for (let s = currentStep; s < step; s++) {
+        let fields: string[] = STEP_FIELDS[s] || [];
+        if (s === 3) {
+          const type = methods.getValues('arenaType');
+          fields = type === 'google_review'
+            ? ['businessName', 'googleMapsLink', 'reviewGuidelines', 'verificationRules']
+            : ['reviewGuidelines', 'verificationRules'];
+        }
+        const isStepValid = await methods.trigger(fields as any);
+        if (!isStepValid) {
+          valid = false;
+          setCurrentStep(s as any);
+          break;
+        }
+      }
+      if (valid) {
+        setCurrentStep(step as any);
+      }
+    }
+  };
+
   const handleLaunch = async (data: any) => {
     const activeProfile = brandProfiles.find((p) => p.id === activeBrandProfileId) || brandProfiles[0];
     if (!activeProfile) {
@@ -172,6 +207,55 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     try {
       onClose();
       showModal({ title: 'Launching Arena...', message: 'Creating your arena and funding the prize pool...' });
+
+      // Helper function to upload files to R2 bucket
+      const uploadFileToR2 = async (uri: string, prefix: string) => {
+        if (uri.startsWith('http://') || uri.startsWith('https://')) {
+          return uri;
+        }
+        const formData = new FormData();
+
+        let extension = 'jpg';
+        const cleanUri = uri.split('?')[0].split('#')[0];
+        const lastSegment = cleanUri.split('/').pop() || '';
+        const dotParts = lastSegment.split('.');
+        if (dotParts.length > 1) {
+          const possibleExt = dotParts.pop()?.toLowerCase();
+          if (possibleExt && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(possibleExt)) {
+            extension = possibleExt;
+          }
+        }
+
+        const filename = `${prefix}.${extension}`;
+
+        if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          formData.append('file', blob, filename);
+        } else {
+          let formattedUri = uri;
+          if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+            formattedUri = `file://${formattedUri}`;
+          }
+          formData.append('file', {
+            uri: formattedUri,
+            name: filename,
+            type: `image/${extension}`,
+          } as any);
+        }
+
+        const uploadRes = await api.media.upload(formData, activeProfile.id);
+        return uploadRes.url;
+      };
+
+      let finalBannerUrl = '';
+      if (data.bannerUrl) {
+        try {
+          finalBannerUrl = await uploadFileToR2(data.bannerUrl, 'arena_banner');
+        } catch (bannerErr) {
+          console.error('Failed to upload arena banner:', bannerErr);
+        }
+      }
 
       const payload = {
         title: data.title,
@@ -188,6 +272,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
         businessName: data.businessName || null,
         googleMapsLink: data.googleMapsLink || null,
         category: data.category,
+        bannerUrl: finalBannerUrl || null,
       };
 
       await api.arena.create(payload, activeProfile.id);
@@ -238,19 +323,23 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
 
           {/* Step Indicator */}
           <View style={styles.indicatorContainer}>
-            {([1, 2, 3, 4, 5] as const).map((step) => {
+            {([1, 2, 3, 4] as const).map((step) => {
               const active = currentStep === step;
               const completed = currentStep > step;
               return (
                 <React.Fragment key={step}>
-                  <View style={[styles.stepDot, active && styles.stepDotActive, completed && styles.stepDotCompleted]}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => handleStepClick(step)}
+                    style={[styles.stepDot, active && styles.stepDotActive, completed && styles.stepDotCompleted]}
+                  >
                     {completed ? (
                       <HugeiconsIcon icon={CheckIcon} size={10} color="#fff" strokeWidth={2.5} />
                     ) : (
                       <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{step}</Text>
                     )}
-                  </View>
-                  {step < 5 && (
+                  </TouchableOpacity>
+                  {step < 4 && (
                     <View style={[styles.stepLine, completed && styles.stepLineCompleted]} />
                   )}
                 </React.Fragment>
@@ -271,9 +360,8 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
             >
               {currentStep === 1 && <ArenaStepType />}
               {currentStep === 2 && <ArenaStepBasics />}
-              {currentStep === 3 && <ArenaStepBudget />}
-              {currentStep === 4 && <ArenaStepGoogleReview />}
-              {currentStep === 5 && (
+              {currentStep === 3 && <ArenaStepGoogleReview />}
+              {currentStep === 4 && (
                 <ArenaStepReview
                   onPublish={methods.handleSubmit(handleLaunch)}
                   isLoading={isSubmitting}

@@ -308,6 +308,11 @@ export default function ArenaDetailScreen() {
           contentContainerStyle={{ paddingBottom: 130 }}
           keyboardShouldPersistTaps="handled"
         >
+          {arena.bannerUrl ? (
+            <View style={styles.heroBannerContainer}>
+              <Image source={{ uri: arena.bannerUrl }} style={styles.heroBannerImage} contentFit="cover" />
+            </View>
+          ) : null}
           {/* Hero stats */}
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
@@ -1111,5 +1116,16 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: Radius.sm,
     backgroundColor: 'rgba(63, 3, 11, 0.05)',
+  },
+  heroBannerContainer: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+  },
+  heroBannerImage: {
+    width: '100%',
+    height: '100%',
   },
 });

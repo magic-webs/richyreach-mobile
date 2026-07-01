@@ -1,6 +1,7 @@
 import { Chip } from '@/components/ui/chip';
 import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
+import { Image } from 'expo-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -58,6 +59,12 @@ function ArenaCard({
         isJoined && { borderColor: '#2a7a5a', backgroundColor: '#e2f4ec' }
       ]}
     >
+      {arena.bannerUrl ? (
+        <View style={styles.cardBannerContainer}>
+          <Image source={{ uri: arena.bannerUrl }} style={styles.cardBannerImage} contentFit="cover" />
+        </View>
+      ) : null}
+
       {/* Top strip */}
       <View style={styles.cardHeader}>
         <View style={[styles.typeBadge, { backgroundColor: typeConf.bg, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
@@ -596,6 +603,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(63,3,11,0.1)',
     gap: 8,
     ...Shadow.card,
+  },
+  cardBannerContainer: {
+    height: 100,
+    width: '100%',
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  cardBannerImage: {
+    width: '100%',
+    height: '100%',
   },
   cardHeader: {
     flexDirection: 'row',

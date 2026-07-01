@@ -718,7 +718,7 @@ export default function CollabDetail() {
           )}
 
           {/* Deliverables */}
-          <View style={{ marginTop: 24 }}>
+          {cm.deliverables.length > 0 && <View style={{ marginTop: 24 }}>
             <SectionHead title="What you'll deliver" action={null} />
             <View style={styles.deliverablesList}>
               {cm.deliverables.map((d: string, k: number) => (
@@ -730,7 +730,7 @@ export default function CollabDetail() {
                 </View>
               ))}
             </View>
-          </View>
+          </View>}
 
           {/* Brand Card Info */}
           <View style={{ marginTop: 24 }}>

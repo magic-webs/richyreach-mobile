@@ -2,6 +2,13 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Image } from 'expo-image';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Cancel01Icon, Image01Icon } from '@hugeicons/core-free-icons';
+import * as ImagePicker from 'expo-image-picker';
+
 
 
 const CATEGORIES = ['General', 'Fashion', 'Beauty', 'Tech', 'Food', 'Travel', 'Fitness', 'Lifestyle', 'Gaming', 'Education'];
@@ -74,6 +81,41 @@ function DateField({ label, control, name }: { label: string; control: any; name
 export function ArenaStepBasics() {
   const { control, watch, setValue } = useFormContext();
 
+  const currentCategory = watch('category');
+  const bannerUrl = watch('bannerUrl');
+
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ['arenaTemplates'],
+    queryFn: async () => {
+      const res = await api.arena.getTemplates();
+      return res || [];
+    },
+  });
+
+  const filteredTemplates = templates.filter(
+    (t) => t.category?.toLowerCase() === currentCategory?.toLowerCase()
+  );
+  const templatesToShow = filteredTemplates.length > 0
+    ? filteredTemplates
+    : templates.filter((t) => t.category?.toLowerCase() === 'general').length > 0
+      ? templates.filter((t) => t.category?.toLowerCase() === 'general')
+      : templates;
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setValue('bannerUrl', result.assets[0].uri, { shouldValidate: true, shouldDirty: true });
+    }
+  };
+
+  const clearImage = () => {
+    setValue('bannerUrl', '', { shouldValidate: true, shouldDirty: true });
+  };
 
   return (
     <View style={styles.container}>
@@ -106,13 +148,69 @@ export function ArenaStepBasics() {
                 <TouchableOpacity
                   key={cat}
                   activeOpacity={0.8}
-                  onPress={() => onChange(cat)}
+                  onPress={() => {
+                    onChange(cat);
+                    setValue('bannerUrl', '', { shouldValidate: true });
+                  }}
                   style={[styles.pill, value === cat && styles.pillActive]}
                 >
                   <Text style={[styles.pillText, value === cat && styles.pillTextActive]}>{cat}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          )}
+        />
+      </View>
+
+      {/* Arena Banner Selector */}
+      <View style={styles.field}>
+        <FieldLabel label="Arena Banner Image" required />
+        <Controller
+          control={control}
+          name="bannerUrl"
+          rules={{ required: 'Arena banner is required' }}
+          render={({ fieldState: { error } }) => (
+            <>
+              {bannerUrl ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: bannerUrl }} style={styles.imagePreview} contentFit="cover" />
+                  <TouchableOpacity style={styles.clearImageBtn} onPress={clearImage}>
+                    <HugeiconsIcon icon={Cancel01Icon} size={12} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.templatesScroll}>
+                <TouchableOpacity
+                  style={[styles.templateCard, styles.devicePickerCard]}
+                  onPress={pickImage}
+                  activeOpacity={0.8}
+                >
+                  <HugeiconsIcon icon={Image01Icon} size={20} color={Colors.oxblood} />
+                  <Text style={styles.devicePickerText}>Upload custom</Text>
+                </TouchableOpacity>
+
+                {templatesToShow.map((tmpl) => {
+                  const active = bannerUrl === tmpl.imageUrl;
+                  return (
+                    <TouchableOpacity
+                      key={tmpl.id}
+                      style={[styles.templateCard, active && styles.templateCardActive]}
+                      onPress={() => setValue('bannerUrl', tmpl.imageUrl, { shouldValidate: true, shouldDirty: true })}
+                      activeOpacity={0.8}
+                    >
+                      <Image source={{ uri: tmpl.imageUrl }} style={styles.templateImage} contentFit="cover" />
+                      {active && (
+                        <View style={styles.activeOverlay}>
+                          <Text style={styles.activeCheck}>✓</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              {error && <Text style={styles.errorText}>{error.message}</Text>}
+            </>
           )}
         />
       </View>
@@ -271,5 +369,74 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    height: 120,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.1)',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  clearImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: Radius.full,
+    padding: 6,
+  },
+  templatesScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  templateCard: {
+    width: 120,
+    height: 70,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(63,3,11,0.1)',
+    backgroundColor: '#fff',
+    position: 'relative',
+  },
+  templateCardActive: {
+    borderColor: Colors.oxblood,
+  },
+  templateImage: {
+    width: '100%',
+    height: '100%',
+  },
+  devicePickerCard: {
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  devicePickerText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9,
+    color: Colors.oxblood,
+    textAlign: 'center',
+  },
+  activeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(63,3,11,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCheck: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
