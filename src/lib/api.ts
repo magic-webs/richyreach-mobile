@@ -1,4 +1,5 @@
 import { getToken } from './storage';
+import type { ChatAttachmentType, ChatMessage, ChatMessagesPage } from '@/types/chat';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -50,6 +51,50 @@ async function request<T>(path: string, options?: RequestInit & { activeProfileI
     throw new Error(msg);
   }
   return json.data as T;
+}
+
+/** Like request(), but also surfaces `json.meta` (e.g. pagination) instead of discarding it. Kept separate from request() so the ~15+ other call sites built on request()'s bare-data return shape are unaffected. */
+async function requestWithMeta<T>(
+  path: string,
+  options?: RequestInit & { activeProfileId?: string | null }
+): Promise<{ data: T; meta: Record<string, any> | undefined }> {
+  const token = await getToken();
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
+  const isFormData = options?.body instanceof FormData || (options?.body && typeof options.body === 'object' && typeof (options.body as any).append === 'function');
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const profileId = options?.activeProfileId !== undefined ? options.activeProfileId : _activeProfileId;
+  if (profileId) {
+    headers['x-active-profile-id'] = profileId;
+  }
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers,
+    ...options,
+  });
+
+  const raw = await res.text();
+  let json: any;
+  try {
+    json = raw ? JSON.parse(raw) : {};
+  } catch {
+    const snippet = raw.slice(0, 120).trim();
+    throw new Error(`Server error (${res.status})${snippet ? `: ${snippet}` : ''}`);
+  }
+
+  if (!res.ok || !json.success) {
+    const msg =
+      typeof json.error === 'string'
+        ? json.error
+        : json.error?.message ?? json.message ?? `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return { data: json.data as T, meta: json.meta };
 }
 
 export const api = {
@@ -172,9 +217,32 @@ export const api = {
             : { influencerId: targetId, campaignId }
         ),
       }),
-    messages: (roomId: string) => request<any[]>(`/chat/messages/${roomId}`),
-    send: (roomId: string, content: string, campaignId?: string) =>
-      request(`/chat/message/${roomId}`, { method: 'POST', body: JSON.stringify({ content, campaignId }) }),
+    messages: (roomId: string, params?: { cursor?: string; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.cursor) query.set('cursor', params.cursor);
+      if (params?.limit) query.set('limit', String(params.limit));
+      const qs = query.toString();
+      return requestWithMeta<ChatMessage[]>(`/chat/messages/${roomId}${qs ? `?${qs}` : ''}`).then(
+        ({ data, meta }) => ({
+          messages: data,
+          pagination: {
+            limit: meta?.pagination?.limit ?? params?.limit ?? 30,
+            hasMore: meta?.pagination?.hasMore ?? false,
+            nextCursor: meta?.pagination?.nextCursor ?? null,
+          },
+        } satisfies ChatMessagesPage)
+      );
+    },
+    send: (
+      roomId: string,
+      content?: string,
+      campaignId?: string,
+      attachment?: { attachmentUrl: string; attachmentType: ChatAttachmentType; attachmentDurationSec: number }
+    ) =>
+      request<ChatMessage>(`/chat/message/${roomId}`, {
+        method: 'POST',
+        body: JSON.stringify({ content, campaignId, ...(attachment ?? {}) }),
+      }),
     respondInvite: (inviteId: string, status: 'accepted' | 'declined') =>
       request(`/chat/invite/${inviteId}/respond`, { method: 'POST', body: JSON.stringify({ status }) }),
   },

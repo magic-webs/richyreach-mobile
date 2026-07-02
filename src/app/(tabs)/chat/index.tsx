@@ -1,97 +1,32 @@
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useAuthStore } from '@/store/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { api } from '@/lib/api';
-import { Icon } from '@/components/ui/icon';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
-import { Image } from 'expo-image';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-
-function ChatListSkeleton() {
-  return (
-    <View style={{ padding: 16, gap: 12 }}>
-      {[1, 2, 3, 4].map((key) => (
-        <View key={key} style={styles.chatRow}>
-          <View style={styles.avatarWrap}>
-            <Skeleton width={52} height={52} borderRadius={26} variant="circle" />
-          </View>
-          <View style={styles.chatInfo}>
-            <View style={styles.chatTopRow}>
-              <Skeleton width="45%" height={16} borderRadius={4} />
-              <View style={{ flex: 1 }} />
-              <Skeleton width={45} height={12} borderRadius={4} />
-            </View>
-            <View style={styles.chatBottomRow}>
-              <Skeleton width="70%" height={13} borderRadius={4} />
-            </View>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { useAuthStore } from '@/store/auth';
+import { Colors, FontFamily } from '@/constants/brand';
+import { useChatRooms } from '@/hooks/chat/useChatRooms';
+import { ChatRoomListItem } from '@/components/chat/ChatRoomListItem';
+import { ChatListSkeleton } from '@/components/chat/ChatListSkeleton';
 
 export default function InfluencerChatListScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session } = useAuthStore();
   const currentUserId = session?.user?.id;
-
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const fetchRooms = async () => {
-    try {
-      const data = await api.chat.rooms();
-      setRooms(data);
-    } catch (err) {
-      console.error("Failed to load chat rooms", err);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchRooms();
-
-      const interval = setInterval(() => {
-        fetchRooms();
-      }, 5000);
-
-      return () => clearInterval(interval);
-    }, [])
-  );
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchRooms();
-  };
+  const { rooms, isLoading, isRefreshing, refresh } = useChatRooms();
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              size={24} color={Colors.oxblood}
-              strokeWidth={2}
-            />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color={Colors.oxblood} strokeWidth={2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Brand Messages</Text>
         </View>
       </View>
 
-      {/* Rooms List */}
       {isLoading ? (
         <ChatListSkeleton />
       ) : rooms.length === 0 ? (
@@ -105,66 +40,16 @@ export default function InfluencerChatListScreen() {
           contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          renderItem={({ item: c }) => {
-            // Under influencer mode, titleName is the Brand's companyName
-            const titleName = c.companyName || c.name || "RichyReach Team";
-            const imageUrl = c.logo || c.avatar || null;
-            const isOnline = c.online ?? false;
-
-            // Format display date
-            let timeStr = "";
-            const displayTime = c.lastMessageCreatedAt || c.createdAt;
-            if (displayTime) {
-              const d = new Date(displayTime);
-              const today = new Date();
-              if (d.toDateString() === today.toDateString()) {
-                timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              } else {
-                timeStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-              }
-            }
-
-            return (
-              <TouchableOpacity
-                onPress={() => router.push({
-                  pathname: '/chat/[id]',
-                  params: {
-                    id: c.roomId,
-                  }
-                })}
-                activeOpacity={0.8}
-                style={styles.chatRow}
-              >
-                <View style={styles.avatarWrap}>
-                  {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
-                  ) : (
-                    <PlaceholderImage tone="rose" height={52} width={52} borderRadius={99} />
-                  )}
-                  {isOnline && <View style={styles.onlineDot} />}
-                </View>
-                <View style={styles.chatInfo}>
-                  <View style={styles.chatTopRow}>
-                    <Text style={styles.chatName} numberOfLines={1}>{titleName}</Text>
-                    {timeStr ? <Text style={[styles.chatTime, c.unreadCount > 0 && styles.chatTimeUnread]}>{timeStr}</Text> : null}
-                  </View>
-                  <View style={styles.chatBottomRow}>
-                    <Text style={[styles.chatLast, c.unreadCount > 0 && styles.chatLastUnread]} numberOfLines={1}>
-                      {c.lastMessage
-                        ? (c.lastMessageSenderId === currentUserId ? `You: ${c.lastMessage}` : c.lastMessage)
-                        : "No messages yet"}
-                    </Text>
-                    {c.unreadCount > 0 ? (
-                      <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadBadgeText}>{c.unreadCount}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+          onRefresh={refresh}
+          renderItem={({ item: room }) => (
+            <ChatRoomListItem
+              room={room}
+              currentUserId={currentUserId}
+              titleName={room.companyName || room.name || 'RichyReach Team'}
+              imageUrl={room.logo || room.avatar || null}
+              onPress={() => router.push({ pathname: '/chat/[id]', params: { id: room.roomId } })}
+            />
+          )}
         />
       )}
     </View>
@@ -178,33 +63,4 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: FontFamily.sansMedium, fontSize: 24, fontWeight: '700', color: Colors.ink },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: 'rgba(63,3,11,0.5)', fontSize: 14 },
-
-  chatRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 16, backgroundColor: '#fff', ...Shadow.card },
-  avatarWrap: { position: 'relative', flexShrink: 0 },
-  avatarImage: { width: 52, height: 52, borderRadius: 26 },
-  onlineDot: { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 99, backgroundColor: '#3ec97a', borderWidth: 2.5, borderColor: '#fff' },
-  chatInfo: { flex: 1, minWidth: 0 },
-  chatTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  chatName: { fontWeight: '700', fontSize: 15.5, color: Colors.ink, flex: 1, minWidth: 0 },
-  chatTime: { fontSize: 11, color: 'rgba(63,3,11,0.4)', fontWeight: '600', flexShrink: 0 },
-  chatBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  chatLast: { flex: 1, fontSize: 13, color: 'rgba(63,3,11,0.45)', fontWeight: '400' },
-  chatLastUnread: { color: Colors.ink, fontWeight: '600' },
-  chatTimeUnread: { color: Colors.rose, fontWeight: '700' },
-  unreadBadge: {
-    backgroundColor: Colors.rose,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-    flexShrink: 0,
-  },
-  unreadBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: FontFamily.sans,
-  },
 });

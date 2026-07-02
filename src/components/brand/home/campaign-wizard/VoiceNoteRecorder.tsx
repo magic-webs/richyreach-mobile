@@ -12,6 +12,7 @@ import {
 } from 'expo-audio';
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { formatDuration } from '@/lib/formatDuration';
 
 export function VoiceNoteRecorder() {
   const { audioInstructionUri, updateField } = useCampaignWizardStore();
@@ -60,12 +61,6 @@ export function VoiceNoteRecorder() {
   const deleteRecording = () => {
     player.pause();
     updateField('audioInstructionUri', null);
-  };
-
-  const formatDuration = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   return (
