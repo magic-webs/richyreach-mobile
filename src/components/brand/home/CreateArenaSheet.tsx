@@ -31,7 +31,7 @@ interface CreateArenaSheetProps {
   onSuccess: () => void;
 }
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 const REEL_DEFAULTS = {
   reviewGuidelines:
@@ -47,13 +47,6 @@ const GOOGLE_DEFAULTS = {
     'Review must be posted on a real Google account. Minimum 50 words. Google review link must be submitted. Review must remain public and verifiable.',
 };
 
-const stepTitles = [
-  'Step 1: Arena Type',
-  'Step 2: Basic Details',
-  'Step 3: Guidelines',
-  'Step 4: Review & Launch',
-];
-
 export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaSheetProps) {
   'use no memo';
 
@@ -61,7 +54,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   const showModal = useUIStore((s) => s.showModal);
   const { activeBrandProfileId, brandProfiles } = useProfilesStore();
   const scrollViewRef = useRef<ScrollView>(null);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get today + 30 days as default dates
@@ -90,6 +83,14 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
       bannerUrl: '',
     },
   });
+
+  const arenaType = methods.watch('arenaType');
+
+  const stepTitles = [
+    'Step 1: Arena Type',
+    'Step 2: Basic Details',
+    'Step 3: Review & Launch',
+  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -133,6 +134,17 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
         methods.setValue('reviewGuidelines', defaults.reviewGuidelines, { shouldDirty: false });
         methods.setValue('verificationRules', defaults.verificationRules, { shouldDirty: false });
       }
+      if (name === 'businessName') {
+        const type = value.arenaType || methods.getValues('arenaType');
+        if (type === 'google_review') {
+          const bName = value.businessName;
+          if (bName) {
+            methods.setValue('title', `${bName} Google Review`, { shouldValidate: true, shouldDirty: true });
+          } else {
+            methods.setValue('title', '', { shouldValidate: true, shouldDirty: true });
+          }
+        }
+      }
     });
     return () => sub.unsubscribe();
   }, [methods]);
@@ -141,20 +153,40 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   }, [currentStep]);
 
-  const STEP_FIELDS: Record<number, string[]> = {
-    1: ['arenaType'],
-    2: ['title', 'description', 'startDate', 'endDate', 'bannerUrl'],
-    3: [],
+  const getStepFields = (step: number, type: string): string[] => {
+    if (step === 1) return ['arenaType'];
+    
+    if (step === 2) {
+      if (type === 'google_review') {
+        return [
+          'businessName',
+          'googleMapsLink',
+          'title',
+          'description',
+          'startDate',
+          'endDate',
+          'bannerUrl',
+          'reviewGuidelines',
+          'verificationRules',
+        ];
+      } else {
+        return [
+          'title',
+          'description',
+          'startDate',
+          'endDate',
+          'bannerUrl',
+          'reviewGuidelines',
+          'verificationRules',
+        ];
+      }
+    }
+    return [];
   };
 
   const nextStep = async () => {
-    let fields: string[] = STEP_FIELDS[currentStep] || [];
-    if (currentStep === 3) {
-      const type = methods.getValues('arenaType');
-      fields = type === 'google_review'
-        ? ['businessName', 'googleMapsLink', 'reviewGuidelines', 'verificationRules']
-        : ['reviewGuidelines', 'verificationRules'];
-    }
+    const type = methods.getValues('arenaType');
+    const fields = getStepFields(currentStep, type);
     const isValid = await methods.trigger(fields as any);
     if (!isValid) return;
     if (currentStep < TOTAL_STEPS) {
@@ -175,14 +207,9 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     } else {
       // Validate intermediate steps before jumping forward
       let valid = true;
+      const type = methods.getValues('arenaType');
       for (let s = currentStep; s < step; s++) {
-        let fields: string[] = STEP_FIELDS[s] || [];
-        if (s === 3) {
-          const type = methods.getValues('arenaType');
-          fields = type === 'google_review'
-            ? ['businessName', 'googleMapsLink', 'reviewGuidelines', 'verificationRules']
-            : ['reviewGuidelines', 'verificationRules'];
-        }
+        const fields = getStepFields(s, type);
         const isStepValid = await methods.trigger(fields as any);
         if (!isStepValid) {
           valid = false;
@@ -323,7 +350,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
 
           {/* Step Indicator */}
           <View style={styles.indicatorContainer}>
-            {([1, 2, 3, 4] as const).map((step) => {
+            {([1, 2, 3] as const).map((step) => {
               const active = currentStep === step;
               const completed = currentStep > step;
               return (
@@ -339,7 +366,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
                       <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{step}</Text>
                     )}
                   </TouchableOpacity>
-                  {step < 4 && (
+                  {step < 3 && (
                     <View style={[styles.stepLine, completed && styles.stepLineCompleted]} />
                   )}
                 </React.Fragment>
@@ -359,9 +386,22 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
               showsVerticalScrollIndicator={false}
             >
               {currentStep === 1 && <ArenaStepType />}
-              {currentStep === 2 && <ArenaStepBasics />}
-              {currentStep === 3 && <ArenaStepGoogleReview />}
-              {currentStep === 4 && (
+              {currentStep === 2 && (
+                arenaType === 'google_review' ? (
+                  <>
+                    <ArenaStepGoogleReview />
+                    <View style={{ height: 24 }} />
+                    <ArenaStepBasics />
+                  </>
+                ) : (
+                  <>
+                    <ArenaStepBasics />
+                    <View style={{ height: 24 }} />
+                    <ArenaStepGoogleReview />
+                  </>
+                )
+              )}
+              {currentStep === 3 && (
                 <ArenaStepReview
                   onPublish={methods.handleSubmit(handleLaunch)}
                   isLoading={isSubmitting}

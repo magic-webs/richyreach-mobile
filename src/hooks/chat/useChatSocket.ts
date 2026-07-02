@@ -8,16 +8,20 @@ interface UseChatSocketOptions {
   onMessage: (message: ChatMessage) => void;
   onInviteStatusUpdate: (inviteId: string, status: InviteStatus) => void;
   onReadReceipt: (messageIds: string[], readAt: string) => void;
+  onTypingStatusChange?: (userId: string, isTyping: boolean) => void;
 }
 
-type OutgoingPayload = SendMessagePayload | { type: 'status-update'; inviteId: string; status: InviteStatus };
+type OutgoingPayload =
+  | SendMessagePayload
+  | { type: 'status-update'; inviteId: string; status: InviteStatus }
+  | { type: 'typing'; isTyping: boolean };
 
-export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStatusUpdate, onReadReceipt }: UseChatSocketOptions) {
+export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange }: UseChatSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callbacksRef = useRef({ onMessage, onInviteStatusUpdate, onReadReceipt });
-  callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt };
+  const callbacksRef = useRef({ onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange });
+  callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange };
 
   useEffect(() => {
     if (!roomId) return;
@@ -65,6 +69,8 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
               callbacksRef.current.onInviteStatusUpdate(data.inviteId, data.status);
             } else if (data.type === 'read-receipt' && isMounted) {
               callbacksRef.current.onReadReceipt(data.messageIds, data.readAt);
+            } else if (data.type === 'typing' && isMounted) {
+              callbacksRef.current.onTypingStatusChange?.(data.userId, data.isTyping);
             }
           } catch (err) {
             console.error('[WS] Error parsing message:', err);

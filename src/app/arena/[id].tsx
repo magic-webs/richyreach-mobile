@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -12,14 +13,15 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { ArrowLeft, MapPin, ExternalLink, Trophy, Coins, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, MapPin, ExternalLink, Trophy, Coins, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award, Sparkles, Users } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
-import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { Colors, FontFamily, Radius, Shadow, Gradients } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { TactileButton } from '@/components/ui/tactile-button';
@@ -83,6 +85,8 @@ export default function ArenaDetailScreen() {
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   const submitForm = useForm<{
     collaborationLink: string;
@@ -265,7 +269,7 @@ export default function ArenaDetailScreen() {
         message: 'Your AI-generated review has been copied to the clipboard. Opening Google Maps so you can paste and post it!',
       });
       if (arena.googleMapsLink) {
-        setTimeout(() => Linking.openURL(arena.googleMapsLink).catch(() => {}), 800);
+        setTimeout(() => Linking.openURL(arena.googleMapsLink).catch(() => { }), 800);
       }
     } catch (err: any) {
       showModal({ title: 'Generation Failed', message: err.message || 'Could not generate review. Please try again.' });
@@ -330,34 +334,114 @@ export default function ArenaDetailScreen() {
           contentContainerStyle={{ paddingBottom: 130 }}
           keyboardShouldPersistTaps="handled"
         >
-          {arena.bannerUrl ? (
-            <View style={styles.heroBannerContainer}>
-              <Image source={{ uri: arena.bannerUrl }} style={styles.heroBannerImage} contentFit="cover" />
-            </View>
-          ) : null}
-          {/* Hero stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Prize Pool</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-                <Text style={[styles.statValue, { color: Colors.gold }]}>
-                  {arena.totalBudgetCoins.toLocaleString()}
+          <View style={styles.heroBannerContainer}>
+            {arena.bannerUrl && !imageError ? (
+              <>
+                <Image
+                  source={{ uri: arena.bannerUrl }}
+                  style={styles.heroBannerImage}
+                  contentFit="cover"
+                  transition={300}
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoadEnd={() => setImageLoading(false)}
+                  onError={() => {
+                    setImageError(true);
+                    setImageLoading(false);
+                  }}
+                />
+                {imageLoading && (
+                  <View style={[StyleSheet.absoluteFill, styles.imageLoaderContainer]}>
+                    <ActivityIndicator size="small" color={Colors.rose} />
+                  </View>
+                )}
+
+                <LinearGradient
+                  colors={['rgba(42, 2, 7, 0.45)', 'transparent', 'rgba(42, 2, 7, 0.65)']}
+                  locations={[0, 0.5, 1]}
+                  style={StyleSheet.absoluteFill}
+                />
+              </>
+            ) : (
+              <LinearGradient
+                colors={Gradients.oxblood}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              >
+                <View style={styles.fallbackContent}>
+                  <Trophy size={48} color={Colors.gold} style={styles.fallbackIcon} />
+                  <Text style={styles.fallbackTitle} numberOfLines={2}>
+                    {arena.title}
+                  </Text>
+                </View>
+              </LinearGradient>
+            )}
+
+            {/* Float Badges */}
+            <View style={styles.bannerBadgesContainer}>
+              <View style={styles.bannerBadgeType}>
+                <Sparkles size={11} color={Colors.gold} />
+                <Text style={styles.bannerBadgeTypeText}>
+                  {TYPE_LABELS[arena.arenaType] || arena.arenaType}
                 </Text>
-                <Coins size={14} color={Colors.gold} />
               </View>
-              <Text style={styles.statSub}>
-                = ₹{(arena.totalBudgetCoins / 100).toLocaleString('en-IN')}
+            </View>
+
+            {/* Status Indicator */}
+            <View style={styles.bannerStatusBadge}>
+              <View style={[
+                styles.statusDot,
+                { backgroundColor: arena.status === 'active' ? Colors.green : Colors.rose }
+              ]} />
+              <Text style={styles.bannerStatusText}>
+                {arena.status?.toUpperCase() || 'ACTIVE'}
               </Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Entry Fee</Text>
-              <Text style={styles.statValue}>{arena.entryFeeCoins.toLocaleString()} coins</Text>
-              <Text style={styles.statSub}>= ₹{(arena.entryFeeCoins / 100).toFixed(0)}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Joined</Text>
-              <Text style={styles.statValue}>{arena.participantCount}</Text>
-              <Text style={styles.statSub}>/ {arena.maxParticipants} max</Text>
+          </View>
+          {/* Hero stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statsCardContainer}>
+              <View style={styles.statsCardHeader}>
+                <View style={styles.statsIconWrap}>
+                  <Users size={16} color={Colors.oxblood} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.statsCardTitle}>Participants joined</Text>
+                  <Text style={styles.statsCardSubtitle}>
+                    {arena.participantCount} spot{arena.participantCount === 1 ? '' : 's'} occupied
+                  </Text>
+                </View>
+                <View style={styles.statsPercentageBadge}>
+                  <Text style={styles.statsPercentageText}>
+                    {Math.round((arena.participantCount / (arena.maxParticipants || 100)) * 100)}% Filled
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress bar */}
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${Math.min(
+                        100,
+                        (arena.participantCount / (arena.maxParticipants || 100)) * 100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+
+              {/* Spots description */}
+              <View style={styles.statsCardFooter}>
+                <Text style={styles.spotsCountText}>
+                  {arena.participantCount} <Text style={styles.spotsCapacityLabel}>Joined</Text>
+                </Text>
+                <Text style={styles.spotsCountText}>
+                  {arena.maxParticipants} <Text style={styles.spotsCapacityLabel}>Max Capacity</Text>
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -482,7 +566,7 @@ export default function ArenaDetailScreen() {
                         <Text style={styles.detailsLabel}>Review Link:</Text>
                         <Text
                           style={[styles.detailsVal, { color: Colors.green, textDecorationLine: 'underline' }]}
-                          onPress={() => Linking.openURL(myParticipation.reviewLink).catch(() => {})}
+                          onPress={() => Linking.openURL(myParticipation.reviewLink).catch(() => { })}
                         >
                           Open Review
                         </Text>
@@ -493,7 +577,7 @@ export default function ArenaDetailScreen() {
                         <Text style={styles.detailsLabel}>Reel Link:</Text>
                         <Text
                           style={[styles.detailsVal, { color: Colors.green, textDecorationLine: 'underline' }]}
-                          onPress={() => Linking.openURL(myParticipation.postUrl).catch(() => {})}
+                          onPress={() => Linking.openURL(myParticipation.postUrl).catch(() => { })}
                         >
                           Open Reel
                         </Text>
@@ -699,35 +783,10 @@ export default function ArenaDetailScreen() {
             )}
           </View>
 
-        {/* AI Review Generator — only for google_review arenas after joining */}
-        {isJoined && isGoogleReview && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={[styles.aiReviewBtn, isGenerating && { opacity: 0.72 }]}
-              onPress={handleGenerateReview}
-              activeOpacity={0.85}
-              disabled={isGenerating}
-            >
-              <View style={styles.aiReviewBtnIcon}>
-                <Sparkles size={20} color="#fff" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.aiReviewBtnTitle}>
-                  {isGenerating ? 'Generating…' : '✨ Write Review with AI'}
-                </Text>
-                <Text style={styles.aiReviewBtnSub}>
-                  {isGenerating
-                    ? 'GPT-4o is crafting your review…'
-                    : 'Tap to generate, copy & open Google Maps'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
         </ScrollView>
 
-        {/* Join CTA */}
-        {!isJoined && arena.status === 'active' && (
+        {/* Fixed bottom CTA */}
+        {!isJoined && arena.status === 'active' ? (
           <View style={[styles.joinCta, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.joinCtaInfo}>
               <Text style={styles.joinCtaLabel}>Entry Fee</Text>
@@ -747,6 +806,32 @@ export default function ArenaDetailScreen() {
               size="lg"
             />
           </View>
+        ) : (
+          isJoined && isGoogleReview && (
+            <View style={[styles.joinCta, { paddingBottom: insets.bottom + 16, flexDirection: 'column', alignItems: 'stretch' }]}>
+              <TactileButton
+                variant="green"
+                onPress={handleGenerateReview}
+                disabled={isGenerating}
+                fullWidth
+                size="lg"
+                style={{ opacity: isGenerating ? 0.72 : 1 }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.aiReviewBtnTitle, { textAlign: 'center' }]}>
+                      {isGenerating ? 'Generating…' : 'Write Review with AI'}
+                    </Text>
+                    <Text style={[styles.aiReviewBtnSub, { textAlign: 'center' }]}>
+                      {isGenerating
+                        ? 'AI is crafting your review…'
+                        : 'Tap to generate, copy & open Google Maps'}
+                    </Text>
+                  </View>
+                </View>
+              </TactileButton>
+            </View>
+          )
         )}
       </View>
     </KeyboardAvoidingView>
@@ -1054,6 +1139,85 @@ const styles = StyleSheet.create({
     color: 'rgba(63, 3, 11, 0.4)',
     textAlign: 'center',
   },
+  statsCardContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: Radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    gap: 12,
+    ...Shadow.card,
+  },
+  statsCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statsIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statsCardTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  statsCardSubtitle: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63, 3, 11, 0.45)',
+    marginTop: 1,
+  },
+  statsPercentageBadge: {
+    backgroundColor: 'rgba(42, 122, 90, 0.08)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 122, 90, 0.15)',
+  },
+  statsPercentageText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.green,
+    fontWeight: '700',
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
+    borderRadius: 99,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.green,
+    borderRadius: 99,
+  },
+  statsCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 2,
+  },
+  spotsCountText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  spotsCapacityLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63, 3, 11, 0.45)',
+    fontWeight: 'normal',
+  },
   joinCta: {
     position: 'absolute',
     bottom: 0,
@@ -1166,15 +1330,114 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(63, 3, 11, 0.05)',
   },
   heroBannerContainer: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(63,3,11,0.06)',
+    marginHorizontal: 16,
+    marginTop: 16,
+    height: 180,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    backgroundColor: Colors.cream,
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.08)',
+    ...Shadow.card,
+    position: 'relative',
   },
   heroBannerImage: {
     width: '100%',
     height: '100%',
+  },
+  imageLoaderContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(63, 3, 11, 0.04)',
+  },
+  fallbackContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  fallbackIcon: {
+    opacity: 0.95,
+  },
+  fallbackTitle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  bannerBadgesContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    right: 12,
+  },
+  bannerBadgeType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(42, 2, 7, 0.72)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.sm,
+    borderWidth: 0.5,
+    borderColor: 'rgba(243, 201, 105, 0.3)',
+  },
+  bannerBadgeTypeText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 10.5,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  bannerBadgePrize: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(42, 2, 7, 0.72)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.sm,
+    borderWidth: 0.5,
+    borderColor: 'rgba(243, 201, 105, 0.3)',
+  },
+  bannerBadgePrizeText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 10.5,
+    color: Colors.gold,
+    fontWeight: '700',
+  },
+  bannerStatusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(42, 2, 7, 0.72)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  bannerStatusText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 9.5,
+    color: '#fff',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   aiReviewBtn: {
     flexDirection: 'row',

@@ -163,24 +163,34 @@ export function ArenaStepGoogleReview() {
             <Text style={styles.label}>Business / Location Name</Text>
             <Text style={styles.required}>*</Text>
           </View>
-          <View style={styles.inputContainer}>
-            <View style={styles.searchIconWrap} pointerEvents="none">
-              <HugeiconsIcon icon={Search01Icon} size={15} color="rgba(63,3,11,0.4)" strokeWidth={2} />
-            </View>
-            <TextInput
-              style={[styles.input, styles.inputWithIcon]}
-              placeholder="Type a business name…"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              onChangeText={handleInputChange}
-              value={inputValue}
-              autoCorrect={false}
-              autoCapitalize="words"
-              returnKeyType="search"
-            />
-            {loading && (
-              <ActivityIndicator style={styles.inputLoader} size="small" color={Colors.oxblood} />
+          <Controller
+            control={control}
+            name="businessName"
+            rules={{ required: 'Business name is required' }}
+            render={({ fieldState: { error } }) => (
+              <>
+                <View style={styles.inputContainer}>
+                  <View style={styles.searchIconWrap} pointerEvents="none">
+                    <HugeiconsIcon icon={Search01Icon} size={15} color="rgba(63,3,11,0.4)" strokeWidth={2} />
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.inputWithIcon, error && styles.inputError]}
+                    placeholder="Type a business name…"
+                    placeholderTextColor="rgba(63,3,11,0.35)"
+                    onChangeText={handleInputChange}
+                    value={inputValue}
+                    autoCorrect={false}
+                    autoCapitalize="words"
+                    returnKeyType="search"
+                  />
+                  {loading && (
+                    <ActivityIndicator style={styles.inputLoader} size="small" color={Colors.oxblood} />
+                  )}
+                </View>
+                {error && <Text style={styles.errorText}>{error.message}</Text>}
+              </>
             )}
-          </View>
+          />
 
           {/* Suggestions Dropdown */}
           {suggestions.length > 0 && (
@@ -213,6 +223,7 @@ export function ArenaStepGoogleReview() {
           <Controller
             control={control}
             name="googleMapsLink"
+            rules={{ required: 'Google Review Link must be auto-generated' }}
             render={({ field: { value }, fieldState: { error } }) => (
               <>
                 <TextInput

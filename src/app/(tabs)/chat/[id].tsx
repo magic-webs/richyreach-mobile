@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Colors } from '@/constants/brand';
@@ -29,6 +29,19 @@ export default function InfluencerChatConversationScreen() {
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSendingVoiceNote, setIsSendingVoiceNote] = useState(false);
+
+  const [partnerIsTyping, setPartnerIsTyping] = useState(false);
+  const [localIsTyping, setLocalIsTyping] = useState(false);
+  const localTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const partnerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
+      if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+    };
+  }, []);
 
   // Resolve room and metadata dynamically on mount
   useEffect(() => {
@@ -98,13 +111,53 @@ export default function InfluencerChatConversationScreen() {
     onMessage: handleIncomingWsMessage,
     onInviteStatusUpdate: handleInviteStatusUpdate,
     onReadReceipt: handleReadReceipt,
+    onTypingStatusChange: (userId, isTyping) => {
+      if (userId === currentUserId) return;
+      setPartnerIsTyping(isTyping);
+      if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+      if (isTyping) {
+        partnerTypingTimeoutRef.current = setTimeout(() => {
+          setPartnerIsTyping(false);
+        }, 5000); // 5s safety timeout
+      }
+    },
   });
+
+  const handleTextChange = (val: string) => {
+    setText(val);
+    if (!roomId) return;
+
+    if (!localIsTyping && val.trim().length > 0) {
+      setLocalIsTyping(true);
+      sendJson({ type: 'typing', isTyping: true });
+    } else if (val.trim().length === 0) {
+      setLocalIsTyping(false);
+      sendJson({ type: 'typing', isTyping: false });
+      if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
+      return;
+    }
+
+    if (localTypingTimeoutRef.current) {
+      clearTimeout(localTypingTimeoutRef.current);
+    }
+
+    localTypingTimeoutRef.current = setTimeout(() => {
+      setLocalIsTyping(false);
+      sendJson({ type: 'typing', isTyping: false });
+    }, 2000);
+  };
 
   const send = async () => {
     const trimmed = text.trim();
     if (!trimmed || !roomId || isSending) return;
 
     setIsSending(true);
+    if (localTypingTimeoutRef.current) {
+      clearTimeout(localTypingTimeoutRef.current);
+    }
+    setLocalIsTyping(false);
+    sendJson({ type: 'typing', isTyping: false });
+
     const sentOverSocket = sendJson({ content: trimmed });
     if (sentOverSocket) {
       setText('');
@@ -193,12 +246,13 @@ export default function InfluencerChatConversationScreen() {
           isInviteRespondable={true}
           onRespondToInvite={respondToInvite}
           collabStepsRoute={(campaignId) => ({ pathname: '/collab/[id]', params: { id: campaignId } })}
+          partnerIsTyping={partnerIsTyping}
         />
       )}
 
       <ChatInputBar
         text={text}
-        onChangeText={setText}
+        onChangeText={handleTextChange}
         onSend={send}
         isSending={isSending}
         onSendVoiceNote={sendVoiceNote}
