@@ -26,6 +26,7 @@ export default function BrandHomeScreen() {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<any>(null);
+  const [editingCampaign, setEditingCampaign] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: brandProfile } = useQuery({
@@ -43,9 +44,19 @@ export default function BrandHomeScreen() {
   }, [brandProfile, session?.user?.id, loadProfiles]);
 
   const handleNewCampaign = () => {
+    setEditingCampaign(null);
     if (hasProfile === false) {
       setIsProfileSheetOpen(true);
     } else {
+      setIsCreateSheetOpen(true);
+    }
+  };
+
+  const handleEditDraft = (campaign: any) => {
+    if (hasProfile === false) {
+      setIsProfileSheetOpen(true);
+    } else {
+      setEditingCampaign(campaign);
       setIsCreateSheetOpen(true);
     }
   };
@@ -75,7 +86,7 @@ export default function BrandHomeScreen() {
 
         <View style={styles.body}>
           <ActionGrid onNewCampaign={handleNewCampaign} />
-          <CampaignsSection onNewCampaign={handleNewCampaign} />
+          <CampaignsSection onNewCampaign={handleNewCampaign} onEditDraft={handleEditDraft} />
           <PendingReviewsSection />
           <SuggestedCreatorsSection onInviteCreator={(creator) => {
             setSelectedCreator(creator);
@@ -87,8 +98,12 @@ export default function BrandHomeScreen() {
 
       <CreateCampaignSheet
         isOpen={isCreateSheetOpen}
-        onClose={() => setIsCreateSheetOpen(false)}
+        onClose={() => {
+          setIsCreateSheetOpen(false);
+          setEditingCampaign(null);
+        }}
         onSuccess={handleCampaignSuccess}
+        campaign={editingCampaign}
       />
 
       <CreateBrandProfileSheet

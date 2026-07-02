@@ -527,6 +527,7 @@ export default function CampaignDetailScreen() {
                 category={category}
                 title={title}
                 brandName={brief.brandName}
+                status={campaign?.status}
               />
 
               <CampaignBriefSection
@@ -559,6 +560,7 @@ export default function CampaignDetailScreen() {
                 prodUrl={prodUrl}
                 prodDescription={prodDescription}
                 prodShipping={prodShipping}
+                status={campaign?.status}
               />
 
               <CampaignGuidelinesSection

@@ -12,6 +12,7 @@ interface Props {
   prodUrl?: string;
   prodDescription?: string;
   prodShipping?: string;
+  status?: string;
 }
 
 export function CampaignBudgetSection({
@@ -24,6 +25,7 @@ export function CampaignBudgetSection({
   prodUrl,
   prodDescription,
   prodShipping,
+  status,
 }: Props) {
   const isBarter = paymentType === 'Barter';
   const totalBudget = (parseInt(costPerCreator) || 0) * (parseInt(numCreators) || 0);
@@ -47,12 +49,31 @@ export function CampaignBudgetSection({
           <Text style={styles.infoCellVal}>{numCreators}</Text>
         </View>
         <View style={styles.infoGridCell}>
-          <Text style={styles.infoCellLabel}>Total Budget</Text>
+          <Text style={styles.infoCellLabel}>Creator Budget</Text>
           <Text style={styles.infoCellValPrice}>
             {isBarter ? 'Barter' : `₹${totalBudget.toLocaleString()}`}
           </Text>
         </View>
       </View>
+
+      {/* Budget Breakdown for Paid Campaigns */}
+      {paymentType === 'Paid' && (
+        <View style={styles.breakdownCard}>
+          <Text style={styles.breakdownHeading}>Budget Breakdown</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsRowLabel}>Creator Budget Payout:</Text>
+            <Text style={styles.detailsRowValue}>₹{totalBudget.toLocaleString()}</Text>
+          </View>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsRowLabel}>Platform Service Fee (10%):</Text>
+            <Text style={styles.detailsRowValue}>₹{Math.floor(totalBudget / 9).toLocaleString()}</Text>
+          </View>
+          <View style={[styles.detailsRow, styles.totalRow]}>
+            <Text style={styles.totalRowLabel}>Total Campaign Budget:</Text>
+            <Text style={styles.totalRowValue}>₹{(totalBudget + Math.floor(totalBudget / 9)).toLocaleString()}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Barter Product Details */}
       {paymentType !== 'Paid' && prodName ? (
@@ -163,6 +184,48 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
+  },
+  breakdownCard: {
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
+    borderRadius: Radius.md,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    marginTop: 6,
+    gap: 6,
+  },
+  breakdownHeading: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 11,
+    color: Colors.oxblood,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  totalRow: {
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(63, 3, 11, 0.08)',
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  totalRowLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  totalRowValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  draftSection: {
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(63, 3, 11, 0.08)',
+    marginTop: 6,
+    paddingTop: 6,
+    gap: 4,
   },
   detailsRow: {
     flexDirection: 'row',

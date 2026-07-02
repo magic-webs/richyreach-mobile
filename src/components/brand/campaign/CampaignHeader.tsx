@@ -10,11 +10,13 @@ interface Props {
   category: string;
   title: string;
   brandName?: string;
+  status?: string;
 }
 
-export function CampaignHeader({ bannerUrl, priority, category, title, brandName }: Props) {
+export function CampaignHeader({ bannerUrl, priority, category, title, brandName, status }: Props) {
   const toneColor = priority === 'urgent' ? 'ox' : 'rose';
   const isUrgent = priority === 'urgent';
+  const isDraft = status === 'draft';
 
   return (
     <View style={styles.card}>
@@ -25,8 +27,10 @@ export function CampaignHeader({ bannerUrl, priority, category, title, brandName
       )}
       <View style={styles.headerMetaRow}>
         <View style={styles.badgeRow}>
-          <View style={styles.activeBadge}>
-            <Text style={styles.activeText}>ACTIVE</Text>
+          <View style={[styles.activeBadge, isDraft && styles.draftBadge]}>
+            <Text style={[styles.activeText, isDraft && styles.draftText]}>
+              {isDraft ? 'DRAFT' : 'ACTIVE'}
+            </Text>
           </View>
           <View style={[styles.priorityBadge, isUrgent && styles.priorityBadgeUrgent]}>
             <Text style={[styles.priorityText, isUrgent && styles.priorityTextUrgent]}>
@@ -80,6 +84,12 @@ const styles = StyleSheet.create({
     color: Colors.green,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  draftBadge: {
+    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+  },
+  draftText: {
+    color: '#d35400',
   },
   priorityBadge: {
     backgroundColor: 'rgba(63, 3, 11, 0.05)',

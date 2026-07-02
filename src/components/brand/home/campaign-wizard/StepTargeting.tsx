@@ -55,7 +55,7 @@ export function StepTargeting() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Gender Preference</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['Male', 'Female', 'Any'] as const).map((gender) => {
+          {(['Any', 'Male', 'Female'] as const).map((gender) => {
             const active = targetGender === gender;
             return (
               <TouchableOpacity
@@ -74,7 +74,7 @@ export function StepTargeting() {
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Creator Age Range</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
-          {(['18-24', '25-34', '35-44', 'Custom'] as const).map((age) => {
+          {(['Any', '18-24', '25-34', '35-44', 'Custom'] as const).map((age) => {
             const active = targetAgeRange === age;
             return (
               <TouchableOpacity

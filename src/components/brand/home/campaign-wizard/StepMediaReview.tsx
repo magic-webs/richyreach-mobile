@@ -278,8 +278,8 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
 
   const totalBudget = parseInt(campaignBudget) || 0;
   const creators = parseInt(numCreators) || 1;
-  const platformFee = totalBudget > 0 ? 1000 : 0;
-  const netPayout = Math.max(0, totalBudget - platformFee);
+  const platformFee = Math.floor(totalBudget * 0.1);
+  const netPayout = totalBudget - platformFee;
   const costPerCreatorCalculated = creators > 0 ? Math.floor(netPayout / creators) : 0;
 
   const handleBack = () => {
@@ -446,7 +446,7 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
               <Text style={styles.summaryValue}>₹{totalBudget.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Platform Fee (Deducted)</Text>
+              <Text style={styles.summaryLabel}>Platform Fee (10%)</Text>
               <Text style={[styles.summaryValue, { color: '#e74c3c' }]}>-₹{platformFee.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryRow}>
@@ -475,7 +475,7 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
         />
         <TactileButton
           onPress={onPublish}
-          text="Publish Campaign"
+          text="Save Draft"
           icon="arrow"
           iconPosition="right"
           variant="primary"

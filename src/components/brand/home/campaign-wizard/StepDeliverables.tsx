@@ -17,8 +17,8 @@ export function StepDeliverables() {
 
   const totalBudget = parseInt(campaignBudget) || 0;
   const creators = parseInt(numCreators) || 0;
-  const platformFee = totalBudget > 0 ? 1000 : 0;
-  const netPayout = Math.max(0, totalBudget - platformFee);
+  const platformFee = Math.floor(totalBudget * 0.1);
+  const netPayout = totalBudget - platformFee;
   const costPerCreatorCalculated = creators > 0 ? Math.floor(netPayout / creators) : 0;
 
   const handleNext = async () => {
@@ -248,7 +248,7 @@ export function StepDeliverables() {
               <Text style={styles.summaryVal}>₹{totalBudget.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Platform Fee (Deducted)</Text>
+              <Text style={styles.summaryLabel}>Platform Fee</Text>
               <Text style={[styles.summaryVal, { color: '#e74c3c' }]}>-₹{platformFee.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryRow}>

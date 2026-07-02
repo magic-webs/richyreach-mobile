@@ -20,11 +20,13 @@ interface CampaignCardProps {
   viewMode?: 'list' | 'grid';
   onPress?: () => void;
   image?: string;
+  status?: string;
 }
 
-function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list', onPress, image }: CampaignCardProps) {
+function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list', onPress, image, status }: CampaignCardProps) {
   const percentage = Math.round((spent / total) * 100);
   const isGrid = viewMode === 'grid';
+  const isDraft = status === 'draft';
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -45,8 +47,10 @@ function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = '
             <View style={styles.titleRow}>
               <Text style={[styles.campaignTitle, isGrid && styles.campaignTitleGrid]} numberOfLines={isGrid ? 2 : 1}>{title}</Text>
               {!isGrid && (
-                <View style={styles.activeBadge}>
-                  <Text style={styles.activeText}>Active</Text>
+                <View style={[styles.activeBadge, isDraft && styles.draftBadge]}>
+                  <Text style={[styles.activeText, isDraft && styles.draftText]}>
+                    {isDraft ? 'Draft' : 'Active'}
+                  </Text>
                 </View>
               )}
             </View>
@@ -103,10 +107,11 @@ function CampaignCardSkeleton({ viewMode = 'list' }: { viewMode?: 'list' | 'grid
 
 interface CampaignsSectionProps {
   onNewCampaign: () => void;
+  onEditDraft?: (campaign: any) => void;
   refreshTrigger?: number;
 }
 
-export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
+export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectionProps) {
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
   const router = useRouter();
 
@@ -217,7 +222,14 @@ export function CampaignsSection({ onNewCampaign }: CampaignsSectionProps) {
                 spent={spent}
                 total={total}
                 viewMode={viewMode}
-                onPress={() => router.push({ pathname: '/brand/campaign/[id]', params: { id: c.id } } as any)}
+                status={c.status}
+                onPress={() => {
+                  if (c.status === 'draft' && onEditDraft) {
+                    onEditDraft(c);
+                  } else {
+                    router.push({ pathname: '/brand/campaign/[id]', params: { id: c.id } } as any);
+                  }
+                }}
               />
             );
           })
@@ -345,6 +357,12 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     color: Colors.green,
     fontWeight: '800',
+  },
+  draftBadge: {
+    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+  },
+  draftText: {
+    color: '#d35400',
   },
   campaignMeta: {
     fontFamily: FontFamily.sansMedium,
