@@ -135,6 +135,11 @@ export function ApplyCampaignSheet({
     setMemeVisible(true);
   };
 
+  const handleMemeDismiss = () => {
+    setMemeVisible(false);
+    setBidPrice(String(spotPrice));
+  };
+
   const applyPercentBump = (pct: number) => {
     const bumped = Math.round(spotPrice * (1 + pct / 100));
     if (bumped >= maxPrice) {
@@ -177,15 +182,15 @@ export function ApplyCampaignSheet({
 
   return (
     <>
-      {/* ── Ashneer meme popup ──────────────────────────────────────────── */}
+      {/* Ashneer meme popup  */}
       <Modal
         visible={memeVisible}
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setMemeVisible(false)}
+        onRequestClose={handleMemeDismiss}
       >
-        <Pressable style={styles.memeOverlay} onPress={() => setMemeVisible(false)}>
+        <Pressable style={styles.memeOverlay} onPress={handleMemeDismiss}>
           <Pressable style={styles.memeCard} onPress={(e) => e.stopPropagation()}>
             <Image
               source={require('@/assets/meme/bhai-kya-kar-raha-hai-tu-ashneer-grover.gif')}
@@ -195,7 +200,7 @@ export function ApplyCampaignSheet({
             <Text style={styles.memeTitle}>Bhai kya kar raha hai tu 😅</Text>
             <TouchableOpacity
               style={styles.memeDismissBtn}
-              onPress={() => setMemeVisible(false)}
+              onPress={handleMemeDismiss}
               activeOpacity={0.85}
             >
               <Text style={styles.memeDismissText}>OK, thik hai bhai 🙏</Text>

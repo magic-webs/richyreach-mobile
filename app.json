@@ -18,7 +18,13 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.abhijit969.richyreach"
+      "package": "com.abhijit969.richyreach",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "output": "static",
@@ -63,8 +69,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "532be49c-1dd3-47da-bbca-d4176e64aedf"
+        "projectId": "cf50aeb2-27b7-47d4-9ccd-dadd175774c7"
       }
+    },
+    "owner": "richyreach",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/cf50aeb2-27b7-47d4-9ccd-dadd175774c7"
     }
   }
 }
