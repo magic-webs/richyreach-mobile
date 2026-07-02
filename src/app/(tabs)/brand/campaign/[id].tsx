@@ -356,7 +356,10 @@ export default function CampaignDetailScreen() {
               await api.campaigns.delete(id);
               showModal({ title: 'Campaign Deleted', message: 'The campaign has been removed successfully.' });
               queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
-              router.replace('/brand/index' as any);
+              queryClient.invalidateQueries({ queryKey: ['brandProfile', activeProfileId] });
+              queryClient.invalidateQueries({ queryKey: ['brandWalletBalance', activeProfileId] });
+              queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
+              router.replace('/brand' as any);
             } catch (err: any) {
               console.error('Failed to delete campaign:', err);
               showModal({ title: 'Delete Failed', message: err.message || 'An error occurred while deleting the campaign.' });

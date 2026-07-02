@@ -55,18 +55,20 @@ export default function InfluencerChatConversationScreen() {
         setIsLoading(true);
         let resolvedId = routeId;
 
-        const allRooms = await api.chat.rooms();
-
-        if (typeof routeId === 'string' && routeId.startsWith('bp_')) {
-          // Create (or get existing) room between this influencer profile and the brand
-          const room = await api.chat.createRoom(routeId);
-          resolvedId = room.id;
-          if (active) {
+        if (active && typeof routeId === 'string') {
+          if (routeId.startsWith('bp_')) {
+            // Create (or get existing) room between this influencer profile and the brand
+            const room = await api.chat.createRoom(routeId);
+            resolvedId = room.id;
             setRoomId(room.id);
             if (room.companyName) setRoomName(room.companyName);
             if (room.logo) setRoomAvatar(room.logo);
+          } else {
+            setRoomId(routeId);
           }
         }
+
+        const allRooms = await api.chat.rooms();
 
         const found = allRooms.find((r: any) => r.roomId === resolvedId);
         if (found && active) {

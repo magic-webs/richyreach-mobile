@@ -64,14 +64,16 @@ export default function BrandChatConversationScreen() {
         setIsLoading(true);
         let resolvedId = routeId;
 
-        if (typeof routeId === 'string' && routeId.startsWith('ip_')) {
-          // Create (or get existing) room between this brand profile and the influencer
-          const room = await api.chat.createRoom(routeId);
-          resolvedId = room.id;
-          if (active) {
+        if (active && typeof routeId === 'string') {
+          if (routeId.startsWith('ip_')) {
+            // Create (or get existing) room between this brand profile and the influencer
+            const room = await api.chat.createRoom(routeId);
+            resolvedId = room.id;
             setRoomId(room.id);
             if (room.name) setRoomName(room.name);
             if (room.avatar) setRoomAvatar(room.avatar);
+          } else {
+            setRoomId(routeId);
           }
         }
 

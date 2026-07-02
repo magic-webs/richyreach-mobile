@@ -34,6 +34,7 @@ const PRESETS = [
 const TX_ICONS: Record<string, string> = {
   brand_topup: '💰',
   brand_campaign_spend: '💼',
+  brand_campaign_refund: '↩️',
   arena_budget: '🏆',
 };
 

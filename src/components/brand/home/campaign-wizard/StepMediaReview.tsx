@@ -475,7 +475,7 @@ export function StepMediaReview({ onPublish }: StepMediaReviewProps) {
         />
         <TactileButton
           onPress={onPublish}
-          text="Save Draft"
+          text="Launch Campaign"
           icon="arrow"
           iconPosition="right"
           variant="primary"

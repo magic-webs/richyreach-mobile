@@ -44,6 +44,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
 
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [loadingText, setLoadingText] = useState('Saving Your Campaign...');
+  const [loadingSubtext, setLoadingSubtext] = useState('Uploading media & finalising details...');
+  const [successText, setSuccessText] = useState('Campaign Draft Saved!');
 
   const {
     createStep,
@@ -213,6 +216,9 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
       const parsedCreators = parseInt(data.numCreators) || 1;
 
       try {
+        setLoadingText('Saving Your Campaign...');
+        setLoadingSubtext('Uploading media & saving draft...');
+        setSuccessText('Campaign Draft Saved!');
         setIsLaunching(true);
 
         let audioUrl = null;
@@ -332,7 +338,205 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
   };
 
   const handleLaunchCampaign = async (data: any) => {
-    await handleClose(true);
+    const parsedBudget = parseInt(data.campaignBudget) || 0;
+    const parsedCreators = parseInt(data.numCreators) || 1;
+    let audioUrl: string | null = null;
+    let bannerUrl = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1080&auto=format&fit=crop';
+
+    try {
+      setLoadingText('Launching Your Campaign...');
+      setLoadingSubtext('Uploading media & activating campaign...');
+      setSuccessText('Campaign Launched!');
+      setIsLaunching(true);
+
+      const audioUri = useCampaignWizardStore.getState().audioInstructionUri;
+      if (audioUri && !audioUri.startsWith('http')) {
+        try {
+          audioUrl = await uploadFileToR2(audioUri, 'audio', data.selectedBrandProfileId);
+        } catch (e) {
+          console.error('Audio upload failed:', e);
+        }
+      } else if (audioUri) {
+        audioUrl = audioUri;
+      }
+
+      const bannerUri = data.campaignBannerUri as string | null;
+      if (bannerUri && !bannerUri.startsWith('http')) {
+        try {
+          bannerUrl = await uploadFileToR2(bannerUri, 'banner', data.selectedBrandProfileId);
+        } catch (bannerErr) {
+          console.error('Failed to upload campaign banner:', bannerErr);
+        }
+      } else if (bannerUri) {
+        bannerUrl = bannerUri;
+      }
+
+      const briefDetailsObj = {
+        brandName: data.brandName,
+        objective: data.campObjective ? data.campObjective.toLowerCase().replace(/[\/\s]+/g, '_') : 'brand_awareness',
+        priority: data.campPriority ? data.campPriority.toLowerCase() : 'normal',
+        location: data.campLocationValue || data.campLocationType,
+        gender: data.targetGender ? data.targetGender.toLowerCase() : 'any',
+        ageRange: data.targetAgeRange === 'Custom' ? data.customAgeRange : data.targetAgeRange,
+        creatorSize: data.creatorSize,
+        paymentType: data.paymentType ? data.paymentType.toLowerCase() : 'paid',
+        minFollowers: 1000,
+        tags: data.campNiche ? [data.campNiche.toLowerCase()] : [],
+        targetLocationType: data.campLocationType,
+        targetLocationValue: data.campLocationValue,
+        minEngagementRate: 0,
+        languages: [data.targetLanguage],
+        platforms: ['instagram'],
+        deliverables: [],
+        costPerCreator: data.paymentType === 'Barter' ? 0 : Math.floor(Math.floor(parsedBudget * 0.9) / parsedCreators),
+        numCreators: data.paymentType === 'Barter' ? 0 : parsedCreators,
+        productInfo:
+          data.paymentType !== 'Paid'
+            ? {
+              name: data.prodName,
+              value: parseInt(data.prodValue) || 0,
+              description: data.prodDescription,
+              sku: data.prodSku,
+              url: data.prodUrl,
+              shippingDetails: data.prodShipping,
+            }
+            : null,
+        guidelines: {
+          mustMention: data.mustMention ? data.mustMention.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+          cta: 'Visit Website',
+          hashtags: data.hashtags ? data.hashtags.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+          brandKeywords: [],
+          brandTone: data.brandTone,
+        },
+        timeline: {
+          startDate: data.startDate,
+          endDate: data.endDate,
+          applicationDeadline: data.applicationDeadline,
+        },
+        mediaUploads: {
+          bannerUrl,
+          brandLogoUrl: '',
+          sampleCreativeUrls: [],
+          referenceLinks: data.referenceLinks ? [data.referenceLinks] : [],
+          audioInstructionUrl: audioUrl,
+        },
+      };
+
+      const finalPayload = {
+        title: data.campName,
+        description: data.campDescription || `Campaign for ${data.campName}.`,
+        budget: data.paymentType === 'Barter' ? 0 : parsedBudget * 100, // cents
+        campaignType: 'instagram',
+        targetAudience: 'all, any, any',
+        requirements: `1. Deliverables: General Deliverables`,
+        expectedReach: 250000,
+        allowFraction: false,
+        isArena: false,
+        category: data.campNiche,
+        briefDetails: JSON.stringify(briefDetailsObj),
+        status: 'active',
+      };
+
+      if (campaign?.id) {
+        await api.campaigns.update(campaign.id, finalPayload);
+      } else {
+        await api.campaigns.create(finalPayload, data.selectedBrandProfileId);
+      }
+
+      setIsLaunching(false);
+      setShowSuccessAnimation(true);
+    } catch (err: any) {
+      console.error('Failed to launch campaign, saving as draft:', err);
+      setIsLaunching(false);
+
+      // Fallback: save as draft and alert user
+      try {
+        const briefDetailsObj = {
+          brandName: data.brandName,
+          objective: data.campObjective ? data.campObjective.toLowerCase().replace(/[\/\s]+/g, '_') : 'brand_awareness',
+          priority: data.campPriority ? data.campPriority.toLowerCase() : 'normal',
+          location: data.campLocationValue || data.campLocationType,
+          gender: data.targetGender ? data.targetGender.toLowerCase() : 'any',
+          ageRange: data.targetAgeRange === 'Custom' ? data.customAgeRange : data.targetAgeRange,
+          creatorSize: data.creatorSize,
+          paymentType: data.paymentType ? data.paymentType.toLowerCase() : 'paid',
+          minFollowers: 1000,
+          tags: data.campNiche ? [data.campNiche.toLowerCase()] : [],
+          targetLocationType: data.campLocationType,
+          targetLocationValue: data.campLocationValue,
+          minEngagementRate: 0,
+          languages: [data.targetLanguage],
+          platforms: ['instagram'],
+          deliverables: [],
+          costPerCreator: data.paymentType === 'Barter' ? 0 : Math.floor(Math.floor(parsedBudget * 0.9) / parsedCreators),
+          numCreators: data.paymentType === 'Barter' ? 0 : parsedCreators,
+          productInfo:
+            data.paymentType !== 'Paid'
+              ? {
+                name: data.prodName,
+                value: parseInt(data.prodValue) || 0,
+                description: data.prodDescription,
+                sku: data.prodSku,
+                url: data.prodUrl,
+                shippingDetails: data.prodShipping,
+              }
+              : null,
+          guidelines: {
+            mustMention: data.mustMention ? data.mustMention.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+            cta: 'Visit Website',
+            hashtags: data.hashtags ? data.hashtags.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+            brandKeywords: [],
+            brandTone: data.brandTone,
+          },
+          timeline: {
+            startDate: data.startDate,
+            endDate: data.endDate,
+            applicationDeadline: data.applicationDeadline,
+          },
+          mediaUploads: {
+            bannerUrl,
+            brandLogoUrl: '',
+            sampleCreativeUrls: [],
+            referenceLinks: data.referenceLinks ? [data.referenceLinks] : [],
+            audioInstructionUrl: audioUrl,
+          },
+        };
+
+        const draftPayload = {
+          title: data.campName,
+          description: data.campDescription || `Campaign draft for ${data.campName}.`,
+          budget: data.paymentType === 'Barter' ? 0 : parsedBudget * 100, // cents
+          campaignType: 'instagram',
+          targetAudience: 'all, any, any',
+          requirements: `1. Deliverables: General Deliverables`,
+          expectedReach: 250000,
+          allowFraction: false,
+          isArena: false,
+          category: data.campNiche,
+          briefDetails: JSON.stringify(briefDetailsObj),
+          status: 'draft',
+        };
+
+        if (campaign?.id) {
+          await api.campaigns.update(campaign.id, draftPayload);
+        } else {
+          await api.campaigns.create(draftPayload, data.selectedBrandProfileId);
+        }
+
+        showModal({
+          title: 'Saved as Draft',
+          message: `${err.message || 'Insufficient wallet balance'}. Your campaign has been saved as a Draft. Please top up your wallet to activate it.`,
+        });
+        onSuccess();
+        onClose();
+      } catch (draftErr) {
+        console.error('Failed to save draft fallback:', draftErr);
+        showModal({
+          title: 'Launch Failed',
+          message: err.message || 'An error occurred while launching your campaign.',
+        });
+      }
+    }
   };
 
   const stepTitles = [
@@ -418,8 +622,8 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
       {isLaunching && (
         <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
           <ActivityIndicator size="large" color={Colors.oxblood} />
-          <Text style={styles.loadingText}>Saving Your Campaign...</Text>
-          <Text style={styles.loadingSubtext}>Uploading media & saving draft...</Text>
+          <Text style={styles.loadingText}>{loadingText}</Text>
+          <Text style={styles.loadingSubtext}>{loadingSubtext}</Text>
         </View>
       )}
 
@@ -439,7 +643,7 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
               }, 800);
             }}
           />
-          <Text style={styles.successText}>Campaign Draft Saved!</Text>
+          <Text style={styles.successText}>{successText}</Text>
         </View>
       )}
     </Modal>

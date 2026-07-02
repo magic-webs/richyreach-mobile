@@ -34,6 +34,7 @@ const TX_TYPE_ICONS: Record<string, string> = {
   review_reward: '⭐',
   referral: '🤝',
   deposit: '💰',
+  brand_campaign_refund: '↩️',
 };
 
 function TransactionRow({ tx }: { tx: any }) {

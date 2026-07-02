@@ -1,7 +1,8 @@
 import { Colors, FontFamily } from '@/constants/brand';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useFormContext, Controller } from 'react-hook-form';
+import { indianStates, indianCities } from '@/data/indianStates';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useCampaignWizardStore } from '@/store/campaignWizard';
@@ -12,6 +13,7 @@ export function StepBasics() {
   const { profiles, activeBrandProfileId } = useProfilesStore();
   const { updateField } = useCampaignWizardStore();
   const { control, setValue, trigger, watch, formState: { errors } } = useFormContext();
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const campObjective = watch('campObjective');
   const campNiche = watch('campNiche');
@@ -179,21 +181,66 @@ export function StepBasics() {
 
       {/* Location Value */}
       {campLocationType !== 'Pan India' && (
-        <View style={styles.formGroup}>
+        <View style={[styles.formGroup, { zIndex: 99 }]}>
           <Text style={styles.formLabel}>{campLocationType} Details *</Text>
           <Controller
             control={control}
             name="campLocationValue"
             rules={{ required: `${campLocationType} value is required` }}
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.formInput, errors.campLocationValue && styles.formInputError]}
-                placeholder={`e.g. Maharashtra, Mumbai, or 400001`}
-                placeholderTextColor="rgba(63,3,11,0.35)"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-              />
+              <View style={{ position: 'relative' }}>
+                <TextInput
+                  style={[styles.formInput, errors.campLocationValue && styles.formInputError]}
+                  placeholder={campLocationType === 'State' ? 'Start typing state, e.g. Karnataka' : campLocationType === 'City' ? 'Start typing city, e.g. Bangalore' : 'e.g. 400001'}
+                  placeholderTextColor="rgba(63,3,11,0.35)"
+                  onBlur={() => {
+                    onBlur();
+                    setTimeout(() => setSuggestions([]), 250);
+                  }}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    if (text.trim().length > 0) {
+                      if (campLocationType === 'State') {
+                        const filtered = indianStates.filter(
+                          (s) =>
+                            s.toLowerCase().includes(text.toLowerCase()) &&
+                            s.toLowerCase() !== text.toLowerCase()
+                        );
+                        setSuggestions(filtered.slice(0, 5));
+                      } else if (campLocationType === 'City') {
+                        const filtered = indianCities.filter(
+                          (c) =>
+                            c.toLowerCase().includes(text.toLowerCase()) &&
+                            c.toLowerCase() !== text.toLowerCase()
+                        );
+                        setSuggestions(filtered.slice(0, 5));
+                      } else {
+                        setSuggestions([]);
+                      }
+                    } else {
+                      setSuggestions([]);
+                    }
+                  }}
+                  value={value}
+                />
+                {(campLocationType === 'State' || campLocationType === 'City') && suggestions.length > 0 && (
+                  <View style={styles.suggestionsContainer}>
+                    {suggestions.map((name) => (
+                      <TouchableOpacity
+                        key={name}
+                        style={styles.suggestionItem}
+                        onPress={() => {
+                          setValue('campLocationValue', name);
+                          setSuggestions([]);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.suggestionText}>{name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
             )}
           />
           {errors.campLocationValue && <Text style={styles.errorText}>{errors.campLocationValue.message as string}</Text>}
@@ -318,5 +365,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingVertical: 4,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.08)',
+    marginTop: 4,
+    maxHeight: 180,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63, 3, 11, 0.04)',
+  },
+  suggestionText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 13,
+    color: Colors.ink,
   },
 });

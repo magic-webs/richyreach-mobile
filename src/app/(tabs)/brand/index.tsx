@@ -64,6 +64,8 @@ export default function BrandHomeScreen() {
   const handleCampaignSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
     queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandProfile', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandWalletBalance', activeProfileId] });
   };
 
   const handleProfileSuccess = () => {
