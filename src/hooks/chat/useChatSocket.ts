@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getToken } from '@/lib/storage';
+import { updateRoomLastMessage, clearRoomUnreadCount } from '@/store/chatStore';
 import type { ChatMessage, InviteStatus, SendMessagePayload } from '@/types/chat';
 
 interface UseChatSocketOptions {
@@ -21,7 +22,10 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbacksRef = useRef({ onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange });
-  callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange };
+
+  useEffect(() => {
+    callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange };
+  }, [onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -31,8 +35,6 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
     async function connect() {
       try {
         // Read token async from SecureStore — same path as REST API calls.
-        // Using session?.token from Zustand is unreliable on mobile because
-        // the store may not be populated yet when this effect fires.
         const token = await getToken();
         if (!token || !isMounted) return;
 
@@ -58,12 +60,16 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
         socket.onopen = () => {
           console.log('[WS] Connected for room:', currentRoomId);
           if (isMounted) setIsConnected(true);
+          clearRoomUnreadCount(currentRoomId);
         };
 
         socket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             if (data.type === 'message' && isMounted) {
+              // Real-time update to chatList rooms view
+              updateRoomLastMessage(currentRoomId, data.message);
+              clearRoomUnreadCount(currentRoomId);
               callbacksRef.current.onMessage(data.message);
             } else if (data.type === 'invite-status-update' && isMounted) {
               callbacksRef.current.onInviteStatusUpdate(data.inviteId, data.status);
@@ -116,8 +122,7 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
       }
       setIsConnected(false);
     };
-    // activeProfileId is deliberately read once per connect, not a reactive dependency —
-    // matches today's behavior where switching active profile mid-session doesn't reconnect.
+    // activeProfileId is deliberately read once per connect, not a reactive dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 

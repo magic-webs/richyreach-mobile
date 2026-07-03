@@ -106,7 +106,7 @@ export default function BrandChatConversationScreen() {
     handleIncomingWsMessage,
     handleInviteStatusUpdate,
     handleReadReceipt,
-    appendLocalMessage,
+    sendMessage,
   } = useChatMessages({ roomId, currentUserId });
 
   const { sendJson } = useChatSocket({
@@ -162,29 +162,11 @@ export default function BrandChatConversationScreen() {
     setLocalIsTyping(false);
     sendJson({ type: 'typing', isTyping: false });
 
-    const sentOverSocket = sendJson({ content: trimmed });
-    if (sentOverSocket) {
-      setText('');
-      setIsSending(false);
-      return;
-    }
-
     try {
-      const res: any = await api.chat.send(roomId, trimmed);
       setText('');
-      const activeBrandProfileId = useProfilesStore.getState().activeBrandProfileId;
-      const activeProfile = useProfilesStore.getState().brandProfiles.find((p) => p.id === activeBrandProfileId);
-      appendLocalMessage({
-        id: res.id,
-        content: res.content,
-        createdAt: res.createdAt,
-        senderId: currentUserId!,
-        senderName: activeProfile?.companyName || session?.user?.name || 'Me',
-        senderAvatar: activeProfile?.logo || undefined,
-      });
+      await sendMessage({ content: trimmed }, sendJson);
     } catch (err) {
-      console.error('Error sending message via API', err);
-      showModal({ title: 'Message Not Sent', message: 'Please check your connection and try again.' });
+      console.error('Error sending message', err);
     } finally {
       setIsSending(false);
     }
@@ -196,23 +178,9 @@ export default function BrandChatConversationScreen() {
     try {
       const { url } = await uploadVoiceNote(localUri);
       const attachmentDurationSec = Math.round(durationSec);
-      const sentOverSocket = sendJson({ attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec });
-      if (!sentOverSocket) {
-        const res: any = await api.chat.send(roomId, undefined, undefined, { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec });
-        const activeBrandProfileId = useProfilesStore.getState().activeBrandProfileId;
-        const activeProfile = useProfilesStore.getState().brandProfiles.find((p) => p.id === activeBrandProfileId);
-        appendLocalMessage({
-          id: res.id,
-          content: res.content ?? '',
-          createdAt: res.createdAt,
-          senderId: currentUserId!,
-          senderName: activeProfile?.companyName || session?.user?.name || 'Me',
-          senderAvatar: activeProfile?.logo || undefined,
-          attachmentUrl: res.attachmentUrl ?? url,
-          attachmentType: 'audio',
-          attachmentDurationSec: res.attachmentDurationSec ?? attachmentDurationSec,
-        });
-      }
+      await sendMessage({
+        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec }
+      }, sendJson);
     } catch (err) {
       console.error('Failed to send voice note', err);
       showModal({ title: 'Voice Note Not Sent', message: 'Please check your connection and try again.' });
@@ -236,23 +204,9 @@ export default function BrandChatConversationScreen() {
 
   const inviteCampaign = async (campaignId: string) => {
     if (!roomId) return;
-    const payload = { content: "I've invited you to collaborate on our campaign!", campaignId };
-
-    const sentOverSocket = sendJson(payload);
-    if (sentOverSocket) {
-      setShowCampaignModal(false);
-      return;
-    }
-
+    const content = "I've invited you to collaborate on our campaign!";
     try {
-      await api.chat.send(roomId, payload.content, campaignId);
-      // The plain create response doesn't include campaign/invite enrichment (title, budget,
-      // inviteId) — those only come from getMessages' joins. A single-item fetch (not a full
-      // refetch) gets the enriched message without discarding any older pages already loaded.
-      const latestPage = await api.chat.messages(roomId, { limit: 1 });
-      if (latestPage.messages.length > 0) {
-        appendLocalMessage(latestPage.messages[latestPage.messages.length - 1]);
-      }
+      await sendMessage({ content, campaignId }, sendJson);
       setShowCampaignModal(false);
     } catch (err) {
       console.error('Failed to send campaign invite', err);

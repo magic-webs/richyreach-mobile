@@ -516,9 +516,17 @@ export default function CollabDetail() {
                       : 'Not submitted',
                 },
                 {
-                  label: 'Instagram Handle',
-                  status: myApplication.igHandle ? 'approved' : 'action_needed',
-                  text: myApplication.igHandle ? `@${myApplication.igHandle}` : 'Not linked',
+                  label: 'Video Draft Review',
+                  status: myApplication.videoStatus === 'approved'
+                    ? 'approved'
+                    : myApplication.videoStatus === 'pending'
+                      ? 'pending'
+                      : 'action_needed',
+                  text: myApplication.videoStatus === 'approved'
+                    ? 'Approved ✓'
+                    : myApplication.videoStatus === 'pending'
+                      ? 'Under Review…'
+                      : 'Not submitted',
                 },
                 {
                   label: 'Live Post Link',

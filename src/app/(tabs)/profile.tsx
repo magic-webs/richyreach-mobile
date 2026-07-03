@@ -7,7 +7,6 @@ import { NotificationsContent } from '@/components/influencer/profile/Notificati
 import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
 import { ReviewsTab } from '@/components/influencer/profile/ReviewsTab';
 import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
-import { WalletContent } from '@/components/influencer/profile/WalletContent';
 import { VerificationContent } from '@/components/influencer/profile/VerificationContent';
 import { PrivacyContent } from '@/components/influencer/profile/PrivacyContent';
 import { LanguageContent } from '@/components/influencer/profile/LanguageContent';
@@ -29,11 +28,11 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About';
-type SheetType = 'wallet' | 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
+type SheetType = 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
 
-const SETTINGS: [string, string, string, SheetType][] = [
+const SETTINGS: [string, string, string, SheetType | 'wallet'][] = [
   ['wallet', 'Wallet & payouts', '', 'wallet'],
-  ['gift', 'Refer & earn', '₹100 + Points', 'referral'],
+  ['gift', 'Refer & earn', '₹100', 'referral'],
   ['verified', 'Verification', 'Verified', 'verification'],
   ['bell', 'Notifications', '', 'notifications'],
   ['lock', 'Privacy & security', '', 'privacy'],
@@ -42,7 +41,6 @@ const SETTINGS: [string, string, string, SheetType][] = [
 ];
 
 export default function ProfileScreen() {
-  const role = useAuthStore((s) => s.role);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -55,6 +53,7 @@ export default function ProfileScreen() {
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('Services');
   const [sheet, setSheet] = useState<SheetType>(null);
+
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Sheets and services state
@@ -172,21 +171,9 @@ export default function ProfileScreen() {
     .filter((t) => t.status === 'cleared')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const displayAvailable = `₹${(clearedEarnings / 100).toLocaleString()}`;
+  const displayAvailable = `₹${(coinBalance / 100).toLocaleString('en-IN')}`;
 
-  const sheetContent: Partial<Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode }>> = {
-    wallet: {
-      title: 'Wallet & payouts',
-      icon: 'wallet',
-      content: (
-        <WalletContent
-          dashboard={dashboardData}
-          earnings={earnings}
-          loadingDashboard={loadingDashboard}
-          loadingEarnings={loadingEarnings}
-        />
-      )
-    },
+  const sheetContent: Partial<Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode; snapPoints?: (string | number)[] }>> = {
     verification: {
       title: 'Verification',
       icon: 'verified',
@@ -282,7 +269,7 @@ export default function ProfileScreen() {
               <Skeleton width={80} height={32} borderRadius={16} />
             ) : (
               <TouchableOpacity
-                onPress={() => setSheet('wallet')}
+                onPress={() => router.push("/profile/wallet")}
                 activeOpacity={0.8}
                 style={styles.coinPill}
               >
@@ -379,15 +366,17 @@ export default function ProfileScreen() {
             <Text style={styles.settingsLabel}>Settings</Text>
             <View style={{ gap: 4 }}>
               {SETTINGS.map(([icon, label, value, key], k) => {
-                const displayVal = key === 'wallet' ? (loadingEarnings ? '...' : displayAvailable) : value;
+                const displayVal = key === 'wallet' ? (loadingWallet ? '...' : displayAvailable) : value;
                 return (
                   <TouchableOpacity
                     key={key}
                     onPress={() => {
                       if (key === 'referral') {
-                        router.push('/referral');
+                        router.push('/profile/referral');
+                      } else if (key === 'wallet') {
+                        router.push('/profile/wallet');
                       } else {
-                        setSheet(key);
+                        setSheet(key as SheetType);
                       }
                     }}
                     activeOpacity={0.8}
@@ -439,6 +428,7 @@ export default function ProfileScreen() {
           title={activeSheet.title}
           icon={activeSheet.icon}
           onClose={() => setSheet(null)}
+          snapPoints={activeSheet.snapPoints}
         >
           {activeSheet.content}
         </BottomSheet>
@@ -546,14 +536,14 @@ const styles = StyleSheet.create({
   avatarRing: { width: 86, height: 86, borderRadius: 43, padding: 3, backgroundColor: Colors.creamLite },
 
   body: { paddingTop: 46, paddingHorizontal: 20 },
-  name: { fontFamily: FontFamily.serif, fontSize: 23, fontWeight: '700', color: Colors.ink },
+  name: { fontFamily: FontFamily.sansMedium, fontSize: 23, fontWeight: '700', color: Colors.ink },
   handle: { fontSize: 13, color: Colors.rose, fontWeight: '600', marginTop: 1 },
   bio: { marginTop: 12, fontSize: 14, lineHeight: 22, color: 'rgba(42,2,7,0.7)' },
 
   statsRow: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 14, paddingHorizontal: 6, marginTop: 16, ...Shadow.card },
   statItem: { flex: 1, alignItems: 'center' },
   statBorder: { borderRightWidth: 0.5, borderRightColor: 'rgba(63,3,11,0.1)' },
-  statValue: { fontFamily: FontFamily.serif, fontSize: 18, fontWeight: '700', color: Colors.oxblood },
+  statValue: { fontFamily: FontFamily.sansMedium, fontSize: 18, fontWeight: '700', color: Colors.oxblood },
   statLabel: { fontSize: 10.5, color: 'rgba(63,3,11,0.5)', fontWeight: '600', marginTop: 2 },
 
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 14 },

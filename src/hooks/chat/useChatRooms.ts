@@ -1,17 +1,19 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { useValue } from '@legendapp/state/react';
 import { api } from '@/lib/api';
+import { chatStore$ } from '@/store/chatStore';
 import type { ChatRoomSummary } from '@/types/chat';
 
 export function useChatRooms() {
-  const [rooms, setRooms] = useState<ChatRoomSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const rooms = useValue(chatStore$.rooms) || [];
+  const [isLoading, setIsLoading] = useState(rooms.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchRooms = useCallback(async () => {
     try {
       const data = await api.chat.rooms();
-      setRooms(data as ChatRoomSummary[]);
+      chatStore$.rooms.set(data as ChatRoomSummary[]);
     } catch (err) {
       console.error('Failed to load chat rooms', err);
     } finally {

@@ -102,7 +102,7 @@ export default function InfluencerChatConversationScreen() {
     handleIncomingWsMessage,
     handleInviteStatusUpdate,
     handleReadReceipt,
-    appendLocalMessage,
+    sendMessage,
   } = useChatMessages({ roomId, currentUserId });
 
   const { sendJson } = useChatSocket({
@@ -158,29 +158,11 @@ export default function InfluencerChatConversationScreen() {
     setLocalIsTyping(false);
     sendJson({ type: 'typing', isTyping: false });
 
-    const sentOverSocket = sendJson({ content: trimmed });
-    if (sentOverSocket) {
-      setText('');
-      setIsSending(false);
-      return;
-    }
-
     try {
-      const res: any = await api.chat.send(roomId, trimmed);
       setText('');
-      const activeInfluencerProfileId = useProfilesStore.getState().activeInfluencerProfileId;
-      const activeProfile = useProfilesStore.getState().influencerProfiles.find((p) => p.id === activeInfluencerProfileId);
-      appendLocalMessage({
-        id: res.id,
-        content: res.content,
-        createdAt: res.createdAt,
-        senderId: currentUserId!,
-        senderName: activeProfile?.instagramHandle ? `@${activeProfile.instagramHandle}` : (session?.user?.name || 'Me'),
-        senderAvatar: activeProfile?.avatar || undefined,
-      });
+      await sendMessage({ content: trimmed }, sendJson);
     } catch (err) {
-      console.error('Error sending message via API', err);
-      showModal({ title: 'Message Not Sent', message: 'Please check your connection and try again.' });
+      console.error('Error sending message', err);
     } finally {
       setIsSending(false);
     }
@@ -192,23 +174,9 @@ export default function InfluencerChatConversationScreen() {
     try {
       const { url } = await uploadVoiceNote(localUri);
       const attachmentDurationSec = Math.round(durationSec);
-      const sentOverSocket = sendJson({ attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec });
-      if (!sentOverSocket) {
-        const res: any = await api.chat.send(roomId, undefined, undefined, { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec });
-        const activeInfluencerProfileId = useProfilesStore.getState().activeInfluencerProfileId;
-        const activeProfile = useProfilesStore.getState().influencerProfiles.find((p) => p.id === activeInfluencerProfileId);
-        appendLocalMessage({
-          id: res.id,
-          content: res.content ?? '',
-          createdAt: res.createdAt,
-          senderId: currentUserId!,
-          senderName: activeProfile?.instagramHandle ? `@${activeProfile.instagramHandle}` : (session?.user?.name || 'Me'),
-          senderAvatar: activeProfile?.avatar || undefined,
-          attachmentUrl: res.attachmentUrl ?? url,
-          attachmentType: 'audio',
-          attachmentDurationSec: res.attachmentDurationSec ?? attachmentDurationSec,
-        });
-      }
+      await sendMessage({
+        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec }
+      }, sendJson);
     } catch (err) {
       console.error('Failed to send voice note', err);
       showModal({ title: 'Voice Note Not Sent', message: 'Please check your connection and try again.' });

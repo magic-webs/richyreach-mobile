@@ -91,7 +91,6 @@ export default function CampaignDetailScreen() {
   const [audioUrl, setAudioUrl] = useState('');
   const [brandName, setBrandName] = useState('');
 
-  // ── Tab bar / floating chat visibility ────────────────────────────────────
   useEffect(() => {
     const setTabBarVisible = useUIStore.getState().setTabBarVisible;
     const setFloatingChatVisible = useUIStore.getState().setFloatingChatVisible;
@@ -103,7 +102,6 @@ export default function CampaignDetailScreen() {
     };
   }, []);
 
-  // ── Sync campaign data to local state ─────────────────────────────────────
   useEffect(() => {
     if (campaign) {
       setTitle(campaign.title || '');
@@ -180,7 +178,6 @@ export default function CampaignDetailScreen() {
     }
   }, [campaign, mode]);
 
-  // ── Audio Player ──────────────────────────────────────────────────────────
   const player = useAudioPlayer(audioUrl || undefined);
   const playerStatus = useAudioPlayerStatus(player);
 
@@ -199,7 +196,6 @@ export default function CampaignDetailScreen() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // ── Image Picker ──────────────────────────────────────────────────────────
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -241,7 +237,6 @@ export default function CampaignDetailScreen() {
     }
   };
 
-  // ── Share ─────────────────────────────────────────────────────────────────
   const handleShareCampaign = async () => {
     try {
       const shareUrl = `https://app.richyreach.com/shared/${id}`;
@@ -253,7 +248,6 @@ export default function CampaignDetailScreen() {
     }
   };
 
-  // ── Update Campaign ───────────────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!title.trim() || !brandName.trim() || !description.trim()) {
       showModal({
@@ -288,13 +282,13 @@ export default function CampaignDetailScreen() {
         productInfo:
           paymentType !== 'Paid'
             ? {
-                name: prodName,
-                value: parseInt(prodValue) || 0,
-                description: prodDescription,
-                sku: prodSku,
-                url: prodUrl,
-                shippingDetails: prodShipping,
-              }
+              name: prodName,
+              value: parseInt(prodValue) || 0,
+              description: prodDescription,
+              sku: prodSku,
+              url: prodUrl,
+              shippingDetails: prodShipping,
+            }
             : null,
         guidelines: {
           mustMention: mustMention ? mustMention.split(',').map((s) => s.trim()).filter(Boolean) : [],
@@ -341,7 +335,6 @@ export default function CampaignDetailScreen() {
     }
   };
 
-  // ── Delete Campaign ───────────────────────────────────────────────────────
   const handleDelete = () => {
     showModal({
       title: 'Delete Campaign',
@@ -370,7 +363,6 @@ export default function CampaignDetailScreen() {
     });
   };
 
-  // ── Applicant actions ─────────────────────────────────────────────────────
   const [negotiatingApp, setNegotiatingApp] = useState<any>(null);
   const [counterSubmitting, setCounterSubmitting] = useState(false);
   const [expandedCollabAppId, setExpandedCollabAppId] = useState<string | null>(null);
@@ -451,7 +443,6 @@ export default function CampaignDetailScreen() {
     }
   };
 
-  // ── Loading / Error States ────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -487,7 +478,6 @@ export default function CampaignDetailScreen() {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <View style={[styles.root, { paddingTop: Math.max(insets.top, 16) }]}>
@@ -520,9 +510,6 @@ export default function CampaignDetailScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         >
           {mode === 'view' ? (
-            // ══════════════════════════════════════════
-            // VIEW MODE
-            // ══════════════════════════════════════════
             <View style={{ gap: 20 }}>
               <CampaignHeader
                 bannerUrl={bannerUrl}
@@ -591,6 +578,7 @@ export default function CampaignDetailScreen() {
                       <ApplicantCard
                         key={app.id}
                         app={app}
+                        campaignId={id}
                         expandedCollabAppId={expandedCollabAppId}
                         onToggleCollab={(appId) =>
                           setExpandedCollabAppId(expandedCollabAppId === appId ? null : appId)
@@ -617,9 +605,6 @@ export default function CampaignDetailScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            // ══════════════════════════════════════════
-            // EDIT MODE
-            // ══════════════════════════════════════════
             <View style={{ gap: 20 }}>
               <EditMediaCard
                 bannerUrl={bannerUrl}
