@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,131 +16,166 @@ import { Image } from 'expo-image';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
   ArrowLeft01Icon,
-  Clock01Icon,
   CheckmarkCircle02Icon,
   CancelCircleIcon,
-  FolderOpenIcon,
-  LinkIcon,
   CheckIcon,
   ChatIcon,
+  ImageUploadIcon,
+  VideoReplayIcon,
 } from '@hugeicons/core-free-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TactileButton } from '@/components/ui/tactile-button';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
+import type { ServiceOrder } from '@/types/order';
 
-interface ServiceOrder {
-  id: string;
-  serviceName: string;
-  price: number;
-  deliveryTime: string;
-  brandName: string;
-  brandAvatar?: string;
-  category: string;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
-  createdAt: string;
-  deliverables: string[];
-  scriptUrl?: string;
-  videoUrl?: string;
-  notes?: string;
+function parseDeliverables(deliverables: ServiceOrder['deliverables']): string[] {
+  if (!deliverables) return [];
+  if (Array.isArray(deliverables)) return deliverables;
+  try {
+    return JSON.parse(deliverables);
+  } catch {
+    return String(deliverables).split(',').map((t) => t.trim()).filter(Boolean);
+  }
 }
-
-const STORAGE_KEY = '@richyreach_service_orders';
 
 export default function OrderDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [order, setOrder] = useState<ServiceOrder | null>(null);
-  const [loading, setLoading] = useState(true);
+  const role = useAuthStore((s) => s.role);
+  const activeBrandProfileId = useProfilesStore((s) => s.activeBrandProfileId);
+  const isBrand = role === 'brand';
 
-  // Script and video URL text inputs
-  const [scriptInput, setScriptInput] = useState('');
-  const [videoInput, setVideoInput] = useState('');
-  const [notesInput, setNotesInput] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
+  const [uploadingConcept, setUploadingConcept] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
-  // Load order detail from storage
-  useEffect(() => {
-    const loadOrderDetail = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const list: ServiceOrder[] = JSON.parse(stored);
-          const found = list.find((o) => o.id === id);
-          if (found) {
-            setOrder(found);
-            setScriptInput(found.scriptUrl || '');
-            setVideoInput(found.videoUrl || '');
-            setNotesInput(found.notes || '');
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load order:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadOrderDetail();
-  }, [id]);
+  const { data: orders = [], isLoading: loading } = useQuery<ServiceOrder[]>({
+    queryKey: isBrand ? ['brandOrders', activeBrandProfileId] : ['influencerOrders'],
+    queryFn: () => (isBrand ? api.brands.orders.list(activeBrandProfileId) : api.influencers.orders.list()),
+  });
 
-  const updateOrderStatus = async (newStatus: 'pending' | 'active' | 'completed' | 'cancelled', updates?: Partial<ServiceOrder>) => {
-    if (!order) return;
-    setActionLoading(true);
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const list: ServiceOrder[] = JSON.parse(stored);
-        const updatedList = list.map((o) => {
-          if (o.id === order.id) {
-            const merged = { ...o, status: newStatus, ...updates };
-            setOrder(merged);
-            return merged;
-          }
-          return o;
-        });
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
-      }
-    } catch (err) {
-      console.error('Failed to update order:', err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const order = orders.find((o) => String(o.id) === String(id)) || null;
 
-  const handleAccept = () => {
-    updateOrderStatus('active');
-  };
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: isBrand ? ['brandOrders'] : ['influencerOrders'] });
 
-  const handleReject = () => {
-    Alert.alert('Cancel Order', 'Are you sure you want to cancel this service order?', [
+  const acceptMutation = useMutation({
+    mutationFn: () => api.influencers.orders.accept(order!.id),
+    onSuccess: invalidate,
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to accept order'),
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: () => api.influencers.orders.decline(order!.id),
+    onSuccess: () => {
+      invalidate();
+      router.back();
+    },
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to decline order'),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.brands.orders.cancel(order!.id, activeBrandProfileId),
+    onSuccess: () => {
+      invalidate();
+      router.back();
+    },
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to cancel order'),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => api.brands.orders.complete(order!.id, activeBrandProfileId),
+    onSuccess: invalidate,
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to complete order'),
+  });
+
+  const submitConceptMutation = useMutation({
+    mutationFn: (conceptUrl: string) => api.influencers.orders.submitConcept(order!.id, conceptUrl),
+    onSuccess: invalidate,
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to submit concept'),
+  });
+
+  const submitVideoMutation = useMutation({
+    mutationFn: (videoUrl: string) => api.influencers.orders.submitVideo(order!.id, videoUrl),
+    onSuccess: invalidate,
+    onError: (err: any) => Alert.alert('Error', err.message || 'Failed to submit video'),
+  });
+
+  const handleDecline = () => {
+    Alert.alert('Decline Order', 'Are you sure you want to decline this service order? The brand will be refunded.', [
       { text: 'No' },
-      { text: 'Yes, Cancel', style: 'destructive', onPress: () => updateOrderStatus('cancelled') },
+      { text: 'Yes, Decline', style: 'destructive', onPress: () => declineMutation.mutate() },
     ]);
   };
 
-  const handleSaveConcept = () => {
-    if (!scriptInput.trim()) {
-      Alert.alert('Validation Error', 'Please enter a valid concept or script link.');
-      return;
-    }
-    updateOrderStatus(order?.status || 'active', { scriptUrl: scriptInput.trim(), notes: notesInput.trim() });
-    Alert.alert('Concept Saved', 'Your concept/script link has been saved and shared with the brand.');
-  };
-
-  const handleSaveVideo = () => {
-    if (!videoInput.trim()) {
-      Alert.alert('Validation Error', 'Please enter a valid video link.');
-      return;
-    }
-    updateOrderStatus(order?.status || 'active', { videoUrl: videoInput.trim() });
-    Alert.alert('Video Work Submitted', 'Your video submission link has been saved.');
+  const handleCancel = () => {
+    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order? You will be refunded.', [
+      { text: 'No' },
+      { text: 'Yes, Cancel', style: 'destructive', onPress: () => cancelMutation.mutate() },
+    ]);
   };
 
   const handleComplete = () => {
-    Alert.alert('Complete Collaboration', 'Mark this service order as completed? This will release the escrow funds.', [
-      { text: 'Cancel' },
-      { text: 'Yes, Complete', onPress: () => updateOrderStatus('completed') },
-    ]);
+    Alert.alert(
+      'Complete Order',
+      'Mark this order as complete? This will release the escrowed payment to the creator.',
+      [
+        { text: 'Cancel' },
+        { text: 'Yes, Release Payment', onPress: () => completeMutation.mutate() },
+      ]
+    );
+  };
+
+  const uploadDeliverable = async (kind: 'concept' | 'video') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: kind === 'video' ? ['videos'] : ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      kind === 'video' ? setUploadingVideo(true) : setUploadingConcept(true);
+
+      const selectedUri = result.assets[0].uri;
+      const formData = new FormData();
+      const extension = kind === 'video' ? 'mp4' : 'jpg';
+      const filename = `order_${kind}.${extension}`;
+
+      if (Platform.OS === 'web' || selectedUri.startsWith('blob:') || selectedUri.startsWith('data:')) {
+        const response = await fetch(selectedUri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+      } else {
+        let formattedUri = selectedUri;
+        if (!formattedUri.startsWith('file://') && !formattedUri.startsWith('content://')) {
+          formattedUri = `file://${formattedUri}`;
+        }
+        formData.append('file', {
+          uri: formattedUri,
+          name: filename,
+          type: kind === 'video' ? `video/${extension}` : `image/${extension}`,
+        } as any);
+      }
+
+      const uploadRes = await api.media.upload(formData);
+      if (kind === 'video') {
+        submitVideoMutation.mutate(uploadRes.url);
+      } else {
+        submitConceptMutation.mutate(uploadRes.url);
+      }
+    } catch (err: any) {
+      console.error(`Failed to upload ${kind}:`, err);
+      Alert.alert('Upload Failed', err.message || 'An error occurred during upload.');
+    } finally {
+      kind === 'video' ? setUploadingVideo(false) : setUploadingConcept(false);
+    }
   };
 
   const getStatusLabelColor = (status: string) => {
@@ -153,6 +187,7 @@ export default function OrderDetailsScreen() {
       case 'completed':
         return Colors.green;
       case 'cancelled':
+      case 'declined':
         return 'rgba(63,3,11,0.45)';
       default:
         return Colors.oxblood;
@@ -163,11 +198,11 @@ export default function OrderDetailsScreen() {
     if (status === 'pending') return 1;
     if (status === 'active') {
       if (order?.videoUrl) return 3;
-      if (order?.scriptUrl) return 2;
+      if (order?.conceptUrl) return 2;
       return 1.5;
     }
     if (status === 'completed') return 4;
-    return 0; // Cancelled
+    return 0; // Cancelled / Declined
   };
 
   if (loading) {
@@ -188,6 +223,15 @@ export default function OrderDetailsScreen() {
   }
 
   const currentStep = getOrderStep(order.status);
+  const isClosed = order.status === 'cancelled' || order.status === 'declined';
+  const deliverables = parseDeliverables(order.deliverables);
+
+  const counterpartyName = isBrand
+    ? order.influencer?.user?.name || 'Creator'
+    : order.brand?.companyName || order.brand?.user?.name || 'Brand';
+  const counterpartyAvatar = isBrand
+    ? order.influencer?.avatar || order.influencer?.user?.image
+    : order.brand?.logo || order.brand?.user?.image;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -208,12 +252,11 @@ export default function OrderDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Status Stepper / Progress (Vibrant mockup styling) */}
-        {order.status !== 'cancelled' && (
+        {/* Status Stepper */}
+        {!isClosed && (
           <View style={styles.stepperCard}>
             <Text style={styles.sectionTitle}>ORDER TIMELINE</Text>
             <View style={styles.stepperRow}>
-              {/* Step 1 */}
               <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, currentStep >= 1 && styles.stepCircleActive, currentStep > 1 && styles.stepCircleCompleted]}>
                   {currentStep > 1 ? <HugeiconsIcon icon={CheckIcon} size={11} color={Colors.white} /> : <Text style={[styles.stepNum, currentStep >= 1 && styles.stepNumActive]}>1</Text>}
@@ -223,7 +266,6 @@ export default function OrderDetailsScreen() {
 
               <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
 
-              {/* Step 2 */}
               <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, currentStep >= 2 && styles.stepCircleActive, currentStep > 2 && styles.stepCircleCompleted]}>
                   {currentStep > 2 ? <HugeiconsIcon icon={CheckIcon} size={11} color={Colors.white} /> : <Text style={[styles.stepNum, currentStep >= 2 && styles.stepNumActive]}>2</Text>}
@@ -233,7 +275,6 @@ export default function OrderDetailsScreen() {
 
               <View style={[styles.stepLine, currentStep >= 3 && styles.stepLineActive]} />
 
-              {/* Step 3 */}
               <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, currentStep >= 3 && styles.stepCircleActive, currentStep > 3 && styles.stepCircleCompleted]}>
                   {currentStep > 3 ? <HugeiconsIcon icon={CheckIcon} size={11} color={Colors.white} /> : <Text style={[styles.stepNum, currentStep >= 3 && styles.stepNumActive]}>3</Text>}
@@ -243,7 +284,6 @@ export default function OrderDetailsScreen() {
 
               <View style={[styles.stepLine, currentStep >= 4 && styles.stepLineActive]} />
 
-              {/* Step 4 */}
               <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, currentStep === 4 && styles.stepCircleCompleted]}>
                   {currentStep === 4 ? <HugeiconsIcon icon={CheckIcon} size={11} color={Colors.white} /> : <Text style={styles.stepNum}>4</Text>}
@@ -271,30 +311,29 @@ export default function OrderDetailsScreen() {
 
           <View style={styles.divider} />
 
-          {/* Pricing and Delivery Grid */}
           <View style={styles.metricsGrid}>
             <View style={styles.metricCell}>
-              <Text style={styles.metricLabel}>Total Earnings</Text>
+              <Text style={styles.metricLabel}>{isBrand ? 'Total Spend' : 'Total Earnings'}</Text>
               <Text style={styles.metricValue}>₹{(order.price / 100).toLocaleString()}</Text>
             </View>
             <View style={styles.metricCell}>
               <Text style={styles.metricLabel}>Delivery Time</Text>
-              <Text style={styles.metricValue}>{order.deliveryTime}</Text>
+              <Text style={styles.metricValue}>{order.deliveryTime || '—'}</Text>
             </View>
           </View>
         </View>
 
-        {/* Brand Information Section */}
+        {/* Counterparty Information */}
         <View style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>BUYER DETAILS</Text>
+          <Text style={styles.sectionTitle}>{isBrand ? 'CREATOR DETAILS' : 'BUYER DETAILS'}</Text>
           <View style={styles.brandRow}>
             <Image
-              source={{ uri: order.brandAvatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+              source={{ uri: counterpartyAvatar || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
               style={styles.brandAvatar}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.brandName}>{order.brandName}</Text>
-              <Text style={styles.brandVerifiedLabel}>Verified Brand Buyer</Text>
+              <Text style={styles.brandName}>{counterpartyName}</Text>
+              <Text style={styles.brandVerifiedLabel}>{isBrand ? 'Order Creator' : 'Verified Brand Buyer'}</Text>
             </View>
             <TouchableOpacity
               onPress={() => router.push('/chat')}
@@ -304,138 +343,141 @@ export default function OrderDetailsScreen() {
               <HugeiconsIcon icon={ChatIcon} size={18} color={Colors.white} />
             </TouchableOpacity>
           </View>
+          {order.notes ? (
+            <>
+              <View style={styles.innerDivider} />
+              <Text style={styles.fieldLabel}>BRIEF / INSTRUCTIONS</Text>
+              <Text style={styles.notesText}>{order.notes}</Text>
+            </>
+          ) : null}
         </View>
 
         {/* Deliverables list */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.sectionTitle}>DELIVERABLES & SCOPE</Text>
-          <View style={styles.deliverablesList}>
-            {order.deliverables.map((item, idx) => (
-              <View key={idx} style={styles.deliverableRow}>
-                <View style={styles.bulletCheck}>
-                  <HugeiconsIcon icon={CheckIcon} size={10} color={Colors.white} />
+        {deliverables.length > 0 && (
+          <View style={styles.detailsCard}>
+            <Text style={styles.sectionTitle}>DELIVERABLES & SCOPE</Text>
+            <View style={styles.deliverablesList}>
+              {deliverables.map((item, idx) => (
+                <View key={idx} style={styles.deliverableRow}>
+                  <View style={styles.bulletCheck}>
+                    <HugeiconsIcon icon={CheckIcon} size={10} color={Colors.white} />
+                  </View>
+                  <Text style={styles.deliverableText}>{item}</Text>
                 </View>
-                <Text style={styles.deliverableText}>{item}</Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Manage Content Submissions (Concept link / Video links) */}
-        {order.status === 'active' && (
+        {/* Influencer: upload concept/video while active */}
+        {!isBrand && order.status === 'active' && (
           <View style={styles.detailsCard}>
             <Text style={styles.sectionTitle}>SUBMIT CREATIVE CONTENT</Text>
 
-            {/* Concept / Script submission */}
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldLabel}>Concept / Script Link</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Google Doc or Concept brief link"
-                placeholderTextColor="rgba(63,3,11,0.3)"
-                value={scriptInput}
-                onChangeText={setScriptInput}
-              />
-              <TextInput
-                style={[styles.textInput, { height: 60, textAlignVertical: 'top', marginTop: 8 }]}
-                placeholder="Add private note for the brand (Optional)"
-                placeholderTextColor="rgba(63,3,11,0.3)"
-                multiline
-                numberOfLines={2}
-                value={notesInput}
-                onChangeText={setNotesInput}
-              />
+              <Text style={styles.fieldLabel}>Concept</Text>
+              {order.conceptUrl && (
+                <Image source={{ uri: order.conceptUrl }} style={styles.conceptPreview} contentFit="cover" />
+              )}
               <TactileButton
-                text={order.scriptUrl ? "Update Concept" : "Submit Concept"}
-                onPress={handleSaveConcept}
+                text={uploadingConcept ? 'Uploading...' : order.conceptUrl ? 'Update Concept' : 'Upload Concept Image'}
+                onPress={() => uploadDeliverable('concept')}
                 variant="white"
                 style={{ marginTop: 8 }}
-                disabled={actionLoading}
+                disabled={uploadingConcept}
               />
             </View>
 
             <View style={styles.innerDivider} />
 
-            {/* Video Submission */}
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldLabel}>Final Video Link</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Google Drive, Dropbox, or Youtube Link"
-                placeholderTextColor="rgba(63,3,11,0.3)"
-                value={videoInput}
-                onChangeText={setVideoInput}
-                editable={!!order.scriptUrl}
-              />
-              {!order.scriptUrl && (
-                <Text style={styles.helperText}>Please submit and save your concept first.</Text>
+              <Text style={styles.fieldLabel}>Final Video</Text>
+              {!order.conceptUrl && (
+                <Text style={styles.helperText}>Please submit your concept first.</Text>
+              )}
+              {order.videoUrl && (
+                <View style={styles.submittedLinkRow}>
+                  <HugeiconsIcon icon={VideoReplayIcon} size={14} color={Colors.roseDeep} />
+                  <Text style={styles.submittedLinkLabel}>Video submitted</Text>
+                </View>
               )}
               <TactileButton
-                text={order.videoUrl ? "Update Video Link" : "Submit Final Video"}
-                onPress={handleSaveVideo}
+                text={uploadingVideo ? 'Uploading...' : order.videoUrl ? 'Update Video' : 'Upload Final Video'}
+                onPress={() => uploadDeliverable('video')}
                 variant="primary"
                 style={{ marginTop: 8 }}
-                disabled={!order.scriptUrl || actionLoading}
+                disabled={!order.conceptUrl || uploadingVideo}
               />
             </View>
           </View>
         )}
 
-        {/* Display Submitted URLs for completed / cancelled / review states */}
-        {(order.scriptUrl || order.videoUrl) && order.status !== 'active' && (
+        {/* Brand: read-only preview of submitted work */}
+        {isBrand && order.status === 'active' && (order.conceptUrl || order.videoUrl) && (
           <View style={styles.detailsCard}>
-            <Text style={styles.sectionTitle}>SUBMITTED LINKS</Text>
-            {order.scriptUrl && (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(order.scriptUrl!)}
-                style={styles.submittedLinkRow}
-                activeOpacity={0.8}
-              >
-                <HugeiconsIcon icon={LinkIcon} size={14} color={Colors.roseDeep} />
-                <Text style={styles.submittedLinkLabel}>View Submitted Concept/Script</Text>
-              </TouchableOpacity>
+            <Text style={styles.sectionTitle}>SUBMITTED WORK</Text>
+            {order.conceptUrl && (
+              <>
+                <Text style={styles.fieldLabel}>Concept</Text>
+                <Image source={{ uri: order.conceptUrl }} style={styles.conceptPreview} contentFit="cover" />
+              </>
             )}
             {order.videoUrl && (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(order.videoUrl!)}
-                style={[styles.submittedLinkRow, { marginTop: 8 }]}
-                activeOpacity={0.8}
-              >
-                <HugeiconsIcon icon={LinkIcon} size={14} color={Colors.roseDeep} />
-                <Text style={styles.submittedLinkLabel}>View Submitted Final Video</Text>
-              </TouchableOpacity>
+              <View style={[styles.submittedLinkRow, { marginTop: 12 }]}>
+                <HugeiconsIcon icon={VideoReplayIcon} size={14} color={Colors.roseDeep} />
+                <Text style={styles.submittedLinkLabel}>Final video submitted — ready for review</Text>
+              </View>
             )}
           </View>
         )}
 
         {/* Operation Action Panel at bottom */}
         <View style={styles.actionPanel}>
-          {order.status === 'pending' && (
+          {!isBrand && order.status === 'pending' && (
             <View style={styles.buttonRow}>
               <TactileButton
                 text="Decline"
-                onPress={handleReject}
+                onPress={handleDecline}
                 variant="white"
                 style={{ flex: 1 }}
-                disabled={actionLoading}
+                disabled={declineMutation.isPending}
               />
               <TactileButton
                 text="Accept Order"
-                onPress={handleAccept}
+                onPress={() => acceptMutation.mutate()}
                 variant="primary"
                 style={{ flex: 2 }}
-                disabled={actionLoading}
+                disabled={acceptMutation.isPending}
               />
             </View>
           )}
 
-          {order.status === 'active' && order.videoUrl && (
+          {isBrand && order.status === 'pending' && (
             <TactileButton
-              text="Complete Collaboration"
+              text="Cancel Order"
+              onPress={handleCancel}
+              variant="white"
+              fullWidth
+              disabled={cancelMutation.isPending}
+            />
+          )}
+
+          {!isBrand && order.status === 'active' && order.videoUrl && (
+            <View style={styles.waitingReceipt}>
+              <HugeiconsIcon icon={ImageUploadIcon} size={18} color={Colors.roseDeep} />
+              <Text style={styles.waitingReceiptText}>
+                Waiting for the brand to review your work and release payment.
+              </Text>
+            </View>
+          )}
+
+          {isBrand && order.status === 'active' && order.videoUrl && (
+            <TactileButton
+              text="Mark Complete & Release Payment"
               onPress={handleComplete}
               variant="primary"
               fullWidth
-              disabled={actionLoading}
+              disabled={completeMutation.isPending}
             />
           )}
 
@@ -443,16 +485,20 @@ export default function OrderDetailsScreen() {
             <View style={styles.completedReceipt}>
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={18} color={Colors.green} />
               <Text style={styles.receiptText}>
-                Order has been successfully completed. ₹{(order.price / 100).toLocaleString()} credited to your wallet balance.
+                {isBrand
+                  ? `Order completed. ₹${(order.price / 100).toLocaleString()} has been released to the creator.`
+                  : `Order completed. ₹${(order.price / 100).toLocaleString()} credited to your wallet balance.`}
               </Text>
             </View>
           )}
 
-          {order.status === 'cancelled' && (
+          {isClosed && (
             <View style={[styles.completedReceipt, { backgroundColor: 'rgba(63,3,11,0.04)' }]}>
               <HugeiconsIcon icon={CancelCircleIcon} size={18} color="rgba(63,3,11,0.4)" />
               <Text style={[styles.receiptText, { color: 'rgba(63,3,11,0.5)' }]}>
-                This service order has been cancelled and funds refunded.
+                {order.status === 'declined'
+                  ? 'This order was declined by the creator and funds have been refunded.'
+                  : 'This service order has been cancelled and funds refunded.'}
               </Text>
             </View>
           )}
@@ -672,6 +718,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.button,
   },
+  notesText: {
+    fontSize: 12.5,
+    color: Colors.ink,
+    fontFamily: FontFamily.sansMedium,
+    lineHeight: 18,
+    marginTop: 4,
+  },
   deliverablesList: {
     gap: 10,
   },
@@ -703,16 +756,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  textInput: {
-    backgroundColor: 'rgba(63,3,11,0.02)',
+  conceptPreview: {
+    width: '100%',
+    height: 140,
     borderRadius: 12,
-    height: 44,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(63,3,11,0.08)',
-    fontSize: 13.5,
-    color: Colors.ink,
-    fontFamily: FontFamily.sansMedium,
+    marginTop: 6,
+    backgroundColor: 'rgba(63,3,11,0.05)',
   },
   innerDivider: {
     height: 0.5,
@@ -762,6 +811,23 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: Colors.green,
+    fontFamily: FontFamily.sansMedium,
+    lineHeight: 18,
+  },
+  waitingReceipt: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: 'rgba(180, 106, 116, 0.08)',
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: 'rgba(180, 106, 116, 0.2)',
+    gap: 10,
+    alignItems: 'center',
+  },
+  waitingReceiptText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.roseDeep,
     fontFamily: FontFamily.sansMedium,
     lineHeight: 18,
   },

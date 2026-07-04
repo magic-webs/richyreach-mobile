@@ -23,7 +23,6 @@ import {
   ChatIcon,
   PlayIcon,
 } from '@hugeicons/core-free-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { TactileButton } from '@/components/ui/tactile-button';
@@ -48,8 +47,6 @@ interface CreatorService {
   creatorAvatar?: string;
 }
 
-const STORAGE_KEY = '@richyreach_service_orders';
-
 
 
 export default function ServiceDetailsScreen() {
@@ -61,6 +58,7 @@ export default function ServiceDetailsScreen() {
   const role = useAuthStore((s) => s.role);
   const session = useAuthStore((s) => s.session);
   const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
+  const activeBrandProfileId = useProfilesStore((s) => s.activeBrandProfileId);
 
   const [service, setService] = useState<CreatorService | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +66,7 @@ export default function ServiceDetailsScreen() {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [guidelines, setGuidelines] = useState('');
   const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const videoSource = service?.videoUrl || (service?.exampleUrl?.endsWith('.mp4') ? service.exampleUrl : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4');
 
   const player = useVideoPlayer(videoSource, (p) => {
@@ -172,42 +171,34 @@ export default function ServiceDetailsScreen() {
       ]);
       return;
     }
+    setOrderError(null);
     setPurchaseModalVisible(true);
   };
 
   const handleConfirmOrder = async () => {
     if (!service) return;
     setOrdering(true);
+    setOrderError(null);
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const orders = stored ? JSON.parse(stored) : [];
+      await api.brands.orders.create(service.id, guidelines, activeBrandProfileId);
+      queryClient.invalidateQueries({ queryKey: ['brandOrders'] });
 
-      const newOrder = {
-        id: `SO-${Math.floor(100 + Math.random() * 900)}`,
-        serviceName: service.name,
-        price: service.price,
-        deliveryTime: service.deliveryTime,
-        brandName: 'My Brand Store',
-        brandAvatar: 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png',
-        category: service.category,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        deliverables: service.deliverables.length > 0 ? service.deliverables : ['1x Deliverable'],
-        notes: guidelines,
-      };
-
-      orders.unshift(newOrder);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-
+      // Close the modal before firing the Alert — showing Alert.alert while a
+      // custom <Modal> is still visible can get silently swallowed on Android.
       setPurchaseModalVisible(false);
-      Alert.alert(
-        'Order Placed!',
-        'Your service order has been successfully placed. The creator will review and accept it soon.',
-        [{ text: 'View Orders', onPress: () => router.push('/profile/orders') }, { text: 'OK' }]
-      );
-    } catch (err) {
+      setGuidelines('');
+      setTimeout(() => {
+        Alert.alert(
+          'Order Placed!',
+          'Your service order has been successfully placed. The creator will review and accept it soon.',
+          [{ text: 'View Orders', onPress: () => router.push('/brand/orders' as any) }, { text: 'OK' }]
+        );
+      }, 350);
+    } catch (err: any) {
       console.error(err);
-      Alert.alert('Error', 'Failed to place service order.');
+      // Shown inline in the modal below rather than only via Alert.alert,
+      // since that native dialog can be hidden behind the still-open Modal.
+      setOrderError(err?.message || 'Failed to place service order.');
     } finally {
       setOrdering(false);
     }
@@ -485,10 +476,29 @@ export default function ServiceDetailsScreen() {
               onChangeText={setGuidelines}
             />
 
+            {orderError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{orderError}</Text>
+                {orderError.toLowerCase().includes('insufficient') && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setPurchaseModalVisible(false);
+                      router.push('/brand/wallet' as any);
+                    }}
+                  >
+                    <Text style={styles.errorBannerLink}>Top Up Wallet</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
             <View style={styles.modalActions}>
               <TactileButton
                 text="Cancel"
-                onPress={() => setPurchaseModalVisible(false)}
+                onPress={() => {
+                  setOrderError(null);
+                  setPurchaseModalVisible(false);
+                }}
                 variant="white"
                 style={{ flex: 1 }}
                 disabled={ordering}
@@ -847,5 +857,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 10,
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(217, 45, 32, 0.08)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(217, 45, 32, 0.25)',
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+  },
+  errorBannerText: {
+    fontSize: 12.5,
+    fontFamily: FontFamily.sansMedium,
+    color: '#D92D20',
+    lineHeight: 18,
+  },
+  errorBannerLink: {
+    fontSize: 12.5,
+    fontFamily: FontFamily.sans,
+    fontWeight: '700',
+    color: Colors.oxblood,
+    textDecorationLine: 'underline',
   },
 });

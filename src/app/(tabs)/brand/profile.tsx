@@ -2,7 +2,7 @@ import LottieView from 'lottie-react-native';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Edit, Gift, Wallet, Users, Bell, Lock, HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
+import { Edit, Gift, Wallet, Users, Bell, Lock, HelpCircle, LogOut, ChevronRight, ShoppingBag } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
@@ -567,6 +567,7 @@ export default function BrandProfileScreen() {
             <View style={{ gap: 4 }}>
               {[
                 { icon: Edit, label: 'Edit brand profile', value: '', key: 'edit_profile' },
+                { icon: ShoppingBag, label: 'My orders', value: '', key: 'orders' },
                 { icon: Gift, label: 'Refer & earn', value: '₹100 + Points', key: 'referral' },
                 { icon: Wallet, label: 'Invoices & billing', value: walletData?.balance?.rupees != null ? `₹${walletData.balance.rupees.toLocaleString('en-IN')}` : '', key: 'billing' },
                 { icon: Users, label: 'Team management', value: '3 members', key: 'team' },
@@ -583,6 +584,8 @@ export default function BrandProfileScreen() {
                         setIsEditSheetOpen(true);
                       } else if (item.key === 'referral') {
                         router.push('/brand/referral');
+                      } else if (item.key === 'orders') {
+                        router.push('/brand/orders' as any);
                       } else {
                         setSheet(item.key as SheetType);
                       }

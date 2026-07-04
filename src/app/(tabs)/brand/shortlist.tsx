@@ -278,6 +278,15 @@ export default function ShortlistScreen() {
           </View>
 
           {/* Action Buttons */}
+          <TouchableOpacity
+            style={styles.orderBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: '/profile/service/[id]', params: { id: item.id } })}
+          >
+            <Text style={styles.orderBtnText}>Order Service</Text>
+            <Icon name="arrow" size={12} color={Colors.white} />
+          </TouchableOpacity>
+
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.removeBtn}
@@ -294,7 +303,7 @@ export default function ShortlistScreen() {
               onPress={() => handleOpenInvite(item)}
             >
               <Text style={styles.inviteBtnText}>Invite to Campaign</Text>
-              <Icon name="arrow" size={12} color={Colors.white} />
+              <Icon name="arrow" size={12} color={Colors.oxblood} />
             </TouchableOpacity>
           </View>
         </View>
@@ -569,10 +578,28 @@ const styles = StyleSheet.create({
     color: Colors.green,
     fontWeight: '700',
   },
+  orderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.oxblood,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: Radius.md,
+    marginTop: 6,
+    ...Shadow.button,
+  },
+  orderBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13.5,
+    color: Colors.cream,
+    fontWeight: '700',
+  },
   actionsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 6,
+    marginTop: 8,
   },
   removeBtn: {
     flexDirection: 'row',
@@ -596,17 +623,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.oxblood,
+    backgroundColor: Colors.white,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.15)',
     justifyContent: 'center',
-    ...Shadow.button,
   },
   inviteBtnText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 12.5,
-    color: Colors.cream,
+    color: Colors.oxblood,
     fontWeight: '700',
   },
   emptyState: {

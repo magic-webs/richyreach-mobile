@@ -24,28 +24,30 @@ import {
 } from '@hugeicons/core-free-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useProfilesStore } from '@/store/profiles';
 import type { ServiceOrder } from '@/types/order';
 
 type OrderTab = 'pending' | 'active' | 'completed' | 'cancelled';
 
-export default function ServiceOrdersScreen() {
+export default function BrandOrdersScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const activeBrandProfileId = useProfilesStore((s) => s.activeBrandProfileId);
   const [activeTab, setActiveTab] = useState<OrderTab>('pending');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: orders = [], isLoading: loading } = useQuery<ServiceOrder[]>({
-    queryKey: ['influencerOrders'],
-    queryFn: () => api.influencers.orders.list(),
+    queryKey: ['brandOrders', activeBrandProfileId],
+    queryFn: () => api.brands.orders.list(activeBrandProfileId),
   });
 
   const filteredOrders = orders.filter((order) => {
-    const brandName = order.brand?.companyName || order.brand?.user?.name || '';
-    // Declined (influencer never accepted) reads the same as cancelled to the influencer.
+    const creatorName = order.influencer?.user?.name || '';
+    // Declined (creator never accepted) reads the same as cancelled to the brand.
     const effectiveStatus = order.status === 'declined' ? 'cancelled' : order.status;
     const matchesTab = effectiveStatus === activeTab;
     const matchesQuery =
-      brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      creatorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesQuery;
   });
@@ -93,7 +95,7 @@ export default function ServiceOrdersScreen() {
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={Colors.oxblood} strokeWidth={1.5} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Orders</Text>
+        <Text style={styles.headerTitle}>My Orders</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -125,7 +127,7 @@ export default function ServiceOrdersScreen() {
       <View style={styles.searchContainer}>
         <HugeiconsIcon icon={Search01Icon} size={18} color="rgba(63,3,11,0.4)" />
         <TextInput
-          placeholder="Search by brand or service..."
+          placeholder="Search by creator or service..."
           placeholderTextColor="rgba(63,3,11,0.35)"
           style={styles.searchInput}
           value={searchQuery}
@@ -141,7 +143,7 @@ export default function ServiceOrdersScreen() {
         <View style={styles.centerContainer}>
           <HugeiconsIcon icon={ShoppingBag01Icon} size={48} color="rgba(63,3,11,0.15)" />
           <Text style={styles.emptyTitle}>No Orders Found</Text>
-          <Text style={styles.emptySub}>There are no {activeTab} service orders matching your search.</Text>
+          <Text style={styles.emptySub}>There are no {activeTab} orders matching your search.</Text>
         </View>
       ) : (
         <ScrollView
@@ -158,13 +160,13 @@ export default function ServiceOrdersScreen() {
                 onPress={() => router.push({ pathname: '/profile/orders/[id]', params: { id: order.id } })}
               >
                 <View style={styles.cardHeader}>
-                  <View style={styles.brandInfo}>
+                  <View style={styles.creatorInfo}>
                     <Image
-                      source={{ uri: order.brand?.logo || order.brand?.user?.image || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
-                      style={styles.brandAvatar}
+                      source={{ uri: order.influencer?.avatar || order.influencer?.user?.image || 'https://pub-c7a89526fe7541b0a1d6bc2d831710d2.r2.dev/plaform-images/avatar.png' }}
+                      style={styles.creatorAvatar}
                     />
                     <View>
-                      <Text style={styles.brandName}>{order.brand?.companyName || order.brand?.user?.name || 'Brand'}</Text>
+                      <Text style={styles.creatorName}>{order.influencer?.user?.name || 'Creator'}</Text>
                       <Text style={styles.orderDate}>
                         Ordered {new Date(order.createdAt).toLocaleDateString()}
                       </Text>
@@ -185,11 +187,11 @@ export default function ServiceOrdersScreen() {
 
                 <View style={styles.cardFooter}>
                   <View>
-                    <Text style={styles.footerLabel}>Earnings</Text>
+                    <Text style={styles.footerLabel}>Spend</Text>
                     <Text style={styles.priceValue}>₹{(order.price / 100).toLocaleString()}</Text>
                   </View>
                   <View style={styles.viewDetailsRow}>
-                    <Text style={styles.viewDetailsText}>Manage Order</Text>
+                    <Text style={styles.viewDetailsText}>View Order</Text>
                     <HugeiconsIcon icon={ArrowRight01Icon} size={14} color={Colors.oxblood} />
                   </View>
                 </View>
@@ -337,17 +339,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  brandInfo: {
+  creatorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  brandAvatar: {
+  creatorAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
   },
-  brandName: {
+  creatorName: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13.5,
     fontWeight: '700',

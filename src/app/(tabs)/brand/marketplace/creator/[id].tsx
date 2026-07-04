@@ -469,10 +469,7 @@ export default function CreatorProfileDetail() {
                               <TouchableOpacity
                                 style={styles.cardActionBtn}
                                 activeOpacity={0.8}
-                                onPress={() => {
-                                  setSelectedService(service);
-                                  setInviteOpen(true);
-                                }}
+                                onPress={() => router.push({ pathname: '/profile/service/[id]', params: { id: service.id } })}
                               >
                                 <Text style={styles.cardActionBtnText}>Order Service</Text>
                                 <HugeiconsIcon icon={ArrowRight01Icon} size={12} color={Colors.white} />

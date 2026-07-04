@@ -1,5 +1,6 @@
 import { getToken } from './storage';
 import type { ChatAttachmentType, ChatMessage, ChatMessagesPage } from '@/types/chat';
+import type { ServiceOrder } from '@/types/order';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -178,6 +179,15 @@ export const api = {
       },
       delete: (id: string) => request<any>(`/influencers/services/${id}`, { method: 'DELETE' }),
     },
+    orders: {
+      list: () => request<ServiceOrder[]>('/influencers/orders'),
+      accept: (id: string) => request<any>(`/influencers/orders/${id}/accept`, { method: 'POST' }),
+      decline: (id: string) => request<any>(`/influencers/orders/${id}/decline`, { method: 'POST' }),
+      submitConcept: (id: string, conceptUrl: string) =>
+        request<any>(`/influencers/orders/${id}/submit-concept`, { method: 'POST', body: JSON.stringify({ conceptUrl }) }),
+      submitVideo: (id: string, videoUrl: string) =>
+        request<any>(`/influencers/orders/${id}/submit-video`, { method: 'POST', body: JSON.stringify({ videoUrl }) }),
+    },
   },
   brands: {
     profile: (activeProfileId?: string | null) => request('/brands/profile', { activeProfileId }),
@@ -195,6 +205,15 @@ export const api = {
       request(`/brands/applications/${id}/review-video`, { method: 'POST', body: JSON.stringify({ status, feedbackType, feedbackText, feedbackVoiceUrl }), activeProfileId }),
     completeCollaboration: (id: string, activeProfileId?: string | null) =>
       request(`/brands/applications/${id}/complete`, { method: 'POST', activeProfileId }),
+    orders: {
+      list: (activeProfileId?: string | null) => request<ServiceOrder[]>('/brands/orders', { activeProfileId }),
+      create: (serviceId: string, notes?: string, activeProfileId?: string | null) =>
+        request<any>('/brands/orders', { method: 'POST', body: JSON.stringify({ serviceId, notes }), activeProfileId }),
+      cancel: (id: string, activeProfileId?: string | null) =>
+        request<any>(`/brands/orders/${id}/cancel`, { method: 'POST', activeProfileId }),
+      complete: (id: string, activeProfileId?: string | null) =>
+        request<any>(`/brands/orders/${id}/complete`, { method: 'POST', activeProfileId }),
+    },
     wallet: {
       balance: (activeProfileId?: string | null) =>
         request<any>('/brands/wallet', { activeProfileId }),
