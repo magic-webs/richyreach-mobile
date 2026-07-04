@@ -4,6 +4,8 @@ import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import LottieView from 'lottie-react-native';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,10 +18,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { Step1Details } from './wizard/Step1Details';
-import { Step2Media } from './wizard/Step2Media';
-import { Step3Review } from './wizard/Step3Review';
-import { styles } from './CreateServiceSheet.styles';
+import { Step1Details } from './Step1Details';
+import { Step2Media } from './Step2Media';
+import { Step3Review } from './Step3Review';
+import { TactileButton } from '@/components/ui/tactile-button';
 
 interface CreateServiceSheetProps {
   isOpen: boolean;
@@ -28,12 +30,8 @@ interface CreateServiceSheetProps {
   service?: any; // If passed, we are in Edit Mode
 }
 
-// Preset categories and subcategories matching the platform
+// Updated Categories representing type of content (previously Subcategories)
 export const CATEGORIES = [
-  { label: 'Instagram', value: 'Instagram', icon: 'camera' }
-];
-
-export const SUB_CATEGORIES = [
   'UGC / Product Review',
   'Unboxing',
   'Dedicated Brand Reel',
@@ -50,8 +48,6 @@ export const DELIVERY_TIMES = [
   '14 Days',
 ];
 
-
-
 export function CreateServiceSheet({
   isOpen,
   onClose,
@@ -60,22 +56,27 @@ export function CreateServiceSheet({
 }: CreateServiceSheetProps) {
   const showModal = useUIStore((s) => s.showModal);
 
+  // React Hook Form initialization
+  const { control, handleSubmit, setValue, trigger, watch, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      name: '',
+      price: '',
+      shortDesc: '',
+      category: 'UGC / Product Review',
+      confirmed: false,
+    }
+  });
+
   // Step tracker
   const [step, setStep] = useState(1);
 
-  // Form Fields
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('Instagram');
-  const [subCategory, setSubCategory] = useState('UGC / Product Review');
-  const [price, setPrice] = useState('');
+  // Form Fields not managed by hook form rules
   const [deliveryTime, setDeliveryTime] = useState('5 Days');
-  const [shortDesc, setShortDesc] = useState('');
   const [tags, setTags] = useState<string[]>(['Brand Reel', 'UGC Creator', 'Product Review']);
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
 
   // Step 2 Fields
-  const [detailedDesc, setDetailedDesc] = useState('');
   const [videoFile, setVideoFile] = useState<any>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState<any>(null);
@@ -92,10 +93,6 @@ export function CreateServiceSheet({
   ]);
   const [delivInput, setDelivInput] = useState('');
   const [showDelivInput, setShowDelivInput] = useState(false);
-
-  // Step 3 Fields
-  const [confirmed, setConfirmed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   // Web file input references
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -126,42 +123,51 @@ export function CreateServiceSheet({
   useEffect(() => {
     if (isOpen) {
       if (service) {
-        setName(service.name || '');
-        setCategory(service.category || 'Instagram');
-        setSubCategory(service.subCategory || 'UGC / Product Review');
-        setPrice(service.price ? String(service.price / 100) : '');
+        setValue('name', service.name || '');
+        // Use subCategory or category fallback for the unified category field
+        setValue('category', service.subCategory || service.category || 'UGC / Product Review');
+        setValue('price', service.price ? String(service.price / 100) : '');
         setDeliveryTime(service.deliveryTime || '5 Days');
-        setShortDesc(service.description || '');
-        setDetailedDesc(service.description || '');
+        setValue('shortDesc', service.description || '');
+        setValue('confirmed', false);
         setVideoUrl(service.videoUrl || service.exampleUrl || '');
         setThumbnailUrl(service.thumbnailUrl || '');
         setVideoDuration('');
 
         // Parse tags if stored
         if (service.tags) {
-          try {
-            setTags(JSON.parse(service.tags));
-          } catch {
-            setTags(service.tags.split(',').map((t: string) => t.trim()));
+          if (Array.isArray(service.tags)) {
+            setTags(service.tags);
+          } else {
+            try {
+              setTags(JSON.parse(service.tags));
+            } catch {
+              setTags(String(service.tags).split(',').map((t: string) => t.trim()));
+            }
           }
         }
         // Parse deliverables
         if (service.deliverables) {
-          try {
-            setDeliverables(JSON.parse(service.deliverables));
-          } catch {
-            setDeliverables(service.deliverables.split(',').map((t: string) => t.trim()));
+          if (Array.isArray(service.deliverables)) {
+            setDeliverables(service.deliverables);
+          } else {
+            try {
+              setDeliverables(JSON.parse(service.deliverables));
+            } catch {
+              setDeliverables(String(service.deliverables).split(',').map((t: string) => t.trim()));
+            }
           }
         }
       } else {
         // Reset to default
-        setName('');
-        setCategory('Instagram');
-        setSubCategory('UGC / Product Review');
-        setPrice('');
+        reset({
+          name: '',
+          price: '',
+          shortDesc: '',
+          category: 'UGC / Product Review',
+          confirmed: false,
+        });
         setDeliveryTime('5 Days');
-        setShortDesc('');
-        setDetailedDesc('');
         setTags(['Brand Reel', 'UGC Creator', 'Product Review']);
         setDeliverables([
           'High quality video',
@@ -176,7 +182,6 @@ export function CreateServiceSheet({
         setSelectedFrameIdx(0);
         setLocalExtractedFrames([]);
         setExtractingFrames(false);
-        setConfirmed(false);
         setVideoDuration('');
       }
       setStep(1);
@@ -357,22 +362,13 @@ export function CreateServiceSheet({
     };
   }, [videoUrl]);
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 1) {
-      if (!name.trim()) {
-        showModal({ title: 'Validation Error', message: 'Please enter a service title.' });
-        return;
+      const isValid = await trigger(['name', 'price', 'shortDesc', 'category']);
+      if (isValid) {
+        setStep(2);
       }
-      if (!price.trim() || isNaN(Number(price.trim())) || Number(price.trim()) <= 0) {
-        showModal({ title: 'Validation Error', message: 'Please enter a valid price.' });
-        return;
-      }
-      setStep(2);
     } else if (step === 2) {
-      if (!detailedDesc.trim() && !shortDesc.trim()) {
-        showModal({ title: 'Validation Error', message: 'Please write a description for this service.' });
-        return;
-      }
       setStep(3);
     }
   };
@@ -472,21 +468,8 @@ export function CreateServiceSheet({
     }
   };
 
-  const handleSuggestedPoints = () => {
-    const points = [
-      '• High-quality vertical format (9:16) ideal for Reels.',
-      '• Product integrations showcasing benefits, usage, and real results.',
-      '• Direct voiceover or trending background audio with text overlays.',
-      '• Call to action (discount code/link) in caption and video.',
-    ];
-    setDetailedDesc((prev) => {
-      const spacing = prev.trim() ? '\n\n' : '';
-      return prev + spacing + points.join('\n');
-    });
-  };
-
   const submitMutation = useMutation({
-    mutationFn: async (payload: FormData) => {
+    mutationFn: async (payload: FormData | Record<string, any>) => {
       if (service?.id) {
         return api.influencers.services.update(service.id, payload);
       } else {
@@ -494,19 +477,7 @@ export function CreateServiceSheet({
       }
     },
     onSuccess: () => {
-      if (service?.id) {
-        showModal({
-          title: 'Service Updated! 🎉',
-          message: `"${name}" has been successfully updated.`,
-        });
-      } else {
-        showModal({
-          title: 'Service Published! 🚀',
-          message: `"${name}" is now live and visible to brands.`,
-        });
-      }
-      onSuccess(null);
-      onClose();
+      setStep(4); // Advance to success step!
     },
     onError: (err: any) => {
       console.error('Failed to submit service:', err);
@@ -514,57 +485,86 @@ export function CreateServiceSheet({
         title: 'Operation Failed',
         message: err?.message || 'An error occurred. Please try again.',
       });
-    },
-    onSettled: () => {
-      setSubmitting(false);
     }
   });
 
-  const handleSubmit = async () => {
+  const onSubmit = async (data: any) => {
     if (step !== 3) return;
 
-    if (!confirmed) {
-      showModal({
-        title: 'Confirmation Required',
-        message: 'Please check the confirmation box before publishing.',
-      });
+    const formattedPrice = Number(data.price.trim()).toFixed(2);
+
+    // On native, React Native's FormData polyfill has issues with string-only
+    // multipart bodies. Use FormData ONLY when there are actual local file URIs
+    // to upload; otherwise send a plain JSON body.
+    const hasLocalVideo = !!videoFile && Platform.OS !== 'web';
+    const hasLocalThumbnail = !!thumbnailFile && Platform.OS !== 'web';
+    const needsMultipart = Platform.OS === 'web' || hasLocalVideo || hasLocalThumbnail;
+
+    if (!needsMultipart) {
+      // ── JSON path (native, no files picked) ────────────────────────────────
+      const frames = getFrames();
+      const frame = frames[selectedFrameIdx >= 0 ? selectedFrameIdx : 0];
+      const thumbUrl = thumbnailUrl && isRemoteUrl(thumbnailUrl)
+        ? thumbnailUrl
+        : isRemoteUrl(frame) ? (frame as string) : '';
+
+      const jsonPayload: Record<string, any> = {
+        name: data.name.trim(),
+        type: 'service',
+        price: formattedPrice,
+        deliveryTime,
+        category: data.category,
+        subCategory: data.category,
+        description: data.shortDesc.trim(),
+        tags,
+        deliverables,
+        selectedFrameIdx,
+        ...(videoUrl ? { exampleUrl: videoUrl } : {}),
+        ...(thumbUrl ? { thumbnailUrl: thumbUrl } : {}),
+      };
+      submitMutation.mutate(jsonPayload as any);
       return;
     }
 
-    setSubmitting(true);
-    const formattedPrice = Number(price.trim()).toFixed(2);
+    // ── FormData path (web or native with local files) ──────────────────────
     const payload = new FormData();
-    payload.append('name', name.trim());
+    payload.append('name', data.name.trim());
     payload.append('type', 'service');
     payload.append('price', formattedPrice);
     payload.append('deliveryTime', deliveryTime);
-    payload.append('category', category);
-    payload.append('subCategory', subCategory);
-    payload.append('description', detailedDesc.trim() || shortDesc.trim());
+    payload.append('category', data.category);
+    payload.append('subCategory', data.category);
+    payload.append('description', data.shortDesc.trim());
     payload.append('tags', JSON.stringify(tags));
     payload.append('deliverables', JSON.stringify(deliverables));
     payload.append('selectedFrameIdx', String(selectedFrameIdx));
 
     // Append Video
     if (videoFile) {
-      payload.append('video', videoFile);
+      if (Platform.OS === 'web') {
+        payload.append('video', videoFile);
+      } else {
+        payload.append('video', { uri: videoFile.uri, name: videoFile.name || 'video.mp4', type: videoFile.type || 'video/mp4' } as any);
+      }
     } else if (videoUrl) {
       payload.append('exampleUrl', videoUrl);
     }
 
     // Append Thumbnail
     if (thumbnailFile) {
-      payload.append('thumbnail', thumbnailFile);
+      if (Platform.OS === 'web') {
+        payload.append('thumbnail', thumbnailFile);
+      } else {
+        payload.append('thumbnail', { uri: thumbnailFile.uri, name: thumbnailFile.name || 'image.jpg', type: thumbnailFile.type || 'image/jpeg' } as any);
+      }
     } else if (thumbnailUrl && isRemoteUrl(thumbnailUrl)) {
       payload.append('thumbnailUrl', thumbnailUrl);
     } else {
-      // Fallback to selected frame index
       const frames = getFrames();
       const frame = frames[selectedFrameIdx >= 0 ? selectedFrameIdx : 0];
       if (isRemoteUrl(frame)) {
         payload.append('thumbnailUrl', frame as string);
       } else {
-        // Local/base64/native frame, let the backend generate the transformed thumbnail from the video using selectedFrameIdx
         payload.append('thumbnailUrl', '');
       }
     }
@@ -610,151 +610,284 @@ export function CreateServiceSheet({
         )}
 
         {/* Wizard Top Bar Header */}
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={handleBackStep} disabled={step === 1} style={[styles.barCircleBtn, step === 1 && { opacity: 0.3 }]}>
-            <Icon name="back" size={18} color={Colors.oxblood} />
-          </TouchableOpacity>
-          <View style={styles.barTitleCenter}>
-            <Text style={styles.barTitleText}>{service ? 'Edit Service' : 'Add new service'}</Text>
-            <Text style={styles.barSubText}>
-              {step === 1 && 'Create a service brands will love'}
-              {step === 2 && 'Step 2 of 3: Media & Preview'}
-              {step === 3 && 'Step 3 of 3: Review & Publish'}
-            </Text>
+        {step < 4 && (
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={handleBackStep} disabled={step === 1} style={[styles.barCircleBtn, step === 1 && { opacity: 0.3 }]}>
+              <Icon name="back" size={18} color={Colors.oxblood} />
+            </TouchableOpacity>
+            <View style={styles.barTitleCenter}>
+              <Text style={styles.barTitleText}>{service ? 'Edit Service' : 'Add new service'}</Text>
+              <Text style={styles.barSubText}>
+                {step === 1 && 'Create a service brands will love'}
+                {step === 2 && 'Step 2 of 3: Media & Preview'}
+                {step === 3 && 'Step 3 of 3: Review & Publish'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.barCircleBtn}>
+              <Icon name="x" size={18} color={Colors.oxblood} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.barCircleBtn}>
-            <Icon name="x" size={18} color={Colors.oxblood} />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* Stepper Progress bar */}
-        <View style={styles.stepperContainer}>
-          {/* Step 1 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, step >= 1 && styles.stepCircleActive, step > 1 && styles.stepCircleCompleted]}>
-              {step > 1 ? <Icon name="check" size={12} color={Colors.white} /> : <Text style={[styles.stepNum, step >= 1 && styles.stepNumActive]}>1</Text>}
+        {step < 4 && (
+          <View style={styles.stepperContainer}>
+            {/* Step 1 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, step >= 1 && styles.stepCircleActive, step > 1 && styles.stepCircleCompleted]}>
+                {step > 1 ? <Icon name="check" size={12} color={Colors.white} /> : <Text style={[styles.stepNum, step >= 1 && styles.stepNumActive]}>1</Text>}
+              </View>
+              <Text style={[styles.stepLabel, step >= 1 && styles.stepLabelActive]}>Details</Text>
+              <Text style={styles.stepSubLabel}>Basic info</Text>
             </View>
-            <Text style={[styles.stepLabel, step >= 1 && styles.stepLabelActive]}>Details</Text>
-            <Text style={styles.stepSubLabel}>Basic info</Text>
-          </View>
 
-          {/* Line 1-2 */}
-          <View style={[styles.stepLine, step >= 2 && styles.stepLineActive]} />
+            {/* Line 1-2 */}
+            <View style={[styles.stepLine, step >= 2 && styles.stepLineActive]} />
 
-          {/* Step 2 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, step >= 2 && styles.stepCircleActive, step > 2 && styles.stepCircleCompleted]}>
-              {step > 2 ? <Icon name="check" size={12} color={Colors.white} /> : <Text style={[styles.stepNum, step >= 2 && styles.stepNumActive]}>2</Text>}
+            {/* Step 2 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, step >= 2 && styles.stepCircleActive, step > 2 && styles.stepCircleCompleted]}>
+                {step > 2 ? <Icon name="check" size={12} color={Colors.white} /> : <Text style={[styles.stepNum, step >= 2 && styles.stepNumActive]}>2</Text>}
+              </View>
+              <Text style={[styles.stepLabel, step >= 2 && styles.stepLabelActive]}>Media</Text>
+              <Text style={styles.stepSubLabel}>Upload & preview</Text>
             </View>
-            <Text style={[styles.stepLabel, step >= 2 && styles.stepLabelActive]}>Media</Text>
-            <Text style={styles.stepSubLabel}>Upload & preview</Text>
-          </View>
 
-          {/* Line 2-3 */}
-          <View style={[styles.stepLine, step >= 3 && styles.stepLineActive]} />
+            {/* Line 2-3 */}
+            <View style={[styles.stepLine, step >= 3 && styles.stepLineActive]} />
 
-          {/* Step 3 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, step === 3 && styles.stepCircleActive]}>
-              <Text style={[styles.stepNum, step === 3 && styles.stepNumActive]}>3</Text>
+            {/* Step 3 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, step === 3 && styles.stepCircleActive]}>
+                <Text style={[styles.stepNum, step === 3 && styles.stepNumActive]}>3</Text>
+              </View>
+              <Text style={[styles.stepLabel, step === 3 && styles.stepLabelActive]}>Publish</Text>
+              <Text style={styles.stepSubLabel}>Review & publish</Text>
             </View>
-            <Text style={[styles.stepLabel, step === 3 && styles.stepLabelActive]}>Publish</Text>
-            <Text style={styles.stepSubLabel}>Review & publish</Text>
           </View>
-        </View>
+        )}
 
         {/* Main Form Body Scrollable */}
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-            {/* ================= STEP 1 DETAILS ================= */}
-            {step === 1 && (
-              <Step1Details
-                name={name}
-                setName={setName}
-                category={category}
-                setCategory={setCategory}
-                subCategory={subCategory}
-                setSubCategory={setSubCategory}
-                price={price}
-                setPrice={setPrice}
-                deliveryTime={deliveryTime}
-                setDeliveryTime={setDeliveryTime}
-                videoUrl={videoUrl}
-                triggerVideoPicker={triggerVideoPicker}
-                getFrames={getFrames}
-                shortDesc={shortDesc}
-                setShortDesc={setShortDesc}
-                setDetailedDesc={setDetailedDesc}
-                tags={tags}
-                removeTag={removeTag}
-                showTagInput={showTagInput}
-                setShowTagInput={setShowTagInput}
-                tagInput={tagInput}
-                setTagInput={setTagInput}
-                addTag={addTag}
-                handleNextStep={handleNextStep}
-                videoDuration={videoDuration}
+          {step === 4 ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
+              <LottieView
+                source={require('@/assets/lottie-animation/success.json')}
+                autoPlay
+                loop={false}
+                style={{ width: 180, height: 180 }}
               />
-            )}
-
-            {step === 2 && (
-              <Step2Media
-                videoFile={videoFile}
-                videoUrl={videoUrl}
-                thumbnailUrl={thumbnailUrl}
-                selectedFrameIdx={selectedFrameIdx}
-                setSelectedFrameIdx={setSelectedFrameIdx}
-                setThumbnailFile={setThumbnailFile}
-                setThumbnailUrl={setThumbnailUrl}
-                extractingFrames={extractingFrames}
-                getFrames={getFrames}
-                triggerVideoPicker={triggerVideoPicker}
-                triggerThumbnailPicker={triggerThumbnailPicker}
-                detailedDesc={detailedDesc}
-                setDetailedDesc={setDetailedDesc}
-                handleSuggestedPoints={handleSuggestedPoints}
-                deliverables={deliverables}
-                removeDeliverable={removeDeliverable}
-                showDelivInput={showDelivInput}
-                setShowDelivInput={setShowDelivInput}
-                delivInput={delivInput}
-                setDelivInput={setDelivInput}
-                addDeliverable={addDeliverable}
-                handleBackStep={handleBackStep}
-                handleNextStep={handleNextStep}
-                videoDuration={videoDuration}
+              <Text style={{ fontFamily: FontFamily.sans, fontSize: 22, fontWeight: '800', color: Colors.ink, textAlign: 'center' }}>
+                {service ? 'Service Saved! 🎉' : 'Service Published! 🚀'}
+              </Text>
+              <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: 'rgba(63, 3, 11, 0.5)', textAlign: 'center', lineHeight: 20 }}>
+                {service
+                  ? `"${watch('name')}" has been successfully updated.`
+                  : `"${watch('name')}" is now live and visible to brands.`
+                }
+              </Text>
+              <TactileButton
+                text="Done"
+                onPress={() => {
+                  onSuccess(null);
+                  onClose();
+                }}
+                variant="primary"
+                fullWidth
+                style={{ marginTop: 24 }}
               />
-            )}
+            </View>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-            {step === 3 && (
-              <Step3Review
-                thumbnailUrl={thumbnailUrl}
-                getFrames={getFrames}
-                selectedFrameIdx={selectedFrameIdx}
-                name={name}
-                category={category}
-                subCategory={subCategory}
-                price={price}
-                deliveryTime={deliveryTime}
-                detailedDesc={detailedDesc}
-                shortDesc={shortDesc}
-                deliverables={deliverables}
-                tags={tags}
-                confirmed={confirmed}
-                setConfirmed={setConfirmed}
-                submitting={submitting}
-                handleBackStep={handleBackStep}
-                handleSubmit={handleSubmit}
-                setStep={setStep}
-                service={service}
-                videoDuration={videoDuration}
-              />
-            )}
+              {/* ================= STEP 1 DETAILS ================= */}
+              {step === 1 && (
+                <Step1Details
+                  control={control}
+                  errors={errors}
+                  deliveryTime={deliveryTime}
+                  setDeliveryTime={setDeliveryTime}
+                  videoUrl={videoUrl}
+                  triggerVideoPicker={triggerVideoPicker}
+                  getFrames={getFrames}
+                  tags={tags}
+                  removeTag={removeTag}
+                  showTagInput={showTagInput}
+                  setShowTagInput={setShowTagInput}
+                  tagInput={tagInput}
+                  setTagInput={setTagInput}
+                  addTag={addTag}
+                  handleNextStep={handleNextStep}
+                  videoDuration={videoDuration}
+                  watch={watch}
+                />
+              )}
 
-          </ScrollView>
+              {/* ================= STEP 2 MEDIA ================= */}
+              {step === 2 && (
+                <Step2Media
+                  videoFile={videoFile}
+                  videoUrl={videoUrl}
+                  thumbnailUrl={thumbnailUrl}
+                  selectedFrameIdx={selectedFrameIdx}
+                  setSelectedFrameIdx={setSelectedFrameIdx}
+                  setThumbnailFile={setThumbnailFile}
+                  setThumbnailUrl={setThumbnailUrl}
+                  extractingFrames={extractingFrames}
+                  getFrames={getFrames}
+                  triggerVideoPicker={triggerVideoPicker}
+                  triggerThumbnailPicker={triggerThumbnailPicker}
+                  deliverables={deliverables}
+                  removeDeliverable={removeDeliverable}
+                  showDelivInput={showDelivInput}
+                  setShowDelivInput={setShowDelivInput}
+                  delivInput={delivInput}
+                  setDelivInput={setDelivInput}
+                  addDeliverable={addDeliverable}
+                  handleBackStep={handleBackStep}
+                  handleNextStep={handleNextStep}
+                  videoDuration={videoDuration}
+                />
+              )}
+
+              {/* ================= STEP 3 REVIEW ================= */}
+              {step === 3 && (
+                <Step3Review
+                  control={control}
+                  errors={errors}
+                  thumbnailUrl={thumbnailUrl}
+                  getFrames={getFrames}
+                  selectedFrameIdx={selectedFrameIdx}
+                  name={watch('name')}
+                  category={watch('category')}
+                  price={watch('price')}
+                  deliveryTime={deliveryTime}
+                  shortDesc={watch('shortDesc')}
+                  deliverables={deliverables}
+                  tags={tags}
+                  submitting={submitMutation.isPending}
+                  handleBackStep={handleBackStep}
+                  handleSubmit={handleSubmit(onSubmit)}
+                  setStep={setStep}
+                  service={service}
+                  videoDuration={videoDuration}
+                />
+              )}
+
+            </ScrollView>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  safeRoot: {
+    flex: 1,
+    backgroundColor: Colors.creamLite,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63, 3, 11, 0.08)',
+    backgroundColor: Colors.white,
+  },
+  barCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(63, 3, 11, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barTitleCenter: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  barTitleText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 18,
+    color: Colors.ink,
+    fontWeight: '700',
+  },
+  barSubText: {
+    fontSize: 10.5,
+    color: 'rgba(63, 3, 11, 0.45)',
+    fontFamily: FontFamily.sansMedium,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63, 3, 11, 0.05)',
+  },
+  stepItem: {
+    alignItems: 'center',
+    width: 90,
+  },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(63, 3, 11, 0.15)',
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  stepCircleActive: {
+    borderColor: Colors.oxblood,
+    backgroundColor: Colors.oxblood,
+  },
+  stepCircleCompleted: {
+    borderColor: Colors.green,
+    backgroundColor: Colors.green,
+  },
+  stepNum: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11,
+    color: 'rgba(63, 3, 11, 0.45)',
+  },
+  stepNumActive: {
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  stepLabel: {
+    fontFamily: FontFamily.sans,
+    fontSize: 10,
+    color: 'rgba(63, 3, 11, 0.45)',
+    fontWeight: '700',
+  },
+  stepLabelActive: {
+    color: Colors.oxblood,
+  },
+  stepSubLabel: {
+    fontSize: 8,
+    color: 'rgba(63, 3, 11, 0.35)',
+    fontFamily: FontFamily.sansMedium,
+  },
+  stepLine: {
+    flex: 1,
+    height: 1.5,
+    backgroundColor: 'rgba(63, 3, 11, 0.1)',
+    marginHorizontal: -12,
+    marginTop: -16,
+  },
+  stepLineActive: {
+    backgroundColor: Colors.oxblood,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 56,
+  },
+});

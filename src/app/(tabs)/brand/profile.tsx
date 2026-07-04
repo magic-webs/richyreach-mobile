@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -516,7 +517,14 @@ export default function BrandProfileScreen() {
                 })
               ) : (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyText}>No campaigns created yet.</Text>
+                  <LottieView
+                    source={require('@/assets/lottie-animation/empty-ghost.json')}
+                    autoPlay
+                    loop
+                    style={styles.emptyStateImage}
+                  />
+                  <Text style={styles.emptyStateText}>No campaigns created yet</Text>
+                  <Text style={styles.emptyStateSub}>Launch a campaign to start collaborating with creators.</Text>
                 </View>
               )}
             </View>
@@ -540,7 +548,14 @@ export default function BrandProfileScreen() {
                 })
               ) : (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyText}>No creators found.</Text>
+                  <LottieView
+                    source={require('@/assets/lottie-animation/empty-ghost.json')}
+                    autoPlay
+                    loop
+                    style={styles.emptyStateImage}
+                  />
+                  <Text style={styles.emptyStateText}>No creators found</Text>
+                  <Text style={styles.emptyStateSub}>Explore the marketplace to find and invite creators.</Text>
                 </View>
               )}
             </View>
@@ -1198,6 +1213,27 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: 'rgba(63,3,11,0.4)',
     textAlign: 'center',
+  },
+  emptyStateImage: {
+    width: 140,
+    height: 140,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.ink,
+    textAlign: 'center',
+  },
+  emptyStateSub: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.5)',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 4,
+    paddingHorizontal: 20,
   },
   analyticsSummaryCard: {
     backgroundColor: '#ffffff',

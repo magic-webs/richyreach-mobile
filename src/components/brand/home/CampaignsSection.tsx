@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -176,10 +177,11 @@ export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectio
           </>
         ) : campaigns.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Image
-              source={require('@/assets/images/empty_campaign.png')}
-              style={styles.emptyStateImage}
-              resizeMode="contain"
+            <LottieView
+              source={require('@/assets/lottie-animation/empty-ghost.json')}
+              autoPlay
+              loop
+              style={{ width: 140, height: 140, marginBottom: 8, alignSelf: 'center' }}
             />
             <Text style={styles.emptyStateTitle}>No campaigns created yet</Text>
             <Text style={styles.emptyStateDescription}>

@@ -1,8 +1,10 @@
+import LottieView from 'lottie-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Image } from 'expo-image';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 interface ServicesTabProps {
   services: any[];
@@ -28,25 +30,7 @@ export function ServicesTab({
   onDeleteService,
 }: ServicesTabProps) {
 
-  // Helper to generate realistic deterministic mock statistics for services
-  const getMockMetadata = (srv: any, index: number) => {
-    const badges = ['FEATURED', 'BEST SELLER', 'NEW'];
-    const badge = badges[index % badges.length];
-
-    const ratings = [4.9, 4.8, 4.7];
-    const rating = ratings[index % ratings.length];
-
-    const reviewCounts = [26, 19, 11];
-    const reviewCount = reviewCounts[index % reviewCounts.length];
-
-    const orderCounts = [32, 21, 15];
-    const orderCount = orderCounts[index % orderCounts.length];
-
-    const durations = ['00:34', '00:28', '00:41'];
-    const duration = durations[index % durations.length];
-
-    return { badge, rating, reviewCount, orderCount, duration };
-  };
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -71,11 +55,12 @@ export function ServicesTab({
         </ScrollView>
       ) : services.length === 0 ? (
         <View style={styles.emptyCard}>
-          {/* <Image
-            source={require('@/assets/images/empty_services.png')}
-            style={styles.emptyStateImage}
-            contentFit="contain"
-          /> */}
+          <LottieView
+            source={require('@/assets/lottie-animation/empty-ghost.json')}
+            autoPlay
+            loop
+            style={{ width: 140, height: 140, marginBottom: 8 }}
+          />
           <Text style={styles.emptyStateText}>No services listed yet</Text>
           <Text style={styles.emptyStateSub}>
             Offer specialized services (like reviews, sponsored posts) directly to brands.
@@ -96,7 +81,6 @@ export function ServicesTab({
         >
           {services.map((srv, index) => {
             const rupeePrice = typeof srv.price === 'number' ? srv.price / 100 : 0;
-            const { badge, rating, reviewCount, orderCount, duration } = getMockMetadata(srv, index);
 
             // Choose cover image
             let coverImage = srv.thumbnailUrl;
@@ -117,42 +101,35 @@ export function ServicesTab({
             if (!coverImage) {
               coverImage = FALLBACK_THUMBNAILS[index % FALLBACK_THUMBNAILS.length];
             }
-            const platform = srv.category || 'Instagram';
-            const catTag = srv.subCategory || 'UGC';
-
-            // Badge Color styles
-            let badgeBg = 'rgba(235, 94, 40, 0.9)'; // orange for FEATURED
-            if (badge === 'BEST SELLER') badgeBg = 'rgba(180, 20, 30, 0.9)'; // deep red
-            if (badge === 'NEW') badgeBg = 'rgba(180, 106, 116, 0.9)'; // pink/rose
-
             return (
-              <View key={srv.id} style={styles.serviceCard}>
+              <TouchableOpacity
+                key={srv.id}
+                style={styles.serviceCard}
+                activeOpacity={0.9}
+                onPress={() => router.push({ pathname: '/profile/service/[id]', params: { id: srv.id } })}
+              >
                 {/* Video Thumbnail Section */}
                 <View style={styles.thumbnailContainer}>
                   <Image source={{ uri: coverImage }} style={styles.thumbnailImage} contentFit="cover" />
                   <View style={styles.thumbnailOverlay} />
 
-                  {/* Badge */}
-                  <View style={[styles.badgeContainer, { backgroundColor: badgeBg }]}>
-                    <Text style={styles.badgeText}>{badge}</Text>
+                  {/* Category Badge overlay */}
+                  <View style={styles.categoryBadgeOverlay}>
+                    <Icon name="grid" size={10} color={Colors.white} />
+                    <Text style={styles.categoryBadgeText}>{srv.subCategory || srv.category || 'General'}</Text>
                   </View>
 
-                  {/* Play Button Overlay */}
-                  <View style={styles.playButtonWrapper}>
-                    <Icon name="play" size={24} color={Colors.white} />
-                  </View>
-
-                  {/* Duration Label */}
-                  <View style={styles.durationContainer}>
-                    <Text style={styles.durationText}>{duration}</Text>
+                  {/* Price Tag overlay */}
+                  <View style={styles.priceTagOverlay}>
+                    <Text style={styles.priceTagText}>₹{rupeePrice.toLocaleString()}</Text>
                   </View>
                 </View>
 
                 {/* Info Section */}
                 <View style={styles.infoContainer}>
                   <View style={styles.titleRow}>
-                    <Text numberOfLines={1} style={styles.serviceTitle}>{srv.name}</Text>
-                    {/* Delete Option via three-dots trigger */}
+                    <Text numberOfLines={2} style={styles.serviceTitle}>{srv.name}</Text>
+                    {/* Delete Option */}
                     <TouchableOpacity
                       onPress={() => onDeleteService(srv.id)}
                       style={styles.moreBtn}
@@ -162,69 +139,11 @@ export function ServicesTab({
                     </TouchableOpacity>
                   </View>
 
-                  {/* Category Tags */}
-                  <View style={styles.tagsRow}>
-                    <View style={styles.platformBadge}>
-                      <Icon name={platform.toLowerCase() === 'youtube' ? 'play' : 'camera'} size={11} color={Colors.roseDeep} />
-                      <Text style={styles.platformText}>{platform}</Text>
-                    </View>
-                    <View style={styles.categoryBadge}>
-                      <Text style={styles.categoryText}>{catTag}</Text>
-                    </View>
-                  </View>
-
-                  {/* Rating and Reviews */}
-                  <View style={styles.ratingRow}>
-                    <Icon name="star" size={13} color={Colors.gold} />
-                    <Text style={styles.ratingText}>
-                      <Text style={styles.boldText}>{rating}</Text> ({reviewCount} reviews)
-                    </Text>
-                    <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.ordersText}>{orderCount} Orders</Text>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  {/* Price and Delivery info */}
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailValue}>₹{rupeePrice.toLocaleString()}</Text>
-                      <Text style={styles.detailLabel}>Starting Price</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailValue}>{srv.deliveryTime || '5 Days'}</Text>
-                      <Text style={styles.detailLabel}>Delivery Time</Text>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.cardActionsRow}>
-                    <TouchableOpacity
-                      style={styles.previewBtn}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        // Open exampleUrl
-                        if (srv.exampleUrl || srv.videoUrl) {
-                          if (Platform.OS === 'web') {
-                            window.open(srv.exampleUrl || srv.videoUrl, '_blank');
-                          }
-                        }
-                      }}
-                    >
-                      <Icon name="eye" size={13} color={Colors.oxblood} />
-                      <Text style={styles.previewBtnText}>Preview</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.editCardBtn}
-                      activeOpacity={0.8}
-                      onPress={() => onEditService(srv)}
-                    >
-                      <Icon name="edit" size={13} color={Colors.white} />
-                      <Text style={styles.editBtnText}>Edit</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text numberOfLines={1} style={styles.deliveryLabel}>
+                    Delivered in {srv.deliveryTime || '5 Days'}
+                  </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -329,7 +248,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     gap: 16,
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingRight: 20,
   },
   serviceCard: {
@@ -418,122 +337,45 @@ const styles = StyleSheet.create({
     padding: 4,
     marginLeft: 6,
   },
-  tagsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  platformBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(180, 106, 116, 0.1)',
+  categoryBadgeOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
     borderRadius: 6,
     paddingVertical: 3,
     paddingHorizontal: 8,
+    backgroundColor: 'rgba(180, 106, 116, 0.95)',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
-  platformText: {
-    fontSize: 10.5,
-    color: Colors.roseDeep,
+  categoryBadgeText: {
+    fontSize: 9.5,
     fontFamily: FontFamily.sansMedium,
-    fontWeight: '600',
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: 0.4,
   },
-  categoryBadge: {
-    backgroundColor: 'rgba(63, 3, 11, 0.05)',
-    borderRadius: 6,
-    paddingVertical: 3,
+  priceTagOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(63, 3, 11, 0.9)',
+    borderRadius: 8,
+    paddingVertical: 4,
     paddingHorizontal: 8,
   },
-  categoryText: {
-    fontSize: 10.5,
-    color: 'rgba(63, 3, 11, 0.6)',
-    fontFamily: FontFamily.sansMedium,
-    fontWeight: '600',
+  priceTagText: {
+    fontSize: 12,
+    fontFamily: FontFamily.sans,
+    fontWeight: '800',
+    color: Colors.white,
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
+  deliveryLabel: {
     fontSize: 11,
-    color: 'rgba(63, 3, 11, 0.6)',
-    fontFamily: FontFamily.sansMedium,
-    marginLeft: 4,
-  },
-  boldText: {
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  bulletDot: {
-    fontSize: 11,
-    color: 'rgba(63, 3, 11, 0.3)',
-    marginHorizontal: 5,
-  },
-  ordersText: {
-    fontSize: 11,
-    color: 'rgba(63, 3, 11, 0.6)',
-    fontFamily: FontFamily.sansMedium,
-  },
-  divider: {
-    height: 0.5,
-    backgroundColor: 'rgba(63, 3, 11, 0.08)',
-    marginVertical: 2,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailItem: {
-    gap: 2,
-  },
-  detailValue: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: Colors.oxblood,
-  },
-  detailLabel: {
-    fontSize: 9.5,
     color: 'rgba(63, 3, 11, 0.45)',
     fontFamily: FontFamily.sansMedium,
-    fontWeight: '600',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-  },
-  previewBtn: {
-    flex: 1,
-    height: 32,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.oxblood,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  previewBtnText: {
-    fontSize: 11,
-    fontFamily: FontFamily.sans,
-    color: Colors.oxblood,
-    fontWeight: '700',
-  },
-  editCardBtn: {
-    flex: 1,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: Colors.oxblood,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  editBtnText: {
-    fontSize: 11,
-    fontFamily: FontFamily.sans,
-    color: Colors.white,
-    fontWeight: '700',
+    marginTop: 2,
   },
   emptyCard: {
     alignItems: 'center',

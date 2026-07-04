@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
@@ -27,10 +28,11 @@ export function MarketplaceCreatorList({ loading, creators, bookmarked, onToggle
           </>
         ) : creators.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Image
-              source={require('@/assets/images/empty_creators.png')}
-              style={styles.emptyStateImage}
-              contentFit="contain"
+            <LottieView
+              source={require('@/assets/lottie-animation/empty-ghost.json')}
+              autoPlay
+              loop
+              style={{ width: 140, height: 140, marginBottom: 8 }}
             />
             <Text style={styles.emptyStateText}>No creators found</Text>
             <Text style={styles.emptyStateSub}>

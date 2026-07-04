@@ -13,9 +13,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/richyreach-logo.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/richyreach-logo.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.abhijit969.richyreach",
@@ -37,7 +35,7 @@
         {
           "backgroundColor": "#208AEF",
           "android": {
-            "image": "./assets/images/splash-icon.png",
+            "image": "./assets/images/richyreach-logo.png",
             "imageWidth": 76
           }
         }

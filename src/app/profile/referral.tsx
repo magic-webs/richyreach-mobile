@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import React, { useState } from 'react';
 import {
   View,
@@ -222,7 +223,12 @@ export default function ReferralScreen() {
         <Text style={styles.sectionLabel}>Referral Tracking</Text>
         {referredUsersList.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Users size={40} color="rgba(63,3,11,0.15)" strokeWidth={1.5} />
+            <LottieView
+              source={require('@/assets/lottie-animation/empty-ghost.json')}
+              autoPlay
+              loop
+              style={{ width: 140, height: 140, marginBottom: 8 }}
+            />
             <Text style={styles.emptyTitle}>No referrals yet</Text>
             <Text style={styles.emptyDesc}>Share your code to start earning rewards!</Text>
             <TouchableOpacity onPress={handleShare} style={styles.emptyBtn} activeOpacity={0.8}>

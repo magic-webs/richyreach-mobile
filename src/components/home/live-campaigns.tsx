@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { GradientView } from '@/components/ui/gradient-view';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
@@ -139,10 +140,11 @@ export function LiveCampaigns({ campaignList, onSeeAllPress, onCampaignPress, lo
         )
       ) : campaignList.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Image
-            source={require('@/assets/images/empty_campaign.png')}
-            style={styles.emptyStateImage}
-            contentFit="contain"
+          <LottieView
+            source={require('@/assets/lottie-animation/empty-ghost.json')}
+            autoPlay
+            loop
+            style={{ width: 140, height: 140, marginBottom: 8 }}
           />
           <Text style={styles.emptyStateText}>No live campaigns</Text>
           <Text style={styles.emptyStateSub}>

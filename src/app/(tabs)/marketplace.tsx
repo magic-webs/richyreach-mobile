@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
@@ -503,10 +504,11 @@ export default function MarketplaceScreen() {
           loading ? null : (
             <View style={{ paddingHorizontal: 18 }}>
               <View style={styles.emptyCard}>
-                <Image
-                  source={require('@/assets/images/empty_campaign.png')}
-                  style={styles.emptyStateImage}
-                  contentFit="contain"
+                <LottieView
+                  source={require('@/assets/lottie-animation/empty-ghost.json')}
+                  autoPlay
+                  loop
+                  style={{ width: 140, height: 140, marginBottom: 8 }}
                 />
                 <Text style={styles.emptyStateText}>No campaigns found</Text>
                 <Text style={styles.emptyStateSub}>

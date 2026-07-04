@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -9,8 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Icon } from '@/components/ui/icon';
-import { Colors } from '@/constants/brand';
-import { styles } from '../CreateServiceSheet.styles';
+import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { TactileButton } from '@/components/ui/tactile-button';
 
 interface Step2MediaProps {
@@ -25,9 +25,6 @@ interface Step2MediaProps {
   getFrames: () => any[];
   triggerVideoPicker: () => void;
   triggerThumbnailPicker: () => void;
-  detailedDesc: string;
-  setDetailedDesc: (val: string | ((prev: string) => string)) => void;
-  handleSuggestedPoints: () => void;
   deliverables: string[];
   removeDeliverable: (idx: number) => void;
   showDelivInput: boolean;
@@ -52,9 +49,6 @@ export function Step2Media({
   getFrames,
   triggerVideoPicker,
   triggerThumbnailPicker,
-  detailedDesc,
-  setDetailedDesc,
-  handleSuggestedPoints,
   deliverables,
   removeDeliverable,
   showDelivInput,
@@ -189,45 +183,6 @@ export function Step2Media({
         </ScrollView>
       </View>
 
-      {/* Service Description Card */}
-      <View style={styles.formCard}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 4,
-          }}
-        >
-          <Text style={styles.sectionFormLabel}>
-            Service Description <Text style={{ color: '#FF3B30' }}>*</Text>
-          </Text>
-          <TouchableOpacity
-            onPress={handleSuggestedPoints}
-            style={styles.suggestedPointsBtn}
-            activeOpacity={0.7}
-          >
-            <Icon name="sparkle" size={12} color={Colors.roseDeep} />
-            <Text style={styles.suggestedText}>Suggested points</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.sectionFormSub}>Explain what brands will get from this service</Text>
-
-        <TextInput
-          multiline
-          maxLength={1000}
-          numberOfLines={8}
-          style={[styles.textAreaInput, { height: 160 }]}
-          placeholder="Describe your service in detail..."
-          placeholderTextColor="rgba(63, 3, 11, 0.35)"
-          value={detailedDesc}
-          onChangeText={setDetailedDesc}
-        />
-        <Text style={[styles.counterText, { alignSelf: 'flex-end', marginTop: 4 }]}>
-          {detailedDesc.length}/1000
-        </Text>
-      </View>
-
       {/* What's Included */}
       <View style={styles.formCard}>
         <Text style={styles.sectionFormLabel}>What's Included</Text>
@@ -295,3 +250,222 @@ export function Step2Media({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  stepWrapper: {
+    gap: 16,
+  },
+  formCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    ...Shadow.card,
+    gap: 14,
+  },
+  sectionFormLabel: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  sectionFormSub: {
+    fontSize: 11.5,
+    color: 'rgba(63, 3, 11, 0.45)',
+    fontFamily: FontFamily.sansMedium,
+    marginBottom: 4,
+  },
+  mediaDetailsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(63, 3, 11, 0.02)',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63, 3, 11, 0.06)',
+    gap: 12,
+  },
+  mediaDetailsLeft: {
+    position: 'relative',
+    width: 64,
+    height: 74,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  mediaThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaThumbOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  mediaThumbPlayCircle: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -10 }, { translateY: -10 }],
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaThumbDuration: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 3,
+    paddingVertical: 1,
+    paddingHorizontal: 3,
+    color: Colors.white,
+    fontSize: 7.5,
+    fontWeight: '700',
+  },
+  mediaDetailsRight: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 3,
+  },
+  mediaFilename: {
+    fontSize: 13,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.ink,
+    fontWeight: '700',
+    flex: 1,
+  },
+  mediaFilesize: {
+    fontSize: 11,
+    color: 'rgba(63, 3, 11, 0.4)',
+    fontFamily: FontFamily.sansMedium,
+  },
+  replaceVideoTextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  replaceVideoTextBtnLabel: {
+    fontSize: 11,
+    fontFamily: FontFamily.sans,
+    color: Colors.roseDeep,
+    fontWeight: '700',
+  },
+  framesScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  frameCard: {
+    position: 'relative',
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  skeletonFrameCard: {
+    backgroundColor: 'rgba(63, 3, 11, 0.04)',
+    borderColor: 'rgba(63, 3, 11, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  frameCardActive: {
+    borderColor: Colors.oxblood,
+  },
+  frameImage: {
+    width: '100%',
+    height: '100%',
+  },
+  frameChecked: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dashedFrameUpload: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(63, 3, 11, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  frameUploadText: {
+    fontSize: 7.5,
+    fontFamily: FontFamily.sans,
+    fontWeight: '700',
+    color: Colors.roseDeep,
+  },
+  deliverablesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  delivPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(42, 122, 90, 0.08)',
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    gap: 6,
+  },
+  delivPillText: {
+    fontSize: 11.5,
+    color: Colors.green,
+    fontFamily: FontFamily.sansMedium,
+    fontWeight: '600',
+  },
+  delivPillClose: {
+    padding: 2,
+  },
+  delivAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(63, 3, 11, 0.3)',
+    paddingHorizontal: 10,
+    gap: 4,
+  },
+  delivAddText: {
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.oxblood,
+  },
+  tagInputWrapper: {
+    borderWidth: 1,
+    borderColor: 'rgba(63, 3, 11, 0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: Colors.white,
+    height: 28,
+    justifyContent: 'center',
+  },
+  tagInputInline: {
+    fontSize: 11,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.ink,
+    width: 80,
+    padding: 0,
+  },
+  wizardFooterRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+});

@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -13,10 +14,11 @@ export function ReviewsTab({ infProfile }: ReviewsTabProps) {
   if (!infProfile?.reviews || infProfile.reviews.length === 0) {
     return (
       <View style={styles.emptyCard}>
-        <Image
-          source={require('@/assets/images/empty_reviews.png')}
-          style={styles.emptyStateImage}
-          contentFit="contain"
+        <LottieView
+          source={require('@/assets/lottie-animation/empty-ghost.json')}
+          autoPlay
+          loop
+          style={{ width: 140, height: 140, marginBottom: 8 }}
         />
         <Text style={styles.emptyStateText}>No reviews yet</Text>
         <Text style={styles.emptyStateSub}>

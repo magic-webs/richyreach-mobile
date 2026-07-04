@@ -1,5 +1,5 @@
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
-import { CreateServiceSheet } from '@/components/influencer/CreateServiceSheet';
+import { CreateServiceSheet } from '@/components/influencer/services/CreateServiceSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { AboutTab } from '@/components/influencer/profile/AboutTab';
@@ -30,8 +30,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About';
 type SheetType = 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
 
-const SETTINGS: [string, string, string, SheetType | 'wallet'][] = [
+const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
   ['wallet', 'Wallet & payouts', '', 'wallet'],
+  ['briefcase', 'Service Orders', '', 'orders'],
   ['gift', 'Refer & earn', '₹100', 'referral'],
   ['verified', 'Verification', 'Verified', 'verification'],
   ['bell', 'Notifications', '', 'notifications'],
@@ -375,6 +376,8 @@ export default function ProfileScreen() {
                         router.push('/profile/referral');
                       } else if (key === 'wallet') {
                         router.push('/profile/wallet');
+                      } else if (key === 'orders') {
+                        router.push('/profile/orders');
                       } else {
                         setSheet(key as SheetType);
                       }

@@ -11,7 +11,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { ArrowLeft01Icon, Share01Icon, ChatIcon, UserGroupIcon, FlashIcon, StarIcon, Dollar01Icon, Clock01Icon, PlayIcon, Cancel01Icon, BadgeCheckIcon, CheckIcon, Camera01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, Share01Icon, ChatIcon, UserGroupIcon, FlashIcon, StarIcon, Dollar01Icon, Clock01Icon, PlayIcon, Cancel01Icon, BadgeCheckIcon, CheckIcon, Camera01Icon, ArrowRight01Icon, Grid02Icon } from '@hugeicons/core-free-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { InviteCreatorSheet } from '@/components/brand/marketplace/InviteCreatorSheet';
@@ -405,24 +405,17 @@ export default function CreatorProfileDetail() {
 
                           {/* Card Content */}
                           <View style={styles.cardContent}>
-                            {/* Platform & Category Tags */}
-                            {(service.category || service.subCategory) && (
+                            {/* Category Tag */}
+                            {service.category && (
                               <View style={styles.cardTagsRow}>
-                                {service.category && (
-                                  <View style={styles.platformBadge}>
-                                    <HugeiconsIcon
-                                      icon={service.category.toLowerCase() === 'youtube' ? PlayIcon : Camera01Icon}
-                                      size={10}
-                                      color={Colors.roseDeep}
-                                    />
-                                    <Text style={styles.platformText}>{service.category}</Text>
-                                  </View>
-                                )}
-                                {service.subCategory && (
-                                  <View style={styles.categoryBadge}>
-                                    <Text style={styles.categoryText}>{service.subCategory}</Text>
-                                  </View>
-                                )}
+                                <View style={styles.platformBadge}>
+                                  <HugeiconsIcon
+                                    icon={Grid02Icon}
+                                    size={10}
+                                    color={Colors.roseDeep}
+                                  />
+                                  <Text style={styles.platformText}>{service.category}</Text>
+                                </View>
                               </View>
                             )}
 
