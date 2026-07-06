@@ -9,6 +9,7 @@ import { GradientView } from '@/components/ui/gradient-view';
 import { Icon } from '@/components/ui/icon';
 import { formatDuration } from '@/lib/formatDuration';
 import { useVoiceRecorder } from '@/hooks/chat/useVoiceRecorder';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ChatInputBarProps {
   text: string;
@@ -69,6 +70,7 @@ function ReviewRow({
 
 export function ChatInputBar({ text, onChangeText, onSend, isSending, onSendVoiceNote, isSendingVoiceNote, attachSlot }: ChatInputBarProps) {
   const recorder = useVoiceRecorder();
+  const insets = useSafeAreaInsets();
 
   const handleSendVoice = () => {
     if (!recorder.recordedUri) return;
@@ -79,7 +81,7 @@ export function ChatInputBar({ text, onChangeText, onSend, isSending, onSendVoic
   };
 
   return (
-    <View style={styles.inputBar}>
+    <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'web' ? 12 : Math.max(insets.bottom, 12) }]}>
       {Platform.OS !== 'web' ? (
         <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
       ) : (

@@ -41,7 +41,7 @@ export function WalletContent({ onOpenWithdraw, onOpenBuyCoins }: WalletContentP
         onOpenBuyCoins={onOpenBuyCoins}
       />
 
-      <WalletConvertPoints />
+      {/* <WalletConvertPoints /> */}
 
       <WalletTransactionHistory transactions={transactions} />
     </View>

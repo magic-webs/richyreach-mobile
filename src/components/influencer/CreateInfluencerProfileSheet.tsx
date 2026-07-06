@@ -7,7 +7,18 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Platform, TextInputProps } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import * as ImagePicker from 'expo-image-picker';
+
+// Safe wrapper for BottomSheetTextInput on Web
+const FormInput = React.forwardRef<TextInput, TextInputProps>((props, ref) => {
+  if (Platform.OS === 'web') {
+    return <TextInput ref={ref} {...props} />;
+  }
+  return <BottomSheetTextInput ref={ref} {...(props as any)} />;
+});
 import { Image } from 'expo-image';
 
 interface CreateInfluencerProfileSheetProps {
@@ -31,7 +42,6 @@ interface CreateInfluencerProfileSheetProps {
 
 type InfluencerProfileFormValues = {
   instagramHandle: string;
-  pricing: string;
   niche: string;
   skills: string;
   country: string;
@@ -65,7 +75,6 @@ export function CreateInfluencerProfileSheet({
   } = useForm<InfluencerProfileFormValues>({
     defaultValues: {
       instagramHandle: '',
-      pricing: '',
       niche: 'Lifestyle',
       skills: '',
       country: 'India',
@@ -79,7 +88,6 @@ export function CreateInfluencerProfileSheet({
     if (isOpen) {
       reset({
         instagramHandle: initialData?.instagramHandle ?? '',
-        pricing: initialData?.pricing ? String(Math.floor(initialData.pricing / 100)) : '',
         niche: initialData?.niche ?? 'Lifestyle',
         skills: initialData?.skills ? initialData.skills.join(', ') : '',
         country: initialData?.country ?? 'India',
@@ -92,7 +100,7 @@ export function CreateInfluencerProfileSheet({
 
   const onSubmit = async (data: InfluencerProfileFormValues) => {
     const cleanHandle = data.instagramHandle.trim().replace(/^@/, '');
-    const parsedPriceInCents = Math.round(Number(data.pricing.trim()) * 100);
+    const parsedPriceInCents = 0;
     const skillsArray = data.skills.trim()
       ? data.skills.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
@@ -106,7 +114,15 @@ export function CreateInfluencerProfileSheet({
         payload.append('niche', data.niche);
         payload.append('skills', JSON.stringify(skillsArray));
         payload.append('country', data.country.trim() || 'India');
-        payload.append('avatar', avatarFile);
+        if (Platform.OS === 'web') {
+          payload.append('avatar', avatarFile);
+        } else {
+          payload.append('avatar', {
+            uri: avatarFile.uri,
+            name: avatarFile.name || 'avatar.jpg',
+            type: avatarFile.type || 'image/jpeg',
+          } as any);
+        }
         payload.append('socialLinks', JSON.stringify({ youtube: data.youtube.trim() || undefined }));
         if (initialData?.id) payload.append('id', initialData.id);
       } else {
@@ -158,16 +174,34 @@ export function CreateInfluencerProfileSheet({
     }
   };
 
-  const triggerAvatarPicker = () => {
+  const triggerAvatarPicker = async () => {
     if (Platform.OS === 'web') {
       avatarInputRef.current?.click();
     } else {
-      setAvatarFile({ name: 'mock_avatar.jpg', size: 1.2 * 1024 * 1024, type: 'image/jpeg' });
-      setAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300');
-      showModal({
-        title: 'Avatar Selected 📸',
-        message: 'Preselected a premium avatar image for native simulation.',
-      });
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          setAvatarFile({
+            uri: asset.uri,
+            name: asset.fileName || 'avatar.jpg',
+            type: asset.mimeType || 'image/jpeg',
+            size: asset.fileSize || 0,
+          });
+          setAvatar(asset.uri);
+        }
+      } catch (err: any) {
+        console.error('Failed to pick avatar:', err);
+        showModal({
+          title: 'Picker Failed',
+          message: 'Could not access the library to select a photo.',
+        });
+      }
     }
   };
 
@@ -198,7 +232,7 @@ export function CreateInfluencerProfileSheet({
         />
       )}
 
-      <ScrollView contentContainerStyle={{ gap: 18, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <View style={{ gap: 18, paddingBottom: 40 }}>
         {/* INSTAGRAM HANDLE */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Instagram Handle *</Text>
@@ -209,7 +243,7 @@ export function CreateInfluencerProfileSheet({
             render={({ field: { onChange, onBlur, value } }) => (
               <View style={[styles.inputContainer, errors.instagramHandle && styles.inputContainerError]}>
                 <Text style={styles.inputPrefix}>@</Text>
-                <TextInput
+                <FormInput
                   style={[styles.formInput, { flex: 1, borderWidth: 0, borderRadius: 0 }]}
                   placeholder="username"
                   placeholderTextColor="rgba(63,3,11,0.35)"
@@ -269,31 +303,7 @@ export function CreateInfluencerProfileSheet({
           </View>
         </View>
 
-        {/* PRICING */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Base Collaboration Pricing (₹) *</Text>
-          <Controller
-            control={control}
-            name="pricing"
-            rules={{
-              required: 'Pricing is required',
-              validate: (v) => (Number(v) > 0) || 'Enter a valid positive price',
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.formInput, errors.pricing && styles.inputError]}
-                placeholder="e.g. 15000"
-                placeholderTextColor="rgba(63,3,11,0.35)"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                keyboardType="numeric"
-                editable={!isSubmitting}
-              />
-            )}
-          />
-          {errors.pricing && <Text style={styles.errorText}>{errors.pricing.message}</Text>}
-        </View>
+
 
         {/* NICHE CATEGORY */}
         <View style={styles.formGroup}>
@@ -329,7 +339,7 @@ export function CreateInfluencerProfileSheet({
             control={control}
             name="skills"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
+              <FormInput
                 style={styles.formInput}
                 placeholder="e.g. Videography, Storytelling, Editing (comma separated)"
                 placeholderTextColor="rgba(63,3,11,0.35)"
@@ -349,7 +359,7 @@ export function CreateInfluencerProfileSheet({
             control={control}
             name="country"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
+              <FormInput
                 style={styles.formInput}
                 placeholder="e.g. India"
                 placeholderTextColor="rgba(63,3,11,0.35)"
@@ -371,7 +381,7 @@ export function CreateInfluencerProfileSheet({
             control={control}
             name="youtube"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
+              <FormInput
                 style={styles.formInput}
                 placeholder="e.g. https://youtube.com/@channel"
                 placeholderTextColor="rgba(63,3,11,0.35)"
@@ -397,7 +407,7 @@ export function CreateInfluencerProfileSheet({
           variant="primary"
           style={{ marginTop: 10 }}
         />
-      </ScrollView>
+      </View>
     </BottomSheet>
   );
 }

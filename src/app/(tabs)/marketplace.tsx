@@ -418,12 +418,13 @@ export default function MarketplaceScreen() {
   }, [filteredList, sortBy]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={styles.root}>
       <Animated.View
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         style={[
           styles.header,
           {
+            paddingTop: insets.top + 8,
             transform: [{ translateY: headerTranslateY }],
           },
         ]}
@@ -560,13 +561,7 @@ export default function MarketplaceScreen() {
           queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
         }}
-        initialData={activeBrand ? {
-          companyName: activeBrand.companyName,
-          website: activeBrand.website,
-          logo: activeBrand.logo || undefined,
-          category: activeBrand.category,
-          description: activeBrand.description || undefined,
-        } : null}
+        initialData={null}
       />
 
       <CreateInfluencerProfileSheet
@@ -576,7 +571,7 @@ export default function MarketplaceScreen() {
           queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
           queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
         }}
-        initialData={activeInfluencer}
+        initialData={null}
       />
     </View>
   );

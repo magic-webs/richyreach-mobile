@@ -7,7 +7,8 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, TextInput, TextInputProps } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform, TextInput, TextInputProps } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 // Safe wrapper for BottomSheetTextInput on Web

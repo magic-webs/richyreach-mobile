@@ -9,7 +9,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
@@ -19,13 +19,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { ArrowLeft, MapPin, ExternalLink, Trophy, Coins, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award, Sparkles, Users } from 'lucide-react-native';
+import { MapPin, ExternalLink, Trophy, CheckCircle2, XCircle, Clock, FileText, UploadCloud, Camera, Award, Sparkles, Users } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Colors, FontFamily, Radius, Shadow, Gradients } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useProfilesStore } from '@/store/profiles';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const TYPE_LABELS: Record<string, string> = {
   reel_reach: 'Reel Reach',
@@ -70,6 +73,72 @@ function LeaderboardRow({ rank, p }: { rank: number; p: any }) {
           <Text style={styles.lbCoins}>+{p.coinsAwarded.toLocaleString()} coins</Text>
         )}
       </View>
+    </View>
+  );
+}
+
+function ArenaSkeleton({ insets }: { insets: any }) {
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      {/* Header Skeleton */}
+      <View style={styles.header}>
+        <Skeleton variant="circle" width={40} height={40} />
+        <View style={{ flex: 1, gap: 6, marginLeft: 12 }}>
+          <Skeleton variant="text" width="60%" height={18} />
+          <Skeleton variant="text" width="35%" height={12} />
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+        {/* Banner Skeleton */}
+        <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+          <Skeleton variant="rect" width="100%" height={180} borderRadius={Radius.lg} />
+        </View>
+
+        {/* Stats Row Skeleton */}
+        <View style={styles.statsRow}>
+          <Skeleton variant="rect" width="100%" height={110} borderRadius={Radius.lg} />
+        </View>
+
+        {/* Prize breakdown Section Skeleton */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Skeleton variant="circle" width={16} height={16} />
+            <Skeleton variant="text" width="40%" height={16} />
+          </View>
+          <Skeleton variant="rect" width="100%" height={80} borderRadius={Radius.lg} />
+        </View>
+
+        {/* Guidelines Section Skeleton */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Skeleton variant="circle" width={16} height={16} />
+            <Skeleton variant="text" width="30%" height={16} />
+          </View>
+          <Skeleton variant="rect" width="100%" height={120} borderRadius={Radius.lg} />
+        </View>
+
+        {/* Leaderboard Section Skeleton */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Skeleton variant="circle" width={16} height={16} />
+            <Skeleton variant="text" width="45%" height={16} />
+          </View>
+          <View style={styles.lbList}>
+            {[1, 2, 3].map((val) => (
+              <View key={val} style={styles.skeletonLbRow}>
+                <Skeleton variant="text" width={20} height={16} />
+                <Skeleton variant="circle" width={32} height={32} style={{ marginLeft: 6 }} />
+                <View style={{ flex: 1, gap: 4, marginLeft: 12 }}>
+                  <Skeleton variant="text" width="50%" height={14} />
+                  <Skeleton variant="text" width="30%" height={10} />
+                </View>
+                <Skeleton variant="rect" width={60} height={20} borderRadius={99} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -300,11 +369,7 @@ export default function ArenaDetailScreen() {
   };
 
   if (isLoading || !arena) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={styles.loadingText}>Loading arena...</Text>
-      </View>
-    );
+    return <ArenaSkeleton insets={insets} />;
   }
 
   const daysLeft = Math.max(0, Math.ceil((new Date(arena.endDate).getTime() - Date.now()) / 864e5));
@@ -319,7 +384,7 @@ export default function ArenaDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-            <ArrowLeft size={20} color={Colors.oxblood} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={24} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle} numberOfLines={1}>{arena.title}</Text>
@@ -1469,5 +1534,14 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: 'rgba(255,255,255,0.75)',
     marginTop: 2,
+  },
+  skeletonLbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63, 3, 11, 0.07)',
   },
 });

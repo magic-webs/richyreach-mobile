@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
   Pressable,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -74,61 +75,97 @@ function VoiceFeedbackPlayer({ url }: { url: string }) {
 }
 
 function WatermarkedVideoPlayer({ url }: { url: string }) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const player = useVideoPlayer(url, (p) => {
     p.loop = true;
   });
 
-  const togglePlay = () => {
-    if (isPlaying) {
-      player.pause();
-      setIsPlaying(false);
-    } else {
-      player.play();
-      setIsPlaying(true);
-    }
+  const handleOpenModal = () => {
+    setIsModalVisible(true);
+    player.play();
+  };
+
+  const handleCloseModal = () => {
+    player.pause();
+    setIsModalVisible(false);
   };
 
   return (
-    <Pressable
-      onPress={togglePlay}
-      {...(Platform.OS === 'web' ? { onContextMenu: (e: any) => e.preventDefault() } : {})}
-      style={styles.watermarkedPlayerContainer}
-    >
-      <VideoView
-        player={player}
-        style={{ width: '100%', height: '100%', position: 'absolute' }}
-        contentFit="contain"
-        nativeControls={false}
-        allowsPictureInPicture={false}
-      />
-      {/* Protected Draft Badge */}
-      <View style={styles.protectedBadge}>
-        <Icon name="lock" size={10} color="#fff" />
-        <Text style={styles.protectedBadgeText}>PROTECTED PREVIEW</Text>
-      </View>
-      {/* Repeated semi-transparent watermark overlays */}
-      <View style={styles.watermarkOverlay} pointerEvents="none">
-        <View style={styles.watermarkRow}>
-          <Text style={styles.watermarkText}>RichyReach Preview</Text>
-          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+    <>
+      <Pressable
+        onPress={handleOpenModal}
+        {...(Platform.OS === 'web' ? { onContextMenu: (e: any) => e.preventDefault() } : {})}
+        style={styles.watermarkedPlayerContainer}
+      >
+        <VideoView
+          player={player}
+          style={{ width: '100%', height: '100%', position: 'absolute' }}
+          contentFit="cover"
+          nativeControls={false}
+          allowsPictureInPicture={false}
+        />
+        {/* Play Overlay */}
+        <View style={styles.videoThumbnailOverlay}>
+          <View style={styles.videoPlayBtnCircle}>
+            <Icon name="play" size={24} color="#ffffff" />
+          </View>
+          <Text style={styles.playOverlayText}>Click to Watch Fullscreen</Text>
         </View>
-        <View style={styles.watermarkRow}>
-          <Text style={styles.watermarkText}>Do Not Share</Text>
-          <Text style={styles.watermarkText}>Do Not Share</Text>
+
+        {/* Protected Draft Badge */}
+        <View style={styles.protectedBadge}>
+          <Icon name="lock" size={10} color="#fff" />
+          <Text style={styles.protectedBadgeText}>PROTECTED PREVIEW</Text>
         </View>
-        <View style={styles.watermarkRow}>
-          <Text style={styles.watermarkText}>RichyReach Preview</Text>
-          <Text style={styles.watermarkText}>RichyReach Preview</Text>
+      </Pressable>
+
+      <Modal
+        visible={isModalVisible}
+        animationType="fade"
+        transparent={false}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.fullScreenContainer}>
+          {/* Video View */}
+          <VideoView
+            player={player}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+            nativeControls={true}
+            allowsPictureInPicture={true}
+          />
+
+          {/* Watermarks (for protection, overlaid on top of full-screen video) */}
+          <View style={styles.fullScreenWatermarkOverlay} pointerEvents="none">
+            <View style={styles.watermarkRow}>
+              <Text style={styles.watermarkText}>RichyReach Preview</Text>
+              <Text style={styles.watermarkText}>RichyReach Preview</Text>
+            </View>
+            <View style={styles.watermarkRow}>
+              <Text style={styles.watermarkText}>Do Not Share</Text>
+              <Text style={styles.watermarkText}>Do Not Share</Text>
+            </View>
+            <View style={styles.watermarkRow}>
+              <Text style={styles.watermarkText}>RichyReach Preview</Text>
+              <Text style={styles.watermarkText}>RichyReach Preview</Text>
+            </View>
+            <View style={styles.watermarkRow}>
+              <Text style={styles.watermarkText}>Do Not Share</Text>
+              <Text style={styles.watermarkText}>Do Not Share</Text>
+            </View>
+          </View>
+
+          {/* Close Button */}
+          <TouchableOpacity
+            style={styles.closeModalBtn}
+            onPress={handleCloseModal}
+            activeOpacity={0.8}
+          >
+            <Icon name="x" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
-      </View>
-      {/* Play/Pause Overlay */}
-      {!isPlaying && (
-        <View style={styles.videoPlayOverlay}>
-          <Icon name="play" size={24} color="#ffffff" />
-        </View>
-      )}
-    </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -1323,21 +1360,56 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  videoPlayOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginTop: -25,
-    marginLeft: -25,
+  videoThumbnailOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  videoPlayBtnCircle: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.25)',
-    zIndex: 20,
+  },
+  playOverlayText: {
+    color: '#fff',
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeModalBtn: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  fullScreenWatermarkOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'space-around',
+    paddingVertical: 100,
+    opacity: 0.15,
   },
 
   // Feedback container

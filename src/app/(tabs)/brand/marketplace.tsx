@@ -682,13 +682,7 @@ export default function BrandMarketplaceScreen() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
         }}
-        initialData={activeBrand ? {
-          companyName: activeBrand.companyName,
-          website: activeBrand.website,
-          logo: activeBrand.logo || undefined,
-          category: activeBrand.category,
-          description: activeBrand.description || undefined,
-        } : null}
+        initialData={null}
       />
 
       <SwitchBrandProfileSheet

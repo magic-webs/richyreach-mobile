@@ -5,7 +5,7 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Briefcase01Icon, GridIcon, ListViewIcon, BadgeCheckIcon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   campaignRow: { flexDirection: 'row', gap: 14 },
   campaignCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.6)' : '#fbf7f4',
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
@@ -384,13 +384,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   campaignArrow: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-
+ 
   // List style
   campaignGridList: { flexDirection: 'column', gap: 12 },
   campaignCardList: {
     width: '100%',
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.6)' : '#fbf7f4',
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,

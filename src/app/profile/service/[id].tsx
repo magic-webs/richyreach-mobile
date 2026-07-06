@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -22,6 +22,7 @@ import {
   CheckIcon,
   ChatIcon,
   PlayIcon,
+  Maximize01Icon,
 } from '@hugeicons/core-free-icons';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
@@ -68,6 +69,8 @@ export default function ServiceDetailsScreen() {
   const [ordering, setOrdering] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const videoSource = service?.videoUrl || (service?.exampleUrl?.endsWith('.mp4') ? service.exampleUrl : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4');
+
+  const videoRef = useRef<VideoView>(null);
 
   const player = useVideoPlayer(videoSource, (p) => {
     p.loop = true;
@@ -323,13 +326,14 @@ export default function ServiceDetailsScreen() {
         {/* Cover Video Player */}
         <View style={styles.mediaContainer}>
           <VideoView
+            ref={videoRef}
             style={styles.coverVideo}
             player={player}
             nativeControls={true}
           />
         </View>
 
-        {service.exampleUrl && (service.exampleUrl.includes('youtube.com') || service.exampleUrl.includes('youtu.be')) && (
+        {service.exampleUrl && (service.exampleUrl.includes('youtube.com') || service.exampleUrl.includes('youtu.be')) ? (
           <TouchableOpacity
             style={styles.youtubeLinkBtn}
             onPress={openExample}
@@ -337,6 +341,15 @@ export default function ServiceDetailsScreen() {
           >
             <HugeiconsIcon icon={PlayIcon} size={14} color={Colors.white} />
             <Text style={styles.youtubeLinkText}>Watch External YouTube Preview</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.fullscreenBtn}
+            onPress={() => videoRef.current?.enterFullscreen()}
+            activeOpacity={0.85}
+          >
+            <HugeiconsIcon icon={Maximize01Icon} size={14} color={Colors.white} />
+            <Text style={styles.fullscreenBtnText}>View in Full Screen</Text>
           </TouchableOpacity>
         )}
 
@@ -586,6 +599,23 @@ const styles = StyleSheet.create({
     ...Shadow.button,
   },
   youtubeLinkText: {
+    color: Colors.white,
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  fullscreenBtn: {
+    backgroundColor: Colors.oxblood,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: -8,
+    ...Shadow.button,
+  },
+  fullscreenBtnText: {
     color: Colors.white,
     fontFamily: FontFamily.sansMedium,
     fontSize: 12,

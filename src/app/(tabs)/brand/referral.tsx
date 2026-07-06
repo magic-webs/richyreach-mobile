@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import React, { useState } from 'react';
 import {
   View,
@@ -7,17 +8,47 @@ import {
   ScrollView,
   Share,
   ActivityIndicator,
-  Platform,
   Image,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { Icon } from '@/components/ui/icon';
+import {
+  Share2,
+  Copy,
+  CheckCheck,
+  Users,
+  Wallet,
+  Star,
+  UserPlus,
+  Gift,
+} from 'lucide-react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon, Share01FreeIcons } from '@hugeicons/core-free-icons';
+
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
-import { GradientView } from '@/components/ui/gradient-view';
+
+const STEPS = [
+  {
+    Icon: Share2,
+    title: 'Invite creators or brands',
+    desc: 'Share your unique referral link or code with your colleagues and friends.',
+  },
+  {
+    Icon: UserPlus,
+    title: 'They register & join',
+    desc: 'When they create an account (referred creators must also add their first service with a video to complete).',
+  },
+  {
+    Icon: Gift,
+    title: 'You get rewarded!',
+    desc: 'Once completed, you get ₹100 wallet balance and 10,000 reach points credit to your profile.',
+  },
+];
 
 export default function ReferralScreen() {
   const router = useRouter();
@@ -25,10 +56,11 @@ export default function ReferralScreen() {
   const showModal = useUIStore((s) => s.showModal);
   const queryClient = useQueryClient();
 
+  const [copied, setCopied] = useState(false);
   const [converting, setConverting] = useState(false);
 
   // Fetch stats & history
-  const { data: stats, isLoading, refetch } = useQuery<any>({
+  const { data: stats, isLoading } = useQuery<any>({
     queryKey: ['referralStats'],
     queryFn: () => api.referrals.getStats(),
   });
@@ -70,6 +102,13 @@ export default function ReferralScreen() {
     }
   };
 
+  const handleCopy = async () => {
+    if (!stats?.referralCode) return;
+    await Clipboard.setStringAsync(stats.referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleConvertPoints = (amount: number) => {
     if ((stats?.reachPoints || 0) < amount) {
       showModal({
@@ -100,190 +139,155 @@ export default function ReferralScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          activeOpacity={0.8}
-        >
-          <Icon name="back" size={20} color={Colors.oxblood} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={Colors.oxblood} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Refer & Earn</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity onPress={handleShare} style={styles.shareHeaderBtn} activeOpacity={0.8}>
+          <HugeiconsIcon icon={Share01FreeIcons} size={28} color={Colors.oxblood} strokeWidth={1.5} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Welcome Section / Points Balance */}
-        <GradientView variant="oxblood" style={styles.heroCard}>
-          <View style={styles.heroContentRow}>
-            <View style={styles.heroLeftCol}>
-              <Text style={styles.heroSubTitle}>YOUR POINTS BALANCE</Text>
-              <Text style={styles.heroPointsValue}>{reachPoints.toLocaleString()}</Text>
-              <Text style={styles.heroPointsLabel}>Reach Points</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-              <View style={styles.codeRow}>
-                <View style={styles.codeContainer}>
-                  <Text style={styles.codeText}>{referralCode}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={handleShare}
-                  style={styles.shareBtn}
-                  activeOpacity={0.8}
-                >
-                  <Icon name="share" size={14} color={Colors.cream} />
-                  <Text style={styles.shareBtnText}>Share</Text>
+        {/* ── Hero card ── */}
+        <LinearGradient
+          colors={['#1e0103', '#3f030b', '#1a0204']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          {/* Decorative ring */}
+          <View style={styles.heroRingDecor} />
+
+          <View style={styles.heroInner}>
+            <View style={styles.heroLeft}>
+              <Text style={styles.heroEyebrow}>YOUR REACH POINTS</Text>
+              <Text style={styles.heroPoints}>{reachPoints.toLocaleString()}</Text>
+              <Text style={styles.heroPointsLabel}>Points</Text>
+
+              {/* Code pill */}
+              <View style={styles.codePill}>
+                <Text style={styles.codeLabel}>CODE</Text>
+                <Text style={styles.codeValue}>{referralCode}</Text>
+                <TouchableOpacity onPress={handleCopy} style={styles.copyBtn} activeOpacity={0.8}>
+                  {copied
+                    ? <CheckCheck size={13} color={Colors.green} strokeWidth={2.5} />
+                    : <Copy size={13} color={Colors.cream} strokeWidth={2.5} />}
+                  <Text style={[styles.copyBtnText, copied && { color: Colors.green }]}>
+                    {copied ? 'Copied!' : 'Copy'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.heroFootnote}>Share your code with other creators & brands</Text>
             </View>
 
-            <View style={styles.heroRightCol}>
+            <View style={styles.heroRight}>
               <Image
                 source={require('@/assets/images/referral_gift.png')}
-                style={styles.heroGiftImage}
+                style={styles.heroImage}
                 resizeMode="contain"
               />
+              <TouchableOpacity onPress={handleShare} style={styles.heroShareBtn} activeOpacity={0.8}>
+                <Share2 size={14} color={Colors.cream} strokeWidth={2.2} />
+                <Text style={styles.heroShareText}>Share</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </GradientView>
 
-        {/* Stats Grid */}
-        <View style={styles.statsCard}>
-          <View style={styles.statItem}>
-            <View style={styles.statIconWrap}>
-              <Icon name="users" size={16} color={Colors.oxblood} />
-            </View>
-            <View style={styles.statTextWrap}>
-              <Text style={styles.statValue}>{totalReferrals}</Text>
-              <Text style={styles.statLabel}>Total Invites</Text>
-            </View>
+          <Text style={styles.heroFooter}>Share with creators & brands to earn together</Text>
+        </LinearGradient>
+
+        {/* ── Stats row ── */}
+        <View style={styles.statsRow}>
+          {[
+            { LIcon: Users, value: String(totalReferrals), label: 'Invites' },
+            { LIcon: Wallet, value: `₹${(totalWalletEarned / 100).toLocaleString()}`, label: 'Earned' },
+            { LIcon: Star, value: totalPointsEarned.toLocaleString(), label: 'Points' },
+          ].map((s, i, arr) => (
+            <React.Fragment key={s.label}>
+              <View style={styles.statCell}>
+                <View style={styles.statIcon}>
+                  <s.LIcon size={15} color={Colors.oxblood} strokeWidth={2.2} />
+                </View>
+                <Text style={styles.statVal}>{s.value}</Text>
+                <Text style={styles.statLbl}>{s.label}</Text>
+              </View>
+              {i < arr.length - 1 && <View style={styles.statDiv} />}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* ── Reward banner ── */}
+        <View style={styles.rewardBanner}>
+          <View style={styles.rewardSide}>
+            <Text style={styles.rewardBadge}>YOU GET</Text>
+            <Text style={styles.rewardAmount}>₹100</Text>
+            <Text style={styles.rewardSub}>+ 10,000 pts</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <View style={styles.statIconWrap}>
-              <Icon name="wallet" size={16} color={Colors.oxblood} />
-            </View>
-            <View style={styles.statTextWrap}>
-              <Text style={styles.statValue}>₹{(totalWalletEarned / 100).toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Wallet Earned</Text>
-            </View>
+          <View style={styles.rewardDivider}>
+            <Text style={styles.rewardDivText}>+</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <View style={styles.statIconWrap}>
-              <Icon name="star" size={16} color={Colors.oxblood} />
-            </View>
-            <View style={styles.statTextWrap}>
-              <Text style={styles.statValue}>{totalPointsEarned.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Points Earned</Text>
-            </View>
+          <View style={styles.rewardSide}>
+            <Text style={styles.rewardBadge}>THEY GET</Text>
+            <Text style={styles.rewardAmount}>₹200</Text>
+            <Text style={styles.rewardSub}>+ 200,000 pts</Text>
           </View>
         </View>
 
-        {/* Reward Steps */}
-        <Text style={styles.sectionHeading}>
-          How it works <Text style={{ color: Colors.roseSoft }}>✦</Text>
-        </Text>
+        {/* ── How it works ── */}
+        <Text style={styles.sectionLabel}>How it works</Text>
         <View style={styles.stepsCard}>
-          {/* Step 1 */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeftColumn}>
-              <View style={styles.stepNumberWrap}>
-                <Text style={styles.stepNumberText}>1</Text>
+          {STEPS.map((step, i) => (
+            <View key={i} style={styles.stepRow}>
+              <View style={styles.stepLeft}>
+                <View style={styles.stepNumBadge}>
+                  <Text style={styles.stepNum}>{i + 1}</Text>
+                </View>
+                {i < STEPS.length - 1 && <View style={styles.stepDash} />}
               </View>
-              <View style={styles.stepLine} />
-            </View>
-            <View style={styles.stepRightColumn}>
-              <View style={styles.stepIconWrapBig}>
-                <Icon name="share" size={20} color={Colors.oxblood} />
-              </View>
-              <View style={styles.stepTextWrapBig}>
-                <Text style={styles.stepTitleBig}>Invite creators or brands</Text>
-                <Text style={styles.stepDescBig}>
-                  Share your unique referral link or code with your colleagues and friends.
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Step 2 */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeftColumn}>
-              <View style={styles.stepNumberWrap}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <View style={styles.stepLine} />
-            </View>
-            <View style={styles.stepRightColumn}>
-              <View style={styles.stepIconWrapBig}>
-                <Icon name="addUser" size={20} color={Colors.oxblood} />
-              </View>
-              <View style={styles.stepTextWrapBig}>
-                <Text style={styles.stepTitleBig}>They register & join</Text>
-                <Text style={styles.stepDescBig}>
-                  When they create an account (referred creators must also add their first service with a video to complete).
-                </Text>
+              <View style={styles.stepRight}>
+                <View style={styles.stepIconWrap}>
+                  <step.Icon size={18} color={Colors.oxblood} strokeWidth={2} />
+                </View>
+                <View style={styles.stepText}>
+                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  <Text style={styles.stepDesc}>{step.desc}</Text>
+                </View>
               </View>
             </View>
-          </View>
-
-          {/* Step 3 */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeftColumn}>
-              <View style={styles.stepNumberWrap}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-            </View>
-            <View style={styles.stepRightColumn}>
-              <View style={styles.stepIconWrapBig}>
-                <Icon name="gift" size={20} color={Colors.oxblood} />
-              </View>
-              <View style={styles.stepTextWrapBig}>
-                <Text style={styles.stepTitleBig}>You get rewarded!</Text>
-                <Text style={styles.stepDescBig}>
-                  Once completed, you get ₹100 wallet balance and 10,000 reach points credit to your profile.
-                </Text>
-              </View>
-            </View>
-          </View>
+          ))}
         </View>
 
-        {/* Points Converter */}
-        <Text style={styles.sectionHeading}>
-          Convert Points to Balance <Text style={{ color: Colors.roseSoft }}>✦</Text>
-        </Text>
+        {/* ── Points Converter (Specific to Brand) ── */}
+        <Text style={styles.sectionLabel}>Convert Points to Balance</Text>
         <View style={styles.converterCard}>
-          <View style={styles.converterLeftCol}>
-            <View style={styles.converterIconWrap}>
-              <Icon name="wallet" size={20} color={Colors.cream} />
+          <View style={styles.converterLeft}>
+            <View style={styles.converterIcon}>
+              <Wallet size={18} color="#fff" strokeWidth={2} />
             </View>
             <Text style={styles.converterTitle}>Instant Points Conversion</Text>
             <Text style={styles.converterDesc}>
-              Convert your reach points directly into wallet cash! Every 10,000 reach points can be converted to ₹100.
+              Convert reach points directly to wallet cash. 10,000 points = ₹100 cash.
             </Text>
           </View>
-
-          <View style={styles.converterRightCol}>
+          <View style={styles.converterRight}>
             <TouchableOpacity
               onPress={() => handleConvertPoints(10000)}
-              style={styles.convertButton}
+              style={styles.convertBtn}
               activeOpacity={0.8}
               disabled={converting}
             >
-              <Text style={styles.convertBtnText}>Convert 10k Pts ➜ ₹100</Text>
+              <Text style={styles.convertBtnText}>10k Pts ➜ ₹100</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               onPress={() => handleConvertPoints(50000)}
-              style={[styles.convertButton, { backgroundColor: Colors.roseDeep }]}
+              style={[styles.convertBtn, { backgroundColor: Colors.roseDeep }]}
               activeOpacity={0.8}
               disabled={converting}
             >
-              <Text style={styles.convertBtnText}>Convert 50k Pts ➜ ₹500</Text>
+              <Text style={styles.convertBtnText}>50k Pts ➜ ₹500</Text>
             </TouchableOpacity>
           </View>
 
@@ -295,70 +299,56 @@ export default function ReferralScreen() {
           )}
         </View>
 
-        {/* Invited History */}
-        <Text style={styles.sectionHeading}>
-          Referral Tracking <Text style={{ color: Colors.roseSoft }}>✦</Text>
-        </Text>
+        {/* ── Referral tracking ── */}
+        <Text style={styles.sectionLabel}>Referral Tracking</Text>
         {referredUsersList.length === 0 ? (
-          <View style={styles.emptyTrackingCard}>
-            <View style={styles.emptyLeftCol}>
-              <Icon name="users" size={36} color="rgba(63,3,11,0.25)" />
-            </View>
-            <View style={styles.emptyRightCol}>
-              <Text style={styles.emptyTitle}>No referrals made yet.</Text>
-              <Text style={styles.emptyDesc}>Share your code to start earning!</Text>
-              <TouchableOpacity
-                onPress={handleShare}
-                style={styles.emptyShareBtn}
-                activeOpacity={0.8}
-              >
-                <Icon name="share" size={14} color={Colors.oxblood} />
-                <Text style={styles.emptyShareBtnText}>Share Now</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.emptyCard}>
+            <LottieView
+              source={require('@/assets/lottie-animation/empty-ghost.json')}
+              autoPlay
+              loop
+              style={{ width: 140, height: 140, marginBottom: 8 }}
+            />
+            <Text style={styles.emptyTitle}>No referrals yet</Text>
+            <Text style={styles.emptyDesc}>Share your code to start earning rewards!</Text>
+            <TouchableOpacity onPress={handleShare} style={styles.emptyBtn} activeOpacity={0.8}>
+              <Share2 size={14} color="#fff" strokeWidth={2.2} />
+              <Text style={styles.emptyBtnText}>Share Now</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.historyListCard}>
+          <View style={styles.historyCard}>
             {referredUsersList.map((item: any, idx: number) => {
-              const formattedDate = new Date(item.createdAt).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              });
-
               const isPending = item.status === 'pending';
-
+              const date = new Date(item.createdAt).toLocaleDateString(undefined, {
+                day: 'numeric', month: 'short', year: 'numeric',
+              });
               return (
                 <View
                   key={item.id || idx}
-                  style={[
-                    styles.historyItem,
-                    idx < referredUsersList.length - 1 && styles.historyItemBorder,
-                  ]}
+                  style={[styles.histRow, idx < referredUsersList.length - 1 && styles.histRowBorder]}
                 >
-                  <View style={styles.historyItemLeft}>
-                    <View style={styles.historyAvatar}>
-                      <Text style={styles.historyAvatarLetter}>
-                        {(item.name || item.email || '?').charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={styles.historyName}>{item.name || 'RichyReach User'}</Text>
-                        {isPending && (
-                          <View style={styles.pendingBadge}>
-                            <Text style={styles.pendingBadgeText}>Pending</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.historyDate}>{formattedDate} · {item.role}</Text>
-                    </View>
+                  <View style={styles.histAvatar}>
+                    <Text style={styles.histAvatarLetter}>
+                      {(item.name || item.email || '?').charAt(0).toUpperCase()}
+                    </Text>
                   </View>
-                  <View style={styles.historyItemRight}>
-                    <Text style={[styles.historyPoints, isPending && styles.pendingText]}>
+                  <View style={styles.histMeta}>
+                    <View style={styles.histNameRow}>
+                      <Text style={styles.histName} numberOfLines={1}>{item.name || 'RichyReach User'}</Text>
+                      {isPending && (
+                        <View style={styles.pendingBadge}>
+                          <Text style={styles.pendingText}>Pending</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.histDate}>{date} · {item.role}</Text>
+                  </View>
+                  <View style={styles.histRewards}>
+                    <Text style={[styles.histPts, isPending && styles.dimText]}>
                       +{isPending ? '10,000' : item.pointsRewarded?.toLocaleString()} pts
                     </Text>
-                    <Text style={[styles.historyWallet, isPending && styles.pendingText]}>
+                    <Text style={[styles.histRupees, isPending && styles.dimText]}>
                       +₹{isPending ? '100' : (item.walletRewarded / 100).toFixed(0)}
                     </Text>
                   </View>
@@ -367,280 +357,143 @@ export default function ReferralScreen() {
             })}
           </View>
         )}
+
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#FAF7F4',
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontFamily: FontFamily.sansMedium,
-    color: Colors.rose,
-    fontSize: 14,
-  },
+  root: { flex: 1, backgroundColor: '#F7F4F1' },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 12, fontFamily: FontFamily.sansMedium, color: Colors.rose, fontSize: 14 },
+
+  // Header
   header: {
-    height: 60,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(250, 247, 244, 0.9)',
+    backgroundColor: '#F7F4F1',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(63,3,11,0.05)',
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(63,3,11,0.05)',
-  },
-  headerTitle: {
-    fontFamily: FontFamily.serif,
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.oxblood,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 60,
-  },
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(63,3,11,0.05)' },
+  headerTitle: { fontFamily: FontFamily.sans, fontSize: 16, fontWeight: '700', color: Colors.oxblood },
+  shareHeaderBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(63,3,11,0.05)' },
+
+  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 },
+
+  // Hero
   heroCard: {
-    borderRadius: 24,
-    paddingVertical: 22,
-    paddingHorizontal: 20,
+    borderRadius: 28,
+    padding: 24,
+    overflow: 'hidden',
     ...Shadow.card,
   },
-  heroContentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
+  heroRingDecor: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 40,
+    borderColor: 'rgba(255,255,255,0.03)',
+    right: -80,
+    top: -80,
   },
-  heroLeftCol: {
-    flex: 1.3,
-    alignItems: 'flex-start',
-    paddingRight: 8,
-  },
-  heroRightCol: {
-    flex: 1,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  heroGiftImage: {
-    width: 140,
-    height: 140,
-  },
-  heroSubTitle: {
-    fontSize: 10,
-    fontFamily: FontFamily.sans,
-    color: 'rgba(232, 216, 204, 0.7)',
-    letterSpacing: 1,
-    fontWeight: '700',
-  },
-  heroPointsValue: {
-    fontFamily: FontFamily.serif,
-    fontSize: 44,
-    fontWeight: '700',
-    color: Colors.gold,
-    marginTop: 4,
-  },
-  heroPointsLabel: {
-    fontSize: 12,
-    fontFamily: FontFamily.sansMedium,
-    color: Colors.cream,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  codeRow: {
+  heroInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  heroLeft: { flex: 1.2, paddingRight: 8 },
+  heroEyebrow: { fontSize: 9, fontFamily: FontFamily.sans, color: 'rgba(232,216,204,0.5)', letterSpacing: 1.5, fontWeight: '700', marginBottom: 4 },
+  heroPoints: { fontFamily: FontFamily.sans, fontSize: 52, fontWeight: '900', color: Colors.gold, lineHeight: 56 },
+  heroPointsLabel: { fontFamily: FontFamily.sansMedium, fontSize: 11, color: 'rgba(232,216,204,0.6)', marginBottom: 18 },
+
+  codePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 18,
-    width: '100%',
-  },
-  codeContainer: {
-    flex: 1.3,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  codeText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.cream,
-    letterSpacing: 0.5,
-  },
-  shareBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     gap: 6,
   },
-  shareBtnText: {
-    fontFamily: FontFamily.sans,
-    color: Colors.cream,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  heroFootnote: {
-    fontSize: 10,
-    fontFamily: FontFamily.sansMedium,
-    color: 'rgba(232, 216, 204, 0.5)',
-    marginTop: 12,
-    fontWeight: '600',
-  },
-  statsCard: {
+  codeLabel: { fontFamily: FontFamily.sans, fontSize: 8, color: 'rgba(232,216,204,0.4)', fontWeight: '700', letterSpacing: 1 },
+  codeValue: { fontFamily: FontFamily.sans, fontSize: 13, fontWeight: '800', color: '#fff', flex: 1 },
+  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  copyBtnText: { fontFamily: FontFamily.sansMedium, fontSize: 10, fontWeight: '700', color: Colors.cream },
+
+  heroRight: { alignItems: 'flex-end', gap: 12 },
+  heroImage: { width: 120, height: 120 },
+  heroShareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
+  heroShareText: { fontFamily: FontFamily.sans, fontSize: 11, fontWeight: '700', color: Colors.cream },
+  heroFooter: { fontFamily: FontFamily.sansMedium, fontSize: 10, color: 'rgba(232,216,204,0.4)', marginTop: 16, textAlign: 'center' },
+
+  // Stats
+  statsRow: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 24,
-    paddingVertical: 20,
+    borderRadius: 20,
+    marginTop: 14,
+    paddingVertical: 16,
     paddingHorizontal: 8,
-    marginTop: 16,
     alignItems: 'center',
     justifyContent: 'space-between',
     ...Shadow.card,
   },
-  statItem: {
-    flex: 1,
+  statCell: { flex: 1, alignItems: 'center', gap: 4 },
+  statIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(63,3,11,0.05)', alignItems: 'center', justifyContent: 'center' },
+  statVal: { fontFamily: FontFamily.sans, fontSize: 15, fontWeight: '800', color: Colors.oxblood },
+  statLbl: { fontFamily: FontFamily.sansMedium, fontSize: 10, color: 'rgba(63,3,11,0.45)' },
+  statDiv: { width: 1, height: 36, backgroundColor: 'rgba(63,3,11,0.07)' },
+
+  // Reward banner
+  rewardBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 2,
-  },
-  statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(180, 106, 116, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statTextWrap: {
-    alignItems: 'flex-start',
-  },
-  statValue: {
-    fontFamily: FontFamily.serif,
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.oxblood,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: 'rgba(63, 3, 11, 0.4)',
-    fontFamily: FontFamily.sansMedium,
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: 'rgba(63, 3, 11, 0.08)',
-  },
-  sectionHeading: {
-    fontSize: 12,
-    fontFamily: FontFamily.sans,
-    fontWeight: '700',
-    color: Colors.rose,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 24,
-    marginBottom: 10,
-    marginLeft: 4,
-  },
-  stepsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
+    marginTop: 14,
+    backgroundColor: Colors.oxblood,
+    borderRadius: 20,
+    overflow: 'hidden',
     ...Shadow.card,
   },
-  stepRow: {
-    flexDirection: 'row',
-    minHeight: 85,
-  },
-  stepLeftColumn: {
-    alignItems: 'center',
-    width: 24,
-    marginRight: 12,
-  },
-  stepNumberWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(180, 106, 116, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumberText: {
+  rewardSide: { flex: 1, alignItems: 'center', paddingVertical: 18, gap: 2 },
+  rewardBadge: { fontFamily: FontFamily.sans, fontSize: 8, color: 'rgba(232,216,204,0.5)', letterSpacing: 1.2, fontWeight: '700' },
+  rewardAmount: { fontFamily: FontFamily.sans, fontSize: 28, fontWeight: '900', color: Colors.gold },
+  rewardSub: { fontFamily: FontFamily.sansMedium, fontSize: 10.5, color: 'rgba(232,216,204,0.55)' },
+  rewardDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  rewardDivText: { fontFamily: FontFamily.sans, fontSize: 22, fontWeight: '900', color: 'rgba(255,255,255,0.25)' },
+
+  // Section label
+  sectionLabel: {
     fontFamily: FontFamily.sans,
+    fontWeight: '700',
     fontSize: 11,
-    color: Colors.roseDeep,
-    fontWeight: '700',
+    color: Colors.rose,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginTop: 22,
+    marginBottom: 10,
+    marginLeft: 2,
   },
-  stepLine: {
-    flex: 1,
-    width: 1,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: 'rgba(63, 3, 11, 0.1)',
-    marginVertical: 4,
-  },
-  stepRightColumn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingBottom: 16,
-  },
-  stepIconWrapBig: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(180, 106, 116, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepTextWrapBig: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  stepTitleBig: {
-    fontFamily: FontFamily.sans,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  stepDescBig: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 11.5,
-    color: 'rgba(63, 3, 11, 0.55)',
-    lineHeight: 18,
-    marginTop: 4,
-  },
+
+  // Steps
+  stepsCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, ...Shadow.card },
+  stepRow: { flexDirection: 'row', gap: 12, minHeight: 76 },
+  stepLeft: { alignItems: 'center', width: 28 },
+  stepNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center' },
+  stepNum: { fontFamily: FontFamily.sans, fontSize: 12, fontWeight: '800', color: '#fff' },
+  stepDash: { flex: 1, width: 1, backgroundColor: 'rgba(63,3,11,0.1)', marginVertical: 4 },
+  stepRight: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingBottom: 16 },
+  stepIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(63,3,11,0.05)', alignItems: 'center', justifyContent: 'center' },
+  stepText: { flex: 1 },
+  stepTitle: { fontFamily: FontFamily.sans, fontSize: 14, fontWeight: '700', color: Colors.ink, marginTop: 10 },
+  stepDesc: { fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', lineHeight: 18, marginTop: 4 },
+
+  // Converter (specific to brand UI)
   converterCard: {
     backgroundColor: '#fff',
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -649,14 +502,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     ...Shadow.card,
   },
-  converterLeftCol: {
+  converterLeft: {
     flex: 1.1,
     alignItems: 'flex-start',
   },
-  converterIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  converterIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: Colors.oxblood,
     alignItems: 'center',
     justifyContent: 'center',
@@ -664,22 +517,22 @@ const styles = StyleSheet.create({
   },
   converterTitle: {
     fontFamily: FontFamily.sans,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.ink,
   },
   converterDesc: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 11,
-    color: 'rgba(63, 3, 11, 0.5)',
+    color: 'rgba(63, 3, 11, 0.45)',
     lineHeight: 16,
     marginTop: 4,
   },
-  converterRightCol: {
+  converterRight: {
     flex: 1,
     gap: 8,
   },
-  convertButton: {
+  convertBtn: {
     height: 38,
     borderRadius: 10,
     backgroundColor: Colors.oxblood,
@@ -696,7 +549,7 @@ const styles = StyleSheet.create({
   convertingOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: 24,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -708,138 +561,36 @@ const styles = StyleSheet.create({
     color: Colors.oxblood,
     fontFamily: FontFamily.sansMedium,
   },
-  emptyTrackingCard: {
+
+  // Empty
+  emptyCard: {
     backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    flexDirection: 'row',
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
     ...Shadow.card,
   },
-  emptyLeftCol: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(180, 106, 116, 0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyRightCol: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.sans,
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyDesc: {
-    fontFamily: FontFamily.sansMedium,
-    fontSize: 11.5,
-    color: 'rgba(63, 3, 11, 0.5)',
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  emptyShareBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.oxblood,
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  emptyShareBtnText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 12,
-    color: Colors.oxblood,
-    fontWeight: '700',
-  },
-  historyListCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    overflow: 'hidden',
-    ...Shadow.card,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  historyItemBorder: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(63,3,11,0.06)',
-  },
-  historyItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  historyAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(63,3,11,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyAvatarLetter: {
-    fontFamily: FontFamily.sans,
-    fontWeight: '700',
-    color: Colors.oxblood,
-    fontSize: 15,
-  },
-  historyName: {
-    fontSize: 14,
-    fontFamily: FontFamily.sans,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  historyDate: {
-    fontSize: 11.5,
-    color: 'rgba(63,3,11,0.4)',
-    marginTop: 2,
-    fontWeight: '600',
-    fontFamily: FontFamily.sansMedium,
-  },
-  historyItemRight: {
-    alignItems: 'flex-end',
-  },
-  historyPoints: {
-    fontSize: 13,
-    fontFamily: FontFamily.sans,
-    fontWeight: '700',
-    color: Colors.roseDeep,
-  },
-  historyWallet: {
-    fontSize: 11,
-    fontFamily: FontFamily.sansMedium,
-    fontWeight: '600',
-    color: '#2a7a5a',
-    marginTop: 2,
-  },
-  pendingBadge: {
-    backgroundColor: '#fff3cd',
-    borderWidth: 0.5,
-    borderColor: '#ffeeba',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  pendingBadgeText: {
-    fontFamily: FontFamily.sans,
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#856404',
-    textTransform: 'uppercase',
-  },
-  pendingText: {
-    color: 'rgba(63, 3, 11, 0.3)',
-  },
+  emptyTitle: { fontFamily: FontFamily.sans, fontSize: 16, fontWeight: '700', color: Colors.ink, marginTop: 8 },
+  emptyDesc: { fontFamily: FontFamily.sansMedium, fontSize: 13, color: 'rgba(63,3,11,0.45)', textAlign: 'center', lineHeight: 20 },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.oxblood, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 22, marginTop: 8 },
+  emptyBtnText: { fontFamily: FontFamily.sans, fontSize: 13, fontWeight: '700', color: '#fff' },
+
+  // History
+  historyCard: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', ...Shadow.card },
+  histRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  histRowBorder: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.06)' },
+  histAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(63,3,11,0.06)', alignItems: 'center', justifyContent: 'center' },
+  histAvatarLetter: { fontFamily: FontFamily.sans, fontSize: 16, fontWeight: '800', color: Colors.oxblood },
+  histMeta: { flex: 1 },
+  histNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  histName: { fontFamily: FontFamily.sans, fontSize: 14, fontWeight: '700', color: Colors.ink },
+  histDate: { fontFamily: FontFamily.sansMedium, fontSize: 11, color: 'rgba(63,3,11,0.4)', marginTop: 2 },
+  histRewards: { alignItems: 'flex-end', gap: 2 },
+  histPts: { fontFamily: FontFamily.sans, fontSize: 12, fontWeight: '700', color: Colors.roseDeep },
+  histRupees: { fontFamily: FontFamily.sans, fontSize: 11, fontWeight: '700', color: '#2a7a5a' },
+  pendingBadge: { backgroundColor: '#fff3cd', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  pendingText: { fontFamily: FontFamily.sans, fontSize: 8, fontWeight: '700', color: '#856404', textTransform: 'uppercase' },
+  dimText: { color: 'rgba(63,3,11,0.3)' },
 });

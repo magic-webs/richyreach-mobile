@@ -22,7 +22,6 @@ import { Step1Details } from './Step1Details';
 import { Step2Media } from './Step2Media';
 import { Step3Review } from './Step3Review';
 import { TactileButton } from '@/components/ui/tactile-button';
-
 interface CreateServiceSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -575,7 +574,7 @@ export function CreateServiceSheet({
   if (!isOpen) return null;
 
   return (
-    <Modal visible={isOpen} animationType="fade" presentationStyle="fullScreen">
+    <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={styles.safeRoot}>
         {/* Web Hidden File Inputs */}
         {Platform.OS === 'web' && (

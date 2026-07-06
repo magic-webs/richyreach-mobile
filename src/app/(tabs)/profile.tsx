@@ -59,6 +59,7 @@ export default function ProfileScreen() {
 
   // Sheets and services state
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
+  const [profileInitialData, setProfileInitialData] = useState<any>(null);
   const [isCreateServiceOpen, setIsCreateServiceOpen] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
 
@@ -305,7 +306,7 @@ export default function ProfileScreen() {
 
           {/* Actions */}
           <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={() => setIsCreateProfileOpen(true)} style={styles.editBtn} activeOpacity={0.85}>
+            <TouchableOpacity onPress={() => { setProfileInitialData(infProfile); setIsCreateProfileOpen(true); }} style={styles.editBtn} activeOpacity={0.85}>
               <Icon name="edit" size={16} color={Colors.cream} />
               <Text style={styles.editBtnText}>Edit profile</Text>
             </TouchableOpacity>
@@ -448,17 +449,21 @@ export default function ProfileScreen() {
         }}
         onAddNewProfile={() => {
           setSwitcherOpen(false);
+          setProfileInitialData(null);
           setIsCreateProfileOpen(true);
         }}
       />
 
       <CreateInfluencerProfileSheet
         isOpen={isCreateProfileOpen}
-        onClose={() => setIsCreateProfileOpen(false)}
+        onClose={() => {
+          setIsCreateProfileOpen(false);
+          setProfileInitialData(null);
+        }}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
         }}
-        initialData={infProfile}
+        initialData={profileInitialData}
       />
 
       <CreateServiceSheet

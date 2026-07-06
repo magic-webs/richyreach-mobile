@@ -242,6 +242,7 @@ export default function BrandProfileScreen() {
   const queryClient = useQueryClient();
 
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [brandProfileInitialData, setBrandProfileInitialData] = useState<any>(null);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   // Fetch brand profile from backend via TanStack Query
@@ -396,7 +397,7 @@ export default function BrandProfileScreen() {
             </View>
             <View style={{ gap: 8 }}>
               <TouchableOpacity
-                onPress={() => setIsEditSheetOpen(true)}
+                onPress={() => { setBrandProfileInitialData(profile); setIsEditSheetOpen(true); }}
                 style={[styles.creatorViewBtn, { borderColor: Colors.rose }]}
                 activeOpacity={0.8}
               >
@@ -581,6 +582,7 @@ export default function BrandProfileScreen() {
                     key={idx}
                     onPress={() => {
                       if (item.key === 'edit_profile') {
+                        setBrandProfileInitialData(profile);
                         setIsEditSheetOpen(true);
                       } else if (item.key === 'referral') {
                         router.push('/brand/referral');
@@ -743,11 +745,14 @@ export default function BrandProfileScreen() {
 
       <CreateBrandProfileSheet
         isOpen={isEditSheetOpen}
-        onClose={() => setIsEditSheetOpen(false)}
+        onClose={() => {
+          setIsEditSheetOpen(false);
+          setBrandProfileInitialData(null);
+        }}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
         }}
-        initialData={profile}
+        initialData={brandProfileInitialData}
       />
 
       <SwitchBrandProfileSheet
@@ -758,7 +763,10 @@ export default function BrandProfileScreen() {
           queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
           queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
         }}
-        onAddNewProfile={() => setIsEditSheetOpen(true)}
+        onAddNewProfile={() => {
+          setBrandProfileInitialData(null);
+          setIsEditSheetOpen(true);
+        }}
       />
     </View>
   );

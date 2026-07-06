@@ -20,6 +20,12 @@ interface UIStore extends ActionModalState {
   setTabBarVisible: (visible: boolean) => void;
   floatingChatVisible: boolean;
   setFloatingChatVisible: (visible: boolean) => void;
+  createCampaignOpen: boolean;
+  setCreateCampaignOpen: (open: boolean) => void;
+  createServiceOpen: boolean;
+  setCreateServiceOpen: (open: boolean) => void;
+  createBrandProfileOpen: boolean;
+  setCreateBrandProfileOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -30,4 +36,10 @@ export const useUIStore = create<UIStore>((set) => ({
   setTabBarVisible: (visible) => set({ tabBarVisible: visible }),
   floatingChatVisible: true,
   setFloatingChatVisible: (visible) => set({ floatingChatVisible: visible }),
+  createCampaignOpen: false,
+  setCreateCampaignOpen: (open) => set({ createCampaignOpen: open }),
+  createServiceOpen: false,
+  setCreateServiceOpen: (open) => set({ createServiceOpen: open }),
+  createBrandProfileOpen: false,
+  setCreateBrandProfileOpen: (open) => set({ createBrandProfileOpen: open }),
 }));

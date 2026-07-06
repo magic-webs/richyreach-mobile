@@ -23,6 +23,7 @@ import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { StatusBar } from 'expo-status-bar';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,7 +86,6 @@ function NavigationLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="collab/[id]" />
         <Stack.Screen name="insights" />
-        <Stack.Screen name="referral" />
       </Stack.Protected>
 
       {/* Public Shared Pages */}
@@ -113,6 +113,7 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <BottomSheetModalProvider>
               <AuthGuard>
+                <StatusBar style="dark" />
                 <NavigationLayout />
                 <ActionModal />
               </AuthGuard>

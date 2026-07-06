@@ -269,7 +269,7 @@ export default function HomeScreen() {
           />
 
           {/* Happening now */}
-          <HappeningNow activity={activityList} />
+          <HappeningNow activity={activityList} campaigns={campaignList} />
 
           {/* Trending audio */}
           <TrendingAudio musics={musicsList} />

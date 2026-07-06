@@ -7,10 +7,14 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth';
 import { HugeiconsIcon } from "@hugeicons/react-native"
-import { Home01FreeIcons } from '@hugeicons/core-free-icons';
-import { Store04FreeIcons } from '@hugeicons/core-free-icons';
-import { CrownIcon } from '@hugeicons/core-free-icons';
-import { User02FreeIcons } from '@hugeicons/core-free-icons';
+import { Home01FreeIcons, Store04FreeIcons, CrownIcon, User02FreeIcons, Add01FreeIcons } from '@hugeicons/core-free-icons';
+import { useUIStore } from '@/store/ui';
+import { useProfilesStore } from '@/store/profiles';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { CreateCampaignSheet } from '@/components/brand/home/CreateCampaignSheet';
+import { CreateServiceSheet } from '@/components/influencer/services/CreateServiceSheet';
+import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 const CREATOR_TABS = [
   { key: 'index', icon: Home01FreeIcons, label: 'Home' },
   { key: 'marketplace', icon: Store04FreeIcons, label: 'Market' },
@@ -119,6 +123,28 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
 function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+  const { setCreateCampaignOpen, setCreateServiceOpen, setCreateBrandProfileOpen } = useUIStore();
+
+  const { data: brandProfile } = useQuery({
+    queryKey: ['brandProfile', activeProfileId],
+    queryFn: () => api.brands.profile().catch(() => null),
+    enabled: role === 'brand',
+  });
+
+  const hasProfile = !!(brandProfile && (brandProfile as any).id);
+
+  const handlePlusPress = () => {
+    if (role === 'brand') {
+      if (!hasProfile) {
+        setCreateBrandProfileOpen(true);
+      } else {
+        setCreateCampaignOpen(true);
+      }
+    } else {
+      setCreateServiceOpen(true);
+    }
+  };
 
   const activeTabs = role === 'brand' ? BRAND_TABS : CREATOR_TABS;
 
@@ -156,19 +182,29 @@ function CustomTabBar({ state, navigation }: any) {
         { paddingBottom: insets.bottom + 8 },
       ]}
     >
-      <View style={styles.tabBar}>
-        {activeTabs.map((tab, i) => {
-          const on = i === activeIdx;
+      <View style={styles.rowWrapper}>
+        <View style={styles.tabBar}>
+          {activeTabs.map((tab, i) => {
+            const on = i === activeIdx;
 
-          return (
-            <TabBarItem
-              key={tab.key}
-              tab={tab}
-              on={on}
-              navigation={navigation}
-            />
-          );
-        })}
+            return (
+              <TabBarItem
+                key={tab.key}
+                tab={tab}
+                on={on}
+                navigation={navigation}
+              />
+            );
+          })}
+        </View>
+
+        <TouchableOpacity
+          onPress={handlePlusPress}
+          activeOpacity={0.85}
+          style={styles.plusButton}
+        >
+          <HugeiconsIcon icon={Add01FreeIcons} size={22} color={Colors.oxblood} strokeWidth={2.5} />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -176,6 +212,34 @@ function CustomTabBar({ state, navigation }: any) {
 
 export default function TabLayout() {
   const role = useAuthStore((s) => s.role);
+  const queryClient = useQueryClient();
+  const activeProfileId = useProfilesStore((s) => s.activeProfileId);
+  const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
+
+  const {
+    createCampaignOpen,
+    setCreateCampaignOpen,
+    createServiceOpen,
+    setCreateServiceOpen,
+    createBrandProfileOpen,
+    setCreateBrandProfileOpen,
+  } = useUIStore();
+
+  const handleCampaignSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandDashboard', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandProfile', activeProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['brandWalletBalance', activeProfileId] });
+  };
+
+  const handleServiceSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['influencerServices', activeInfluencerProfileId] });
+    queryClient.invalidateQueries({ queryKey: ['influencerDashboard', activeInfluencerProfileId] });
+  };
+
+  const handleProfileSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['brandProfile'] });
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -197,8 +261,6 @@ export default function TabLayout() {
           <Tabs.Screen name="profile" />
           <Tabs.Screen name="chat/index" options={{ href: null }} />
           <Tabs.Screen name="chat/[id]" options={{ href: null }} />
-          <Tabs.Screen name="referral" options={{ href: null }} />
-          <Tabs.Screen name="arena/[id]" options={{ href: null }} />
         </Tabs.Protected>
 
         <Tabs.Protected guard={role === 'brand'}>
@@ -216,6 +278,25 @@ export default function TabLayout() {
           <Tabs.Screen name="brand/analytics" options={{ href: null }} />
         </Tabs.Protected>
       </Tabs>
+
+      <CreateCampaignSheet
+        isOpen={createCampaignOpen}
+        onClose={() => setCreateCampaignOpen(false)}
+        onSuccess={handleCampaignSuccess}
+      />
+
+      <CreateServiceSheet
+        isOpen={createServiceOpen}
+        onClose={() => setCreateServiceOpen(false)}
+        onSuccess={handleServiceSuccess}
+      />
+
+      <CreateBrandProfileSheet
+        isOpen={createBrandProfileOpen}
+        onClose={() => setCreateBrandProfileOpen(false)}
+        onSuccess={handleProfileSuccess}
+        initialData={null}
+      />
     </View>
   );
 }
@@ -230,7 +311,14 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     backgroundColor: 'transparent'
   },
+  rowWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+  },
   tabBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -241,6 +329,17 @@ const styles = StyleSheet.create({
     borderWidth: 0.8,
     borderColor: 'rgba(255,255,255,0.65)',
     overflow: 'hidden',
+  },
+  plusButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: 'rgba(255, 255, 255, 0.70)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.tab,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   tabItem: {
     height: 48,
