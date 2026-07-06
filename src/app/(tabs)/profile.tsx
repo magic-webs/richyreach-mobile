@@ -17,6 +17,7 @@ import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { registerForPushNotificationsAsync } from '@/lib/push-notifications';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
@@ -411,6 +412,8 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 onPress={async () => {
                   setSheet(null);
+                  const device = await registerForPushNotificationsAsync().catch(() => null);
+                  await api.auth.logout(device?.expoPushToken).catch((err) => console.error('Failed to log out on server:', err));
                   await logout();
                   router.replace('/(auth)');
                 }}

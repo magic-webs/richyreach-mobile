@@ -98,14 +98,33 @@ async function requestWithMeta<T>(
   return { data: json.data as T, meta: json.meta };
 }
 
+export interface DeviceRegistrationInfo {
+  expoPushToken: string;
+  deviceId: string;
+  platform: 'ios' | 'android' | 'web';
+  appVersion?: string;
+  deviceName?: string;
+}
+
 export const api = {
   auth: {
     requestOtp: (identifier: string, method: 'email' | 'whatsapp', mode?: 'login' | 'signup') =>
       request('/auth/request-otp', { method: 'POST', body: JSON.stringify({ identifier, method, mode }) }),
-    verifyOtp: (identifier: string, code: string, role?: string, name?: string, referralCode?: string) =>
-      request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ identifier, code, role, name, referralCode }) }),
-    logout: () => request('/auth/logout', { method: 'POST' }),
+    verifyOtp: (
+      identifier: string,
+      code: string,
+      role?: string,
+      name?: string,
+      referralCode?: string,
+      device?: DeviceRegistrationInfo
+    ) =>
+      request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ identifier, code, role, name, referralCode, ...device }) }),
+    logout: (expoPushToken?: string) => request('/auth/logout', { method: 'POST', body: JSON.stringify({ expoPushToken }) }),
     session: () => request('/auth/session'),
+  },
+  devices: {
+    register: (data: DeviceRegistrationInfo) => request('/devices/register', { method: 'POST', body: JSON.stringify(data) }),
+    unregister: (expoPushToken: string) => request('/devices/unregister', { method: 'POST', body: JSON.stringify({ expoPushToken }) }),
   },
   campaigns: {
     list: () => request('/campaigns'),

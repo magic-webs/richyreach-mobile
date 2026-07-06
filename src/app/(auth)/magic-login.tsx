@@ -1,6 +1,7 @@
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { registerForPushNotificationsAsync } from '@/lib/push-notifications';
 import { deleteToken, saveToken, setOnboardingSeen } from '@/lib/storage';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,6 +41,10 @@ export default function MagicLoginScreen() {
           // Step 3: Complete login by setting the active session & role
           await setSession({ user: data.user, token });
           setRole(data.user.role);
+
+          registerForPushNotificationsAsync()
+            .then((device) => (device ? api.devices.register(device) : null))
+            .catch((err) => console.error('Failed to register push token:', err));
 
           setStatus('success');
 

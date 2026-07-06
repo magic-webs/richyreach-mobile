@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "962080298651",
+    "project_id": "richyreach-25d4a",
+    "storage_bucket": "richyreach-25d4a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962080298651:android:88a06ad3f4289d001b983e",
+        "android_client_info": {
+          "package_name": "com.richyreach.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZpayLAukFRW1nnv0VRtCrEWuCWeIzdIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

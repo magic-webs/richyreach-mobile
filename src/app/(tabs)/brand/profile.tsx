@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { registerForPushNotificationsAsync } from '@/lib/push-notifications';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
@@ -608,6 +609,8 @@ export default function BrandProfileScreen() {
               })}
               <TouchableOpacity
                 onPress={async () => {
+                  const device = await registerForPushNotificationsAsync().catch(() => null);
+                  await api.auth.logout(device?.expoPushToken).catch((err) => console.error('Failed to log out on server:', err));
                   await logout();
                   router.replace('/(auth)');
                 }}

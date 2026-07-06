@@ -8,15 +8,17 @@
     "scheme": "richyreachmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/richyreach-logo.png"
+      "icon": "./assets/images/richyreach-logo.png",
+      "bundleIdentifier": "com.richyreach.app"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/richyreach-logo.png"
+        "backgroundColor": "transparent",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.abhijit969.richyreach",
+      "package": "com.richyreach.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
@@ -58,7 +60,14 @@
         }
       ],
       "expo-status-bar",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/richyreach-logo.png",
+          "color": "#208AEF"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

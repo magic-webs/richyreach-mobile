@@ -2,6 +2,7 @@ import { SplashLoader } from '@/components/splash-loader';
 import { ActionModal } from '@/components/ui/action-modal';
 import { api } from '@/lib/api';
 import { getOnboardingSeen, getToken } from '@/lib/storage';
+import { registerForPushNotificationsAsync, setupNotificationResponseListener } from '@/lib/push-notifications';
 import { useAuthStore } from '@/store/auth';
 import {
   BodoniModa_400Regular,
@@ -17,8 +18,7 @@ import {
 } from '@expo-google-fonts/montserrat';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -35,8 +35,6 @@ const queryClient = new QueryClient({
 });
 
 
-SplashScreen.preventAutoHideAsync();
-
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -52,6 +50,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
           if (data && data.user) {
             useAuthStore.setState({ role: data.user.role });
             await setSession({ user: data.user, token });
+            registerForPushNotificationsAsync()
+              .then((device) => (device ? api.devices.register(device) : null))
+              .catch((err) => console.error('Failed to register push token:', err));
           } else {
             await setSession(null);
           }
@@ -75,6 +76,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function NavigationLayout() {
   const session = useAuthStore((s) => s.session);
   const isLoggedIn = !!session;
+  const router = useRouter();
+
+  useEffect(() => {
+    return setupNotificationResponseListener(router);
+  }, [router]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -97,14 +103,7 @@ function NavigationLayout() {
 export default function RootLayout() {
   const [bodoniLoaded] = useBodoni({ BodoniModa_400Regular, BodoniModa_500Medium_Italic, BodoniModa_700Bold });
   const [montserratLoaded] = useMontserrat({ Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold });
-
-  useEffect(() => {
-    if (bodoniLoaded && montserratLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [bodoniLoaded, montserratLoaded]);
-
-  if (!bodoniLoaded || !montserratLoaded) return null;
+  const fontsLoaded = bodoniLoaded && montserratLoaded;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -112,11 +111,15 @@ export default function RootLayout() {
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
             <BottomSheetModalProvider>
-              <AuthGuard>
-                <StatusBar style="dark" />
-                <NavigationLayout />
-                <ActionModal />
-              </AuthGuard>
+              {!fontsLoaded ? (
+                <SplashLoader />
+              ) : (
+                <AuthGuard>
+                  <StatusBar style="dark" />
+                  <NavigationLayout />
+                  <ActionModal />
+                </AuthGuard>
+              )}
             </BottomSheetModalProvider>
           </QueryClientProvider>
         </KeyboardProvider>

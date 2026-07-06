@@ -1,6 +1,7 @@
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { registerForPushNotificationsAsync } from '@/lib/push-notifications';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
@@ -168,6 +169,10 @@ export default function AuthScreen() {
       // Update local role and session
       setRole(userRole);
       await setSession(data);
+
+      registerForPushNotificationsAsync()
+        .then((device) => (device ? api.devices.register(device) : null))
+        .catch((err) => console.error('Failed to register push token:', err));
 
       if (userRole === 'brand') {
         router.replace('/brand');
