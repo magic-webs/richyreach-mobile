@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID_PLACEHOLDER.com.richyreach.app",
+        "paths": [
+          "/shared/*",
+          "/profile/service/*",
+          "/magic-login",
+          "/onboarding"
+        ]
+      }
+    ]
+  }
+}

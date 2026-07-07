@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.richyreach.app",
+      "sha256_cert_fingerprints": [
+        "93:4A:2B:52:1D:51:62:6F:D0:AD:30:AB:6F:85:19:97:85:EF:A2:56:49:BC:5D:5B:68:A6:39:EA:69:A5:B8:14"
+      ]
+    }
+  }
+]

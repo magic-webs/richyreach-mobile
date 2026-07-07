@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/richyreach-logo.png",
-      "bundleIdentifier": "com.richyreach.app"
+      "bundleIdentifier": "com.richyreach.app",
+      "associatedDomains": ["applinks:app.richyreach.com"]
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -24,6 +25,19 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "https", "host": "app.richyreach.com", "pathPrefix": "/shared" },
+            { "scheme": "https", "host": "app.richyreach.com", "pathPrefix": "/profile/service" },
+            { "scheme": "https", "host": "app.richyreach.com", "path": "/magic-login" },
+            { "scheme": "https", "host": "app.richyreach.com", "path": "/onboarding" }
+          ]
+        }
       ]
     },
     "web": {
