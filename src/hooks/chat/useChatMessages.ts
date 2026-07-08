@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useValue } from '@legendapp/state/react';
 import { api } from '@/lib/api';
+import { playSound } from '@/lib/sound';
 import { chatStore$, syncPendingMessages } from '@/store/chatStore';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
@@ -198,6 +199,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     // 1. Optimistic append to list
     const currentList = roomMessages$.list.peek() || [];
     roomMessages$.list.set([...currentList, tempMsg]);
+    playSound('messageSent');
 
     // 2. Try sending over WebSocket first
     const wsPayload = {

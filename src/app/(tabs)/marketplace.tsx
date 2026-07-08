@@ -8,7 +8,7 @@ import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, FlatList, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, FlatList, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +20,9 @@ import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfl
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { ArrowRightIcon, Bookmark02FreeIcons, ChatIcon, HeartIcon, InstagramIcon, Message02FreeIcons, Navigation03FreeIcons, SendToBackIcon } from '@hugeicons/core-free-icons';
+import { ArrowRightIcon, ChatIcon, HeartIcon, InstagramIcon, Message02FreeIcons, Navigation03FreeIcons, SendToBackIcon } from '@hugeicons/core-free-icons';
+import { SavedBookmarkIcon, UnsavedBookmarkIcon } from '@/components/ui/bookmark-icons';
+import { useSavedCampaignsStore } from '@/store/savedCampaigns';
 
 const SORTS = ['Top match', 'Highest pay', 'Ending soon', 'New'];
 
@@ -93,9 +95,8 @@ function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: 
   );
 }
 
-function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
+function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any; onPress: () => void; isBookmarked: boolean; onToggleBookmark: () => void }) {
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
 
   const handleShare = async () => {
     const pay = cm.numCreators > 1 && cm.costPerCreator
@@ -108,7 +109,7 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
         message: `\ud83c\udfaf *${cm.title}*\n\n\ud83c\udfe2 Brand: ${cm.brand}\n\ud83d\udcb0 Pay: ${pay}\n\u23f0 Deadline: ${cm.deadline}\n\n\ud83d\udd17 View & apply here:\n${shareUrl}\n\n_Powered by RichyReach_`,
         url: shareUrl,   // iOS picks this up as a separate URL (opens in browser)
       });
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // Dynamic hashtags based on category & reach
@@ -194,13 +195,12 @@ function CampaignCard({ cm, onPress }: { cm: any; onPress: () => void }) {
             />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => setBookmarked(!bookmarked)} style={styles.iconBtn}>
-          <HugeiconsIcon
-            icon={Bookmark02FreeIcons}
-            size={22}
-            strokeWidth={2}
-            color={bookmarked ? Colors.rose : Colors.oxblood}
-          />
+        <TouchableOpacity onPress={onToggleBookmark} style={styles.iconBtn}>
+          {isBookmarked ? (
+            <SavedBookmarkIcon size={24} color={Colors.rose} />
+          ) : (
+            <UnsavedBookmarkIcon size={24} color={Colors.oxblood} strokeWidth={1} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -280,6 +280,15 @@ export default function MarketplaceScreen() {
   const cat = 'All';
   const [sortBy, setSortBy] = useState('Top match');
 
+  const { savedCampaignIds, loadSavedCampaigns, toggleSaveCampaign } = useSavedCampaignsStore();
+  const [showOnlySaved, setShowOnlySaved] = useState(false);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadSavedCampaigns(session.user.id);
+    }
+  }, [session?.user?.id]);
+
   const [headerHeight, setHeaderHeight] = useState(160);
   const lastOffsetY = useRef(0);
   const isHeaderVisible = useRef(true);
@@ -348,7 +357,7 @@ export default function MarketplaceScreen() {
     }
   }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId, loadBrandProfiles, loadInfluencerProfiles]);
 
-  const { data: rawCampaignListData, isLoading: loading } = useQuery<any>({
+  const { data: rawCampaignListData, isLoading: loading, refetch } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
     queryFn: () => {
       if ((role as string) === 'brand' && activeBrandProfileId) {
@@ -358,6 +367,14 @@ export default function MarketplaceScreen() {
       }
     },
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch().catch(() => {});
+    setRefreshing(false);
+  };
 
   const campaignList = React.useMemo(() => {
     const list = (rawCampaignListData ?? []) as any[];
@@ -391,7 +408,7 @@ export default function MarketplaceScreen() {
   // Search query state
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filtering by category and search query
+  // Filtering by category, search query, and showOnlySaved
   const filteredList = React.useMemo(() => {
     return campaignList.filter((c: any) => {
       const matchesCategory = cat === 'All' || c.cat === cat;
@@ -399,9 +416,10 @@ export default function MarketplaceScreen() {
         c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.about?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const matchesSaved = !showOnlySaved || savedCampaignIds.includes(c.id);
+      return matchesCategory && matchesSearch && matchesSaved;
     });
-  }, [campaignList, cat, searchQuery]);
+  }, [campaignList, cat, searchQuery, showOnlySaved, savedCampaignIds]);
 
   // Sorting
   const sortedList = React.useMemo(() => {
@@ -430,7 +448,36 @@ export default function MarketplaceScreen() {
         ]}
       >
         <View style={styles.headerTop}>
-          <Text style={[{ fontFamily: FontFamily.sansMedium, fontSize: 24, color: Colors.oxblood }]}>Marketplace</Text>
+          <Text style={styles.headerTitle}>Marketplace</Text>
+          <View style={styles.headerRightButtons}>
+            <TouchableOpacity
+              onPress={() => setShowOnlySaved(!showOnlySaved)}
+              activeOpacity={0.8}
+              style={[
+                styles.circleHeaderBtn,
+                showOnlySaved && { backgroundColor: Colors.oxblood }
+              ]}
+            >
+              {showOnlySaved ? (
+                <SavedBookmarkIcon size={20} color={Colors.cream} />
+              ) : (
+                <UnsavedBookmarkIcon size={20} color={Colors.oxblood} strokeWidth={2} />
+              )}
+              {savedCampaignIds.length > 0 && (
+                <View style={[
+                  styles.badgeContainer,
+                  showOnlySaved && { backgroundColor: Colors.cream, borderColor: Colors.oxblood }
+                ]}>
+                  <Text style={[
+                    styles.badgeText,
+                    showOnlySaved && { color: Colors.oxblood }
+                  ]}>
+                    {savedCampaignIds.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search Bar */}
@@ -475,10 +522,16 @@ export default function MarketplaceScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        progressViewOffset={Platform.OS === 'android' ? headerHeight : undefined}
+        contentInset={{ top: Platform.OS === 'ios' ? headerHeight : 0 }}
+        contentOffset={{ x: 0, y: Platform.OS === 'ios' ? -headerHeight : 0 }}
+        automaticallyAdjustContentInsets={false}
         ListHeaderComponent={
           <View>
-            {/* Spacer equal to header height so list items start below the header */}
-            <View style={{ height: headerHeight }} />
+            {/* Spacer equal to header height so list items start below the header (only on Android, since iOS uses contentInset) */}
+            {Platform.OS === 'android' && <View style={{ height: headerHeight }} />}
 
             {/* List Header content / Loading content */}
             <View style={{ paddingHorizontal: 18, paddingTop: 10 }}>
@@ -511,9 +564,13 @@ export default function MarketplaceScreen() {
                   loop
                   style={{ width: 140, height: 140, marginBottom: 8 }}
                 />
-                <Text style={styles.emptyStateText}>No campaigns found</Text>
+                <Text style={styles.emptyStateText}>
+                  {showOnlySaved ? 'No saved campaigns' : 'No campaigns found'}
+                </Text>
                 <Text style={styles.emptyStateSub}>
-                  There are currently no active campaigns in the marketplace. Check back later or adjust your category.
+                  {showOnlySaved
+                    ? 'Bookmarked campaigns will show up here. Start saving your favorite collaborations!'
+                    : 'There are currently no active campaigns in the marketplace. Check back later or adjust your category.'}
                 </Text>
               </View>
             </View>
@@ -524,6 +581,12 @@ export default function MarketplaceScreen() {
             <CampaignCard
               cm={item}
               onPress={() => router.push({ pathname: '/collab/[id]', params: { id: item.id } })}
+              isBookmarked={savedCampaignIds.includes(item.id)}
+              onToggleBookmark={() => {
+                if (session?.user?.id) {
+                  toggleSaveCampaign(session.user.id, item.id);
+                }
+              }}
             />
           </View>
         )}
@@ -602,6 +665,12 @@ const styles = StyleSheet.create({
   },
   greetSub: { fontSize: 13, color: Colors.rose, fontWeight: '700', fontFamily: FontFamily.sansMedium },
   greetTitle: { fontFamily: FontFamily.serif, fontSize: 32, fontWeight: '700', color: Colors.ink },
+  headerTitle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.oxblood,
+  },
   headerRightButtons: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   circleHeaderBtn: {
     width: 42,
@@ -613,6 +682,26 @@ const styles = StyleSheet.create({
     ...Shadow.card,
     borderWidth: 1,
     borderColor: 'rgba(63,3,11,0.04)',
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.rose,
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: FontFamily.sans,
+    textAlign: 'center',
   },
   catScroll: { gap: 8 },
   catBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', ...Shadow.card, borderWidth: 1, borderColor: 'rgba(63,3,11,0.04)' },

@@ -13,6 +13,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
+import { playSound } from '@/lib/sound';
 
 const COIN_PACKAGES = [
   { coins: 2000, rupees: 20, label: 'Starter', tag: null },
@@ -42,7 +43,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
 function buildRazorpayCheckoutUrl(order: any): string {
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-api.richyreach.com/api';
-  const callbackUrl = `${apiBaseUrl}/payments/razorpay-callback`;
   const params = new URLSearchParams({
     key_id: order.key_id ?? '',
     order_id: order.id ?? '',
@@ -50,10 +50,11 @@ function buildRazorpayCheckoutUrl(order: any): string {
     currency: 'INR',
     name: 'RichyReach',
     description: 'Wallet Top-up',
-    callback_url: callbackUrl,
-    redirect: 'true',
+    theme_color: '#3f030b',
+    scheme: 'richyreachmobile',
+    redirect_path: 'wallet',
   });
-  return `https://api.razorpay.com/v1/checkout/embedded?${params.toString()}`;
+  return `${apiBaseUrl}/payments/razorpay-checkout?${params.toString()}`;
 }
 
 interface BuyCoinsSheetProps {
@@ -121,7 +122,7 @@ export function BuyCoinsSheet({ visible, onClose }: BuyCoinsSheetProps) {
         });
       } else {
         const checkoutUrl = buildRazorpayCheckoutUrl(order);
-        const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'richyreach://wallet');
+        const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'richyreachmobile://wallet');
 
         if (result.type !== 'success' || !result.url) {
           throw new Error('Payment cancelled or failed');
@@ -141,6 +142,7 @@ export function BuyCoinsSheet({ visible, onClose }: BuyCoinsSheetProps) {
     },
     onSuccess: (data, pkg) => {
       queryClient.invalidateQueries({ queryKey: ['walletBalance'] });
+      playSound('coinCredit');
       showModal({
         title: '🎉 Coins Added!',
         message: `${pkg.coins.toLocaleString()} coins (₹${pkg.rupees}) successfully added to your wallet.`,

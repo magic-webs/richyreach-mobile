@@ -4,14 +4,14 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import type { useRouter } from 'expo-router';
 import { getOrCreateDeviceId } from './storage';
+import type { DeviceRegistrationInfo } from './api';
 
 type Router = ReturnType<typeof useRouter>;
-import type { DeviceRegistrationInfo } from './api';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: true,
+    shouldPlaySound: false, // Disables system double-sound in foreground; we trigger playSound('notification') programmatically
     shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true,
@@ -27,7 +27,8 @@ export async function registerForPushNotificationsAsync(): Promise<DeviceRegistr
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Default',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'main_notification',
     });
   }
 
@@ -69,5 +70,11 @@ export function setupNotificationResponseListener(router: Router): () => void {
     }
   });
 
+  return () => subscription.remove();
+}
+
+/** Wires the foreground notification received listener. Call once from the root layout; returns an unsubscribe function. */
+export function setupNotificationReceivedListener(onNotification: (notification: Notifications.Notification) => void): () => void {
+  const subscription = Notifications.addNotificationReceivedListener(onNotification);
   return () => subscription.remove();
 }

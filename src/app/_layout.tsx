@@ -2,7 +2,8 @@ import { SplashLoader } from '@/components/splash-loader';
 import { ActionModal } from '@/components/ui/action-modal';
 import { api } from '@/lib/api';
 import { getOnboardingSeen, getToken } from '@/lib/storage';
-import { registerForPushNotificationsAsync, setupNotificationResponseListener } from '@/lib/push-notifications';
+import { registerForPushNotificationsAsync, setupNotificationResponseListener, setupNotificationReceivedListener } from '@/lib/push-notifications';
+import { playSound } from '@/lib/sound';
 import { useAuthStore } from '@/store/auth';
 import {
   BodoniModa_400Regular,
@@ -79,7 +80,14 @@ function NavigationLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    return setupNotificationResponseListener(router);
+    const unsubResponse = setupNotificationResponseListener(router);
+    const unsubReceived = setupNotificationReceivedListener(() => {
+      playSound('notification');
+    });
+    return () => {
+      unsubResponse();
+      unsubReceived();
+    };
   }, [router]);
 
   return (

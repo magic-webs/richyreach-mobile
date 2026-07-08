@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { playSound } from '@/lib/sound';
 
 export interface ActionModalAction {
   text: string;
@@ -30,7 +31,17 @@ interface UIStore extends ActionModalState {
 
 export const useUIStore = create<UIStore>((set) => ({
   visible: false,
-  showModal: (params) => set({ ...params, visible: true }),
+  showModal: (params) => {
+    const isError =
+      params.title?.toLowerCase().includes('error') ||
+      params.title?.toLowerCase().includes('fail') ||
+      params.message?.toLowerCase().includes('failed') ||
+      params.message?.toLowerCase().includes('error');
+    if (isError) {
+      playSound('error');
+    }
+    set({ ...params, visible: true });
+  },
   hideModal: () => set({ visible: false, title: undefined, message: undefined, actions: undefined }),
   tabBarVisible: true,
   setTabBarVisible: (visible) => set({ tabBarVisible: visible }),

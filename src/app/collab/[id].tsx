@@ -21,6 +21,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon, Share01Icon, Bookmark02Icon, BadgeCheckIcon, Clock01Icon, InstagramIcon, Camera01Icon, UserGroupIcon, Calendar01Icon, CheckIcon, ChatIcon } from '@hugeicons/core-free-icons';
 import { Icon } from '@/components/ui/icon';
+import { SavedBookmarkIcon, UnsavedBookmarkIcon } from '@/components/ui/bookmark-icons';
+import { useSavedCampaignsStore } from '@/store/savedCampaigns';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 function CollabDetailSkeleton() {
@@ -83,6 +85,7 @@ export default function CollabDetail() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
+  const session = useAuthStore((s) => s.session);
   const [applied, setApplied] = useState(false);
   const [createProfileOpen, setCreateProfileOpen] = useState(false);
   const [applySheetOpen, setApplySheetOpen] = useState(false);
@@ -90,6 +93,14 @@ export default function CollabDetail() {
   const queryClient = useQueryClient();
 
   const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
+
+  const { savedCampaignIds, loadSavedCampaigns, toggleSaveCampaign } = useSavedCampaignsStore();
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadSavedCampaigns(session.user.id);
+    }
+  }, [session?.user?.id]);
 
   // Entrance animations state
   const fadeAnim = React.useMemo(() => new Animated.Value(0), []);
@@ -437,8 +448,20 @@ export default function CollabDetail() {
               <TouchableOpacity onPress={handleShareCampaign} style={styles.navBtn} activeOpacity={0.8}>
                 <HugeiconsIcon icon={Share01Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.navBtn} activeOpacity={0.8}>
-                <HugeiconsIcon icon={Bookmark02Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
+              <TouchableOpacity
+                onPress={() => {
+                  if (session?.user?.id && cm?.id) {
+                    toggleSaveCampaign(session.user.id, cm.id);
+                  }
+                }}
+                style={styles.navBtn}
+                activeOpacity={0.8}
+              >
+                {cm && savedCampaignIds.includes(cm.id) ? (
+                  <SavedBookmarkIcon size={20} color={Colors.rose} />
+                ) : (
+                  <UnsavedBookmarkIcon size={20} color={Colors.oxblood} strokeWidth={2} />
+                )}
               </TouchableOpacity>
             </View>
           </View>

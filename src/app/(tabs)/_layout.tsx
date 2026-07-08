@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { CreateCampaignSheet } from '@/components/brand/home/CreateCampaignSheet';
 import { CreateServiceSheet } from '@/components/influencer/services/CreateServiceSheet';
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
+import { triggerTabHaptic } from '@/lib/haptics';
 const CREATOR_TABS = [
   { key: 'index', icon: Home01FreeIcons, label: 'Home' },
   { key: 'marketplace', icon: Store04FreeIcons, label: 'Market' },
@@ -94,7 +95,10 @@ function TabBarItem({ tab, on, navigation }: TabBarItemProps) {
 
       {/* Button for touch interaction */}
       <TouchableOpacity
-        onPress={() => navigation.navigate(tab.key)}
+        onPress={() => {
+          triggerTabHaptic();
+          navigation.navigate(tab.key);
+        }}
         activeOpacity={0.7}
         style={StyleSheet.absoluteFill}
       />
@@ -199,7 +203,10 @@ function CustomTabBar({ state, navigation }: any) {
         </View>
 
         <TouchableOpacity
-          onPress={handlePlusPress}
+          onPress={() => {
+            triggerTabHaptic();
+            handlePlusPress();
+          }}
           activeOpacity={0.85}
           style={styles.plusButton}
         >

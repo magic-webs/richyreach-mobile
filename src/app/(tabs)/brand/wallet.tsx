@@ -19,6 +19,7 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
+import { playSound } from '@/lib/sound';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 const GST_RATE = 0.18;
@@ -199,7 +200,7 @@ export default function BrandWalletScreen() {
       } else {
         // Real Razorpay checkout via expo-web-browser
         const checkoutUrl = buildRazorpayCheckoutUrl(order);
-        const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'richyreach://wallet');
+        const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'richyreachmobile://wallet');
 
         if (result.type !== 'success' || !result.url) {
           throw new Error('Payment cancelled or failed');
@@ -224,6 +225,7 @@ export default function BrandWalletScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brandWallet'] });
       queryClient.invalidateQueries({ queryKey: ['brandWalletTx'] });
+      playSound('coinCredit');
       setShowAddSheet(false);
       setSelectedRupees(null);
       setCustomRupees('');
@@ -402,7 +404,6 @@ export default function BrandWalletScreen() {
 
 function buildRazorpayCheckoutUrl(order: any): string {
   const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-api.richyreach.com/api';
-  const callbackUrl = `${apiBaseUrl}/payments/razorpay-callback`;
   const params = new URLSearchParams({
     key_id: order.key_id ?? '',
     order_id: order.id ?? '',
@@ -410,10 +411,11 @@ function buildRazorpayCheckoutUrl(order: any): string {
     currency: 'INR',
     name: 'RichyReach',
     description: 'Brand Wallet Top-up',
-    callback_url: callbackUrl,
-    redirect: 'true',
+    theme_color: '#3498db',
+    scheme: 'richyreachmobile',
+    redirect_path: 'wallet',
   });
-  return `https://api.razorpay.com/v1/checkout/embedded?${params.toString()}`;
+  return `${apiBaseUrl}/payments/razorpay-checkout?${params.toString()}`;
 }
 
 const styles = StyleSheet.create({

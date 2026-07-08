@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
+import { Colors, FontFamily, Radius } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { playSound } from '@/lib/sound';
 
 // Lucide icons
 import { Info } from 'lucide-react-native';
@@ -34,6 +35,7 @@ export function WithdrawSheet({ visible, onClose }: WithdrawSheetProps) {
       onClose();
     },
     onError: (err: any) => {
+      playSound('error');
       setErrorMsg(err.message || 'Withdrawal failed. Please try again.');
     },
   });
@@ -41,10 +43,12 @@ export function WithdrawSheet({ visible, onClose }: WithdrawSheetProps) {
   const handleConfirm = () => {
     const amount = parseInt(withdrawCoins);
     if (!amount || isNaN(amount)) {
+      playSound('error');
       setErrorMsg('Please enter a valid coin amount.');
       return;
     }
     if (amount < 10000) {
+      playSound('error');
       setErrorMsg('Minimum withdrawal is 10,000 coins.');
       return;
     }
