@@ -19,6 +19,7 @@ import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
+import { useAuthStore } from '@/store/auth';
 import { playSound } from '@/lib/sound';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
@@ -198,28 +199,41 @@ export default function BrandWalletScreen() {
           rzp.open();
         });
       } else {
-        // Real Razorpay checkout via expo-web-browser
-        const checkoutUrl = buildRazorpayCheckoutUrl(order);
-        const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'richyreachmobile://wallet');
+        const RazorpayCheckout = require('react-native-razorpay').default;
+        const session = useAuthStore.getState().session;
+        const user = session?.user;
 
-        if (result.type !== 'success' || !result.url) {
-          throw new Error('Payment cancelled or failed');
-        }
-
-        const params = new URLSearchParams(result.url.split('?')[1] ?? '');
-        const razorpay_payment_id = params.get('razorpay_payment_id') ?? '';
-        const razorpay_signature = params.get('razorpay_signature') ?? '';
-
-        return api.brands.wallet.verifyPayment(
-          {
-            razorpay_order_id: order.id,
-            razorpay_payment_id,
-            razorpay_signature,
-            baseCoins,
-            gstCoins,
+        const options = {
+          description: 'Brand Wallet Top-up',
+          image: 'https://i.imgur.com/3g7nmJC.jpg',
+          currency: 'INR',
+          key: order.key_id ?? '',
+          amount: String(order.amount ?? 0),
+          name: 'RichyReach',
+          order_id: order.id ?? '',
+          prefill: {
+            email: user?.email ?? '',
+            contact: user?.phone ?? '',
+            name: user?.name ?? '',
           },
-          activeProfileId
-        );
+          theme: { color: '#3498db' },
+        };
+
+        try {
+          const response = await RazorpayCheckout.open(options);
+          return api.brands.wallet.verifyPayment(
+            {
+              razorpay_order_id: order.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              baseCoins,
+              gstCoins,
+            },
+            activeProfileId
+          );
+        } catch (error: any) {
+          throw new Error(error.description || 'Payment cancelled or failed');
+        }
       }
     },
     onSuccess: () => {
