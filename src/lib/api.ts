@@ -211,7 +211,14 @@ export const api = {
   brands: {
     profile: (activeProfileId?: string | null) => request('/brands/profile', { activeProfileId }),
     profiles: () => request<any[]>('/brands/profiles'),
-    updateProfile: (data: any, activeProfileId?: string | null) => request('/brands/profile', { method: 'POST', body: JSON.stringify(data), activeProfileId }),
+    updateProfile: (data: FormData | any, activeProfileId?: string | null) => {
+      const isFormData = data instanceof FormData || (data && typeof data === 'object' && typeof (data as any).append === 'function');
+      return request('/brands/profile', {
+        method: 'POST',
+        body: isFormData ? data : JSON.stringify(data),
+        activeProfileId,
+      });
+    },
     dashboard: (activeProfileId?: string | null) => request('/brands/dashboard', { activeProfileId }),
     applications: (status?: string, activeProfileId?: string | null) => request<any[]>(`/brands/applications${status ? `?status=${status}` : ''}`, { activeProfileId }),
     rejectApplication: (id: string, activeProfileId?: string | null) => request(`/brands/applications/${id}/reject`, { method: 'POST', activeProfileId }),

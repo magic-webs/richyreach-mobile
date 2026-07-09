@@ -4,6 +4,8 @@ const sounds = {
   notification: require('../../assets/sounds/main_notification.wav'),
   coinCredit: require('../../assets/sounds/coin-credit.wav'),
   error: require('../../assets/sounds/error.wav'),
+  error2: require('../../assets/sounds/error2.wav'),
+  completeTask: require('../../assets/sounds/complete_task.wav'),
   messageSent: require('../../assets/sounds/message-sent.mp3'),
 };
 

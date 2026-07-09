@@ -5,11 +5,13 @@ import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { StyleSheet, Text, TouchableOpacity, View, Platform, TextInput, TextInputProps } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 
 // Safe wrapper for BottomSheetTextInput on Web
 const FormInput = React.forwardRef<TextInput, TextInputProps>((props, ref) => {
@@ -52,6 +54,10 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
   const saveProfile = useProfilesStore((s) => s.saveProfile);
   const setActiveProfileId = useProfilesStore((s) => s.setActiveProfileId);
 
+  const [logo, setLogo] = useState('');
+  const [logoFile, setLogoFile] = useState<any>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   const {
     control,
     handleSubmit,
@@ -78,24 +84,77 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         description: initialData?.description ?? '',
         instagramPage: initialData?.instagramPage ?? '',
       });
+      setLogo(initialData?.logo ?? '');
+      setLogoFile(null);
     }
   }, [isOpen, initialData]);
 
+  const triggerLogoPicker = async () => {
+    if (Platform.OS === 'web') {
+      logoInputRef.current?.click();
+    } else {
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          setLogoFile({
+            uri: asset.uri,
+            name: asset.fileName || 'logo.jpg',
+            type: asset.mimeType || 'image/jpeg',
+            size: asset.fileSize || 0,
+          });
+          setLogo(asset.uri);
+        }
+      } catch (err: any) {
+        console.error('Failed to pick logo:', err);
+        showModal({
+          title: 'Picker Failed',
+          message: 'Could not access the library to select a photo.',
+        });
+      }
+    }
+  };
+
   const onSubmit = async (data: BrandProfileFormValues) => {
     let formattedWebsite = data.website.trim();
-    if (!/^https?:\/\//i.test(formattedWebsite)) {
+    if (formattedWebsite && !/^https?:\/\//i.test(formattedWebsite)) {
       formattedWebsite = `https://${formattedWebsite}`;
     }
 
     try {
-      const payload = {
-        companyName: data.companyName.trim(),
-        website: formattedWebsite,
-        logo: data.logo.trim() || null,
-        category: data.category,
-        description: data.description.trim() || null,
-        instagramPage: data.instagramPage.trim().replace(/^@/, '') || null,
-      };
+      let payload: any;
+      if (logoFile) {
+        payload = new FormData();
+        payload.append('companyName', data.companyName.trim());
+        payload.append('website', formattedWebsite);
+        payload.append('category', data.category);
+        payload.append('description', data.description.trim() || '');
+        payload.append('instagramPage', data.instagramPage.trim().replace(/^@/, '') || '');
+        
+        if (Platform.OS === 'web') {
+          payload.append('logo', logoFile);
+        } else {
+          payload.append('logo', {
+            uri: logoFile.uri,
+            name: logoFile.name || 'logo.jpg',
+            type: logoFile.type || 'image/jpeg',
+          } as any);
+        }
+      } else {
+        payload = {
+          companyName: data.companyName.trim(),
+          website: formattedWebsite,
+          logo: logo.trim() || null,
+          category: data.category,
+          description: data.description.trim() || null,
+          instagramPage: data.instagramPage.trim().replace(/^@/, '') || null,
+        };
+      }
 
       const res = await api.brands.updateProfile(payload);
 
@@ -104,11 +163,11 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         const profileId = (initialData as any)?.id || (res as any)?.id || 'bp_' + Math.random().toString(36).substr(2, 9);
         const profileObj = {
           id: profileId,
-          companyName: payload.companyName,
-          website: payload.website,
-          logo: payload.logo,
-          category: payload.category,
-          description: payload.description,
+          companyName: data.companyName.trim(),
+          website: formattedWebsite,
+          logo: (res as any)?.logo ?? (logo.trim() || (initialData as any)?.logo || null),
+          category: data.category,
+          description: data.description.trim() || null,
         };
         await saveProfile(userId, profileObj);
         await setActiveProfileId(userId, profileId);
@@ -118,6 +177,10 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         title: 'Profile Updated! ✨',
         message: initialData ? 'Your brand profile was successfully updated.' : 'Your brand profile was successfully created.',
       });
+
+      if (!initialData) {
+        useUIStore.getState().triggerConfetti();
+      }
 
       onSuccess(res);
       onClose();
@@ -141,6 +204,21 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
       snapPoints={['82%']}
       hideHeaderBorder
     >
+      {Platform.OS === 'web' && (
+        <input
+          type="file"
+          accept="image/*"
+          ref={logoInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setLogoFile(file);
+              setLogo(URL.createObjectURL(file));
+            }
+          }}
+        />
+      )}
       <View style={{ gap: 18, paddingBottom: 20 }}>
         {/* COMPANY NAME */}
         <View style={styles.formGroup}>
@@ -226,28 +304,50 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
           />
         </View>
 
-        {/* LOGO URL */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Logo Image URL (Optional)</Text>
-          <Controller
-            control={control}
-            name="logo"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <FormInput
-                style={styles.formInput}
-                placeholder="e.g. https://brand.com/logo.png"
-                placeholderTextColor="rgba(63,3,11,0.35)"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                keyboardType="url"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isSubmitting}
-              />
-            )}
-          />
-        </View>
+        {/* COMPANY LOGO */}
+        {initialData ? (
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Company Logo</Text>
+            <View style={styles.logoPickerContainer}>
+              <View style={styles.logoPreviewWrap}>
+                {logo ? (
+                  <Image source={{ uri: logo }} style={styles.logoPreview} contentFit="cover" />
+                ) : (
+                  <View style={[styles.logoPreview, styles.logoPreviewFallback]}>
+                    <Text style={styles.logoPreviewText}>
+                      {initialData?.companyName ? initialData.companyName.charAt(0).toUpperCase() : '?'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1, gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={styles.logoUploadBtn}
+                    onPress={triggerLogoPicker}
+                    activeOpacity={0.8}
+                    disabled={isSubmitting}
+                  >
+                    <Text style={styles.logoUploadBtnText}>Upload Photo</Text>
+                  </TouchableOpacity>
+                  {(logo || logoFile) ? (
+                    <TouchableOpacity
+                      style={styles.logoClearBtn}
+                      onPress={() => { setLogo(''); setLogoFile(null); }}
+                      activeOpacity={0.8}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.logoClearBtnText}>Reset</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <Text style={styles.helperText}>
+                  {logoFile ? `Selected: ${logoFile.name}` : 'Upload a custom brand logo image.'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {/* DESCRIPTION / BIO */}
         <View style={styles.formGroup}>
@@ -371,5 +471,77 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     fontFamily: FontFamily.sans,
     color: '#ffffff',
+  },
+  logoPickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.06)',
+  },
+  logoPreviewWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 15,
+    backgroundColor: Colors.cream,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  logoPreviewFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.cream,
+  },
+  logoPreviewText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  helperText: {
+    fontSize: 10,
+    color: 'rgba(63,3,11,0.45)',
+    fontFamily: FontFamily.sansMedium,
+    lineHeight: 14,
+  },
+  logoUploadBtn: {
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoUploadBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: '#ffffff',
+  },
+  logoClearBtn: {
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.2)',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoClearBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    color: Colors.oxblood,
   },
 });

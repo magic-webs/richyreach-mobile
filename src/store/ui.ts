@@ -27,8 +27,11 @@ interface UIStore extends ActionModalState {
   setCreateServiceOpen: (open: boolean) => void;
   createBrandProfileOpen: boolean;
   setCreateBrandProfileOpen: (open: boolean) => void;
+  confettiVisible: boolean;
+  setConfettiVisible: (visible: boolean) => void;
+  triggerConfetti: () => void;
 }
-
+ 
 export const useUIStore = create<UIStore>((set) => ({
   visible: false,
   showModal: (params) => {
@@ -53,4 +56,10 @@ export const useUIStore = create<UIStore>((set) => ({
   setCreateServiceOpen: (open) => set({ createServiceOpen: open }),
   createBrandProfileOpen: false,
   setCreateBrandProfileOpen: (open) => set({ createBrandProfileOpen: open }),
+  confettiVisible: false,
+  setConfettiVisible: (visible) => set({ confettiVisible: visible }),
+  triggerConfetti: () => {
+    playSound('completeTask');
+    set({ confettiVisible: true });
+  },
 }));

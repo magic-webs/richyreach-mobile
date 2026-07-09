@@ -112,9 +112,9 @@ export function SwitchBrandProfileSheet({
                 {/* Logo / Avatar */}
                 <View style={styles.avatarWrap}>
                   {p.logo ? (
-                    <Image source={{ uri: p.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    <Image source={{ uri: p.logo }} style={{ width: '100%', height: '100%', borderRadius: 11 }} contentFit="cover" />
                   ) : (
-                    <View style={styles.stripesAvatar}>
+                    <View style={[styles.stripesAvatar, { backgroundColor: Colors.oxbloodDeep }]}>
                       <ProfileStripes id={`item-${p.id}`} />
                       <Text style={styles.avatarText}>{letter}</Text>
                     </View>
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: Colors.oxbloodDeep,
+    backgroundColor: '#ffffff',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(63,3,11,0.08)',

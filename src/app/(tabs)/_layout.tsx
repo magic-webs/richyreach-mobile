@@ -230,6 +230,8 @@ export default function TabLayout() {
     setCreateServiceOpen,
     createBrandProfileOpen,
     setCreateBrandProfileOpen,
+    confettiVisible,
+    setConfettiVisible,
   } = useUIStore();
 
   const handleCampaignSuccess = () => {

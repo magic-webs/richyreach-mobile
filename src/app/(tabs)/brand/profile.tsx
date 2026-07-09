@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import React from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -233,6 +233,7 @@ function CreatorRow({
 
 export default function BrandProfileScreen() {
   const router = useRouter();
+  const { create } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const setRole = useAuthStore((s) => s.setRole);
   const logout = useAuthStore((s) => s.logout);
@@ -245,6 +246,13 @@ export default function BrandProfileScreen() {
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [brandProfileInitialData, setBrandProfileInitialData] = useState<any>(null);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+
+  useEffect(() => {
+    if (create === 'true') {
+      setIsEditSheetOpen(true);
+      router.setParams({ create: undefined });
+    }
+  }, [create]);
 
   // Fetch brand profile from backend via TanStack Query
   const { data: profileData, isLoading: loadingProfile } = useQuery<any>({
@@ -348,7 +356,7 @@ export default function BrandProfileScreen() {
             {profile?.logo ? (
               <Image source={{ uri: profile.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
             ) : (
-              <Stripes id="header-logo" stripeColor="rgba(180, 106, 116, 0.25)" backgroundColor={Colors.oxbloodDeep} />
+              <Stripes id="header-logo" stripeColor="rgba(63, 3, 11, 0.08)" backgroundColor="#ffffff" />
             )}
           </View>
           <Text style={styles.headerTitle} numberOfLines={1}>{profile?.companyName || 'Brand Settings'}</Text>
@@ -377,9 +385,9 @@ export default function BrandProfileScreen() {
         <View style={[styles.avatarShadowWrap, loadingProfile && { opacity: 0 }]}>
           <View style={styles.avatarContainer}>
             {profile?.logo ? (
-              <Image source={{ uri: profile.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              <Image source={{ uri: profile.logo }} style={{ width: '100%', height: '100%', borderRadius: 19 }} contentFit="cover" />
             ) : (
-              <Stripes id="avatar-stripes" stripeColor="rgba(180, 106, 116, 0.2)" backgroundColor={Colors.oxbloodDeep} />
+              <Stripes id="avatar-stripes" stripeColor="rgba(63, 3, 11, 0.08)" backgroundColor="#ffffff" />
             )}
           </View>
         </View>
@@ -796,7 +804,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: Colors.oxbloodDeep,
+    backgroundColor: '#ffffff',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(63,3,11,0.08)'
@@ -818,7 +826,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(63,3,11,0.07)',
     ...Shadow.card
   },
-
+ 
   coverContainer: {
     height: 120,
     backgroundColor: 'rgba(180, 106, 116, 0.12)',
@@ -839,6 +847,7 @@ const styles = StyleSheet.create({
     top: 75,
     width: 86,
     height: 86,
+    borderRadius: 22,
     shadowColor: Colors.oxblood,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
@@ -852,7 +861,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 3,
     borderColor: '#ffffff',
-    backgroundColor: Colors.oxbloodDeep,
+    backgroundColor: '#ffffff',
     overflow: 'hidden',
   },
 

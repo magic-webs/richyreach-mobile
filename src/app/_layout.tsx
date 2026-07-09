@@ -1,6 +1,9 @@
 import { SplashLoader } from '@/components/splash-loader';
 import { ActionModal } from '@/components/ui/action-modal';
 import { api } from '@/lib/api';
+import { useUIStore } from '@/store/ui';
+import LottieView from 'lottie-react-native';
+import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { getOnboardingSeen, getToken } from '@/lib/storage';
 import { registerForPushNotificationsAsync, setupNotificationResponseListener, setupNotificationReceivedListener } from '@/lib/push-notifications';
 import { playSound } from '@/lib/sound';
@@ -113,6 +116,9 @@ export default function RootLayout() {
   const [montserratLoaded] = useMontserrat({ Montserrat_400Regular, Montserrat_500Medium, Montserrat_700Bold });
   const fontsLoaded = bodoniLoaded && montserratLoaded;
 
+  const confettiVisible = useUIStore((s) => s.confettiVisible);
+  const setConfettiVisible = useUIStore((s) => s.setConfettiVisible);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -126,6 +132,19 @@ export default function RootLayout() {
                   <StatusBar style="dark" />
                   <NavigationLayout />
                   <ActionModal />
+                  <Modal visible={confettiVisible} transparent animationType="fade" onRequestClose={() => setConfettiVisible(false)}>
+                    <TouchableWithoutFeedback onPress={() => setConfettiVisible(false)}>
+                      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                        <LottieView
+                          source={require('@/assets/lottie-animation/coffeti.json')}
+                          autoPlay
+                          loop={false}
+                          style={StyleSheet.absoluteFill}
+                          onAnimationFinish={() => setConfettiVisible(false)}
+                        />
+                      </View>
+                    </TouchableWithoutFeedback>
+                  </Modal>
                 </AuthGuard>
               )}
             </BottomSheetModalProvider>

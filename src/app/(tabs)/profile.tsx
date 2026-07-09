@@ -22,7 +22,7 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -44,10 +44,18 @@ const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { create } = useLocalSearchParams();
   const queryClient = useQueryClient();
 
   const insets = useSafeAreaInsets();
   const setRole = useAuthStore((s) => s.setRole);
+
+  useEffect(() => {
+    if (create === 'true') {
+      setIsCreateProfileOpen(true);
+      router.setParams({ create: undefined });
+    }
+  }, [create]);
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
   const loadInfluencerProfiles = useProfilesStore((s) => s.loadInfluencerProfiles);

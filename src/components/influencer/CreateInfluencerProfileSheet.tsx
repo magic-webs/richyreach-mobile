@@ -163,6 +163,10 @@ export function CreateInfluencerProfileSheet({
         message: initialData ? 'Your creator profile was successfully updated.' : 'Your creator profile was successfully created.',
       });
 
+      if (!initialData) {
+        useUIStore.getState().triggerConfetti();
+      }
+
       onSuccess(res);
       onClose();
     } catch (err: any) {
