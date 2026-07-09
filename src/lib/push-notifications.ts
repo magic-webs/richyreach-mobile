@@ -10,7 +10,6 @@ type Router = ReturnType<typeof useRouter>;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: false, // Disables system double-sound in foreground; we trigger playSound('notification') programmatically
     shouldSetBadge: false,
     shouldShowBanner: true,
@@ -21,6 +20,10 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(): Promise<DeviceRegistrationInfo | null> {
   if (!Device.isDevice) {
     // Push tokens can't be issued to simulators/emulators.
+    return null;
+  }
+
+  if (Platform.OS === 'web') {
     return null;
   }
 

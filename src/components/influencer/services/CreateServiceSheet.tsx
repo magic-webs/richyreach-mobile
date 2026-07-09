@@ -29,25 +29,12 @@ interface CreateServiceSheetProps {
   service?: any; // If passed, we are in Edit Mode
 }
 
-// Updated Categories representing type of content (previously Subcategories)
-export const CATEGORIES = [
-  'UGC / Product Review',
-  'Unboxing',
-  'Dedicated Brand Reel',
-  'Sponsored Post',
-  'Tutorial / Walkthrough',
-];
+export function CreateServiceSheet(props: CreateServiceSheetProps) {
+  if (!props.isOpen) return null;
+  return <CreateServiceForm {...props} />;
+}
 
-export const DELIVERY_TIMES = [
-  '1 Day',
-  '3 Days',
-  '5 Days',
-  '7 Days',
-  '10 Days',
-  '14 Days',
-];
-
-export function CreateServiceSheet({
+function CreateServiceForm({
   isOpen,
   onClose,
   onSuccess,
@@ -58,10 +45,10 @@ export function CreateServiceSheet({
   // React Hook Form initialization
   const { control, handleSubmit, setValue, trigger, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
-      name: '',
-      price: '',
-      shortDesc: '',
-      category: 'UGC / Product Review',
+      name: service?.name || '',
+      price: service?.price ? String(service.price / 100) : '',
+      shortDesc: service?.description || '',
+      category: service?.subCategory || service?.category || 'UGC / Product Review',
       confirmed: false,
     }
   });
@@ -70,26 +57,54 @@ export function CreateServiceSheet({
   const [step, setStep] = useState(1);
 
   // Form Fields not managed by hook form rules
-  const [deliveryTime, setDeliveryTime] = useState('5 Days');
-  const [tags, setTags] = useState<string[]>(['Brand Reel', 'UGC Creator', 'Product Review']);
+  const [deliveryTime, setDeliveryTime] = useState(service?.deliveryTime || '5 Days');
+  const [tags, setTags] = useState<string[]>(() => {
+    if (service?.tags) {
+      if (Array.isArray(service.tags)) return service.tags;
+      try {
+        return JSON.parse(service.tags);
+      } catch {
+        return String(service.tags).split(',').map((t: string) => t.trim());
+      }
+    }
+    return ['Brand Reel', 'UGC Creator', 'Product Review'];
+  });
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
 
   // Step 2 Fields
   const [videoFile, setVideoFile] = useState<any>(null);
-  const [videoUrl, setVideoUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState(service?.videoUrl || service?.exampleUrl || '');
+
+  const [videoError, setVideoError] = useState('');
+  useEffect(() => {
+    if (videoUrl) {
+      setVideoError('');
+    }
+  }, [videoUrl]);
+
   const [thumbnailFile, setThumbnailFile] = useState<any>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState('');
-  const [selectedFrameIdx, setSelectedFrameIdx] = useState(0);
+  const [thumbnailUrl, setThumbnailUrl] = useState(service?.thumbnailUrl || '');
+  const [selectedFrameIdx, setSelectedFrameIdx] = useState(service?.selectedFrameIdx || 0);
   const [localExtractedFrames, setLocalExtractedFrames] = useState<any[]>([]);
   const [extractingFrames, setExtractingFrames] = useState(false);
   const [videoDuration, setVideoDuration] = useState('');
-  const [deliverables, setDeliverables] = useState<string[]>([
-    'High quality video',
-    'Script & Concept',
-    'Royalty free music',
-    'Up to 2 revisions',
-  ]);
+  const [deliverables, setDeliverables] = useState<string[]>(() => {
+    if (service?.deliverables) {
+      if (Array.isArray(service.deliverables)) return service.deliverables;
+      try {
+        return JSON.parse(service.deliverables);
+      } catch {
+        return String(service.deliverables).split(',').map((t: string) => t.trim());
+      }
+    }
+    return [
+      'High quality video',
+      'Script & Concept',
+      'Royalty free music',
+      'Up to 2 revisions',
+    ];
+  });
   const [delivInput, setDelivInput] = useState('');
   const [showDelivInput, setShowDelivInput] = useState(false);
 
@@ -117,75 +132,6 @@ export function CreateServiceSheet({
     }
     return [];
   };
-
-  // Detect Edit Mode & Pre-populate
-  useEffect(() => {
-    if (isOpen) {
-      if (service) {
-        setValue('name', service.name || '');
-        // Use subCategory or category fallback for the unified category field
-        setValue('category', service.subCategory || service.category || 'UGC / Product Review');
-        setValue('price', service.price ? String(service.price / 100) : '');
-        setDeliveryTime(service.deliveryTime || '5 Days');
-        setValue('shortDesc', service.description || '');
-        setValue('confirmed', false);
-        setVideoUrl(service.videoUrl || service.exampleUrl || '');
-        setThumbnailUrl(service.thumbnailUrl || '');
-        setVideoDuration('');
-
-        // Parse tags if stored
-        if (service.tags) {
-          if (Array.isArray(service.tags)) {
-            setTags(service.tags);
-          } else {
-            try {
-              setTags(JSON.parse(service.tags));
-            } catch {
-              setTags(String(service.tags).split(',').map((t: string) => t.trim()));
-            }
-          }
-        }
-        // Parse deliverables
-        if (service.deliverables) {
-          if (Array.isArray(service.deliverables)) {
-            setDeliverables(service.deliverables);
-          } else {
-            try {
-              setDeliverables(JSON.parse(service.deliverables));
-            } catch {
-              setDeliverables(String(service.deliverables).split(',').map((t: string) => t.trim()));
-            }
-          }
-        }
-      } else {
-        // Reset to default
-        reset({
-          name: '',
-          price: '',
-          shortDesc: '',
-          category: 'UGC / Product Review',
-          confirmed: false,
-        });
-        setDeliveryTime('5 Days');
-        setTags(['Brand Reel', 'UGC Creator', 'Product Review']);
-        setDeliverables([
-          'High quality video',
-          'Script & Concept',
-          'Royalty free music',
-          'Up to 2 revisions',
-        ]);
-        setVideoFile(null);
-        setVideoUrl('');
-        setThumbnailFile(null);
-        setThumbnailUrl('');
-        setSelectedFrameIdx(0);
-        setLocalExtractedFrames([]);
-        setExtractingFrames(false);
-        setVideoDuration('');
-      }
-      setStep(1);
-    }
-  }, [isOpen, service]);
 
   // Helper to determine if a URL is a remote web asset (excludes base64 data URIs and blob URIs)
   const isRemoteUrl = (url: any) => {
@@ -364,9 +310,27 @@ export function CreateServiceSheet({
   const handleNextStep = async () => {
     if (step === 1) {
       const isValid = await trigger(['name', 'price', 'shortDesc', 'category']);
-      if (isValid) {
-        setStep(2);
+      
+      if (!isValid || !videoUrl) {
+        try {
+          const { playSound } = require('@/lib/sound');
+          playSound('error');
+        } catch (e) {}
       }
+
+      if (!isValid) {
+        if (!videoUrl) {
+          setVideoError('Please upload a service video to continue.');
+        }
+        return;
+      }
+
+      if (!videoUrl) {
+        setVideoError('Please upload a service video to continue.');
+        return;
+      }
+
+      setStep(2);
     } else if (step === 2) {
       setStep(3);
     }
@@ -719,6 +683,7 @@ export function CreateServiceSheet({
                   handleNextStep={handleNextStep}
                   videoDuration={videoDuration}
                   watch={watch}
+                  videoError={videoError}
                 />
               )}
 

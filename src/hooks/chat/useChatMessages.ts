@@ -10,8 +10,9 @@ import type { ChatMessage, DisplayChatMessage, InviteStatus, ChatAttachmentType 
 function deriveDisplayMessages(messages: ChatMessage[], currentUserId: string | undefined): DisplayChatMessage[] {
   return messages.map((m, index) => {
     const prevMsg = messages[index - 1];
+    const nextMsg = messages[index + 1];
     const isMe = m.senderId === currentUserId;
-    const showAvatar = !isMe && (!prevMsg || prevMsg.senderId !== m.senderId);
+    const showAvatar = !isMe && (!nextMsg || nextMsg.senderId !== m.senderId);
     const isGroupContinuation = !!prevMsg && prevMsg.senderId === m.senderId;
     return { ...m, showAvatar, isGroupContinuation };
   });
@@ -108,28 +109,31 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     if (!roomId || !roomMessages$) return;
     const currentList = roomMessages$.list.peek() || [];
 
-    // Check if we have an optimistic/pending temp message that matches
+    // 1. If a message with this exact server ID already exists, skip entirely
+    if (currentList.some(m => m.id === incoming.id)) return;
+
+    // 2. Try to find a matching optimistic temp message to replace
     const tempIndex = currentList.findIndex(m => {
       if (!m.id.startsWith('temp_')) return false;
-      if (incoming.attachmentUrl && m.attachmentUrl) {
-        return incoming.attachmentUrl === m.attachmentUrl;
-      }
-      if (incoming.campaignId && m.campaignId) {
-        return incoming.campaignId === m.campaignId;
-      }
-      return incoming.content === m.content && incoming.senderId === m.senderId;
+      // Must be from the same sender
+      if (m.senderId !== incoming.senderId) return false;
+      // Match by attachment URL (most reliable for media messages)
+      if (incoming.attachmentUrl && m.attachmentUrl && incoming.attachmentUrl === m.attachmentUrl) return true;
+      // Match by campaign invite
+      if (incoming.campaignId && m.campaignId && incoming.campaignId === m.campaignId) return true;
+      // Match by content text (for regular text messages)
+      if (incoming.content && m.content && incoming.content === m.content) return true;
+      return false;
     });
 
     if (tempIndex !== -1) {
-      // Replace temporary message with official server one
+      // Replace the temp message with the confirmed server message
       const updated = [...currentList];
       updated[tempIndex] = incoming;
       roomMessages$.list.set(updated);
     } else {
-      // Normal append if it doesn't already exist
-      if (!currentList.some(m => m.id === incoming.id)) {
-        roomMessages$.list.set([...currentList, incoming]);
-      }
+      // New message from another user (or a message we didn't send optimistically)
+      roomMessages$.list.set([...currentList, incoming]);
     }
   }, [roomId, roomMessages$]);
 
@@ -160,6 +164,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
       content?: string;
       campaignId?: string;
       attachment?: { attachmentUrl: string; attachmentType: ChatAttachmentType; attachmentDurationSec: number };
+      replyToId?: string;
     },
     sendJson?: (p: any) => boolean
   ): Promise<ChatMessage | null> => {
@@ -183,6 +188,17 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
       senderAvatar = activeBrand.logo || undefined;
     }
 
+    let replyToContent = undefined;
+    let replyToSenderName = undefined;
+    const currentList = roomMessages$.list.peek() || [];
+    if (payload.replyToId) {
+      const parent = currentList.find(m => m.id === payload.replyToId);
+      if (parent) {
+        replyToContent = parent.content;
+        replyToSenderName = parent.senderName;
+      }
+    }
+
     const tempMsg: ChatMessage = {
       id: tempId,
       content: payload.content || '',
@@ -194,10 +210,12 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
       attachmentUrl: payload.attachment?.attachmentUrl,
       attachmentType: payload.attachment?.attachmentType,
       attachmentDurationSec: payload.attachment?.attachmentDurationSec,
+      replyToId: payload.replyToId,
+      replyToContent,
+      replyToSenderName,
     };
 
     // 1. Optimistic append to list
-    const currentList = roomMessages$.list.peek() || [];
     roomMessages$.list.set([...currentList, tempMsg]);
     playSound('messageSent');
 
@@ -208,6 +226,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
       attachmentUrl: payload.attachment?.attachmentUrl,
       attachmentType: payload.attachment?.attachmentType,
       attachmentDurationSec: payload.attachment?.attachmentDurationSec,
+      replyToId: payload.replyToId,
     };
 
     if (sendJson && sendJson(wsPayload)) {
@@ -217,7 +236,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
 
     // 3. Fallback to REST API
     try {
-      const res = await api.chat.send(roomId, payload.content, payload.campaignId, payload.attachment);
+      const res = await api.chat.send(roomId, payload.content, payload.campaignId, payload.attachment, payload.replyToId);
 
       // Update optimistic item with resolved message
       const latestList = roomMessages$.list.peek() || [];
@@ -248,6 +267,73 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     }
   }, [roomId, currentUserId, roomMessages$]);
 
+  const handleReactionUpdate = useCallback((messageId: string, userId: string, reaction: string) => {
+    if (!roomId || !roomMessages$) return;
+    const currentList = roomMessages$.list.peek() || [];
+    const msgIndex = currentList.findIndex(m => m.id === messageId);
+    
+    if (msgIndex !== -1) {
+      const msg = currentList[msgIndex];
+      const reactions = msg.reactions || [];
+      const existingIdx = reactions.findIndex(r => r.userId === userId);
+      
+      let updatedReactions = [...reactions];
+      if (existingIdx !== -1) {
+        if (!reaction) {
+          updatedReactions.splice(existingIdx, 1);
+        } else {
+          updatedReactions[existingIdx] = { ...reactions[existingIdx], reaction };
+        }
+      } else if (reaction) {
+        updatedReactions.push({ id: `react_${Date.now()}`, userId, reaction });
+      }
+      
+      const updatedList = [...currentList];
+      updatedList[msgIndex] = { ...msg, reactions: updatedReactions };
+      roomMessages$.list.set(updatedList);
+    }
+  }, [roomId, roomMessages$]);
+
+  const toggleReaction = useCallback(async (messageId: string, emoji: string, sendJson?: (p: any) => boolean) => {
+    if (!roomId || !roomMessages$ || !currentUserId) return;
+    
+    const currentList = roomMessages$.list.peek() || [];
+    const msgIndex = currentList.findIndex(m => m.id === messageId);
+    
+    if (msgIndex !== -1) {
+      const msg = currentList[msgIndex];
+      const reactions = msg.reactions || [];
+      const existingIdx = reactions.findIndex(r => r.userId === currentUserId);
+      
+      let updatedReactions = [...reactions];
+      if (existingIdx !== -1) {
+        if (reactions[existingIdx].reaction === emoji || !emoji) {
+          updatedReactions.splice(existingIdx, 1);
+        } else {
+          updatedReactions[existingIdx] = { ...reactions[existingIdx], reaction: emoji };
+        }
+      } else if (emoji) {
+        updatedReactions.push({ id: `temp_react_${Date.now()}`, userId: currentUserId, reaction: emoji });
+      }
+      
+      const updatedList = [...currentList];
+      updatedList[msgIndex] = { ...msg, reactions: updatedReactions };
+      roomMessages$.list.set(updatedList);
+    }
+    
+    const wsPayload = { type: 'reaction' as const, messageId, reaction: emoji };
+    if (sendJson && sendJson(wsPayload)) {
+      return;
+    }
+    
+    try {
+      const isAdmin = currentUserId.startsWith('usr_') ? false : true;
+      await api.chat.react(messageId, emoji, roomId, isAdmin);
+    } catch (err) {
+      console.warn('Failed to send reaction via REST', err);
+    }
+  }, [roomId, roomMessages$, currentUserId]);
+
   const messages = useMemo(() => deriveDisplayMessages(rawMessages, currentUserId), [rawMessages, currentUserId]);
 
   return {
@@ -261,5 +347,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     handleReadReceipt,
     appendLocalMessage,
     sendMessage,
+    handleReactionUpdate,
+    toggleReaction,
   };
 }

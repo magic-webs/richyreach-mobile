@@ -18,7 +18,7 @@ export interface PendingMessage {
   campaignId?: string;
   attachment?: {
     attachmentUrl: string;
-    attachmentType: 'audio';
+    attachmentType: 'audio' | 'image' | 'video';
     attachmentDurationSec: number;
   };
   createdAt: string;
@@ -99,7 +99,7 @@ export function updateRoomLastMessage(roomId: string, message: ChatMessage) {
     const room = updatedRooms[index];
     updatedRooms[index] = {
       ...room,
-      lastMessage: message.content || (message.attachmentType === 'audio' ? 'Voice note' : 'New attachment'),
+      lastMessage: message.content || (message.attachmentType === 'audio' ? 'Voice note' : message.attachmentType === 'image' ? 'Photo' : message.attachmentType === 'video' ? 'Video' : 'New attachment'),
       lastMessageCreatedAt: message.createdAt,
       lastMessageSenderId: message.senderId,
       unreadCount: message.senderId === room.lastMessageSenderId ? room.unreadCount : room.unreadCount + 1,

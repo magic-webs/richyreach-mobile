@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import { Colors, FontFamily } from '@/constants/brand';
-import type { DisplayChatMessage } from '@/types/chat';
+import type { DisplayChatMessage, ChatMessage } from '@/types/chat';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 
@@ -17,6 +17,8 @@ interface MessageListProps {
   onRespondToInvite: (inviteId: string, status: 'accepted' | 'declined') => void;
   collabStepsRoute: (campaignId: string) => { pathname: string; params: { id: string } };
   partnerIsTyping?: boolean;
+  onReply?: (message: ChatMessage) => void;
+  onReact?: (messageId: string, emoji: string) => void;
 }
 
 export function MessageList({
@@ -29,6 +31,8 @@ export function MessageList({
   onRespondToInvite,
   collabStepsRoute,
   partnerIsTyping = false,
+  onReply,
+  onReact,
 }: MessageListProps) {
   const listRef = useRef<FlatList<DisplayChatMessage>>(null);
   const isNearBottomRef = useRef(true);
@@ -67,6 +71,17 @@ export function MessageList({
   // Inverted FlatList requires reverse chronological order
   const reversedData = messages.slice().reverse();
 
+  const scrollToMessage = (messageId: string) => {
+    const index = reversedData.findIndex((m) => m.id === messageId);
+    if (index !== -1) {
+      try {
+        listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+      } catch (err) {
+        console.warn('scrollToIndex failed', err);
+      }
+    }
+  };
+
   return (
     <FlatList
       ref={listRef}
@@ -80,8 +95,22 @@ export function MessageList({
           isInviteRespondable={isInviteRespondable}
           onRespondToInvite={onRespondToInvite}
           collabStepsRoute={collabStepsRoute}
+          onReply={onReply}
+          onReact={onReact}
+          currentUserId={currentUserId || ''}
+          onScrollToMessage={scrollToMessage}
         />
       )}
+      onScrollToIndexFailed={(info) => {
+        const promise = new Promise((resolve) => setTimeout(resolve, 80));
+        promise.then(() => {
+          try {
+            listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+          } catch (e) {
+            console.warn('Fallback scrollToIndex failed', e);
+          }
+        });
+      }}
       onEndReached={() => {
         if (hasMoreOlder && !isLoadingOlder) onLoadOlder();
       }}

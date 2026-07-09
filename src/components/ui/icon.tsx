@@ -1,8 +1,5 @@
-import { Feather, MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
-type MaterialName = React.ComponentProps<typeof MaterialIcons>['name'];
+import * as LucideIcons from 'lucide-react-native';
 
 interface IconProps {
   name: string;
@@ -10,80 +7,85 @@ interface IconProps {
   color?: string;
 }
 
-const MATERIAL_ICONS: Record<string, MaterialName> = {
-  verified: 'verified',
-  medal: 'military-tech',
-  crown: 'workspace-premium',
-  flame: 'local-fire-department',
-  sparkle: 'auto-awesome',
-  reel: 'video-library',
-  arena: 'emoji-events',
-  trending: 'trending-up',
-  swap: 'swap-horiz',
-  wallet: 'account-balance-wallet',
-  addUser: 'person-add',
-  trophy: 'emoji-events',
-  ticket: 'local-activity',
-};
-
-const FEATHER_MAP: Record<string, FeatherName> = {
-  home: 'home',
-  grid: 'grid',
-  list: 'list',
-  user: 'user',
-  chat: 'message-square',
-  search: 'search',
-  bell: 'bell',
-  heart: 'heart',
-  star: 'star',
-  bolt: 'zap',
-  arrow: 'arrow-right',
-  arrowLeft: 'arrow-left',
-  plus: 'plus',
-  play: 'play',
-  dollar: 'dollar-sign',
-  chevron: 'chevron-right',
-  chevDown: 'chevron-down',
-  eye: 'eye',
-  filter: 'sliders',
-  clock: 'clock',
-  bookmark: 'bookmark',
-  location: 'map-pin',
-  send: 'send',
-  settings: 'settings',
-  camera: 'camera',
-  check: 'check',
-  x: 'x',
-  pause: 'pause',
-  briefcase: 'briefcase',
-  users: 'users',
-  back: 'arrow-left',
-  music: 'music',
-  calendar: 'calendar',
-  edit: 'edit-2',
-  logout: 'log-out',
-  globe: 'globe',
-  lock: 'lock',
-  chart: 'bar-chart-2',
-  more: 'more-horizontal',
-  attach: 'paperclip',
-  mic: 'mic',
-  gift: 'gift',
-  share: 'share-2',
-  pin: 'map-pin',
-  mail: 'mail',
-  phone: 'phone',
-  sun: 'sun',
-  trash: 'trash-2',
-  volume: 'volume-2',
-  mute: 'volume-x',
-  instagram: 'instagram',
+const ICON_MAPPING: Record<string, string> = {
+  verified: 'BadgeCheck',
+  medal: 'Medal',
+  crown: 'Crown',
+  flame: 'Flame',
+  sparkle: 'Sparkles',
+  reel: 'Film',
+  arena: 'Trophy',
+  trending: 'TrendingUp',
+  swap: 'ArrowLeftRight',
+  wallet: 'Wallet',
+  addUser: 'UserPlus',
+  trophy: 'Trophy',
+  ticket: 'Ticket',
+  
+  home: 'Home',
+  grid: 'Grid',
+  list: 'List',
+  user: 'User',
+  chat: 'MessageSquare',
+  search: 'Search',
+  bell: 'Bell',
+  heart: 'Heart',
+  star: 'Star',
+  bolt: 'Zap',
+  arrow: 'ArrowRight',
+  arrowLeft: 'ArrowLeft',
+  plus: 'Plus',
+  play: 'Play',
+  dollar: 'DollarSign',
+  chevron: 'ChevronRight',
+  chevDown: 'ChevronDown',
+  'chevron-down': 'ChevronDown',
+  eye: 'Eye',
+  filter: 'Sliders',
+  clock: 'Clock',
+  bookmark: 'Bookmark',
+  location: 'MapPin',
+  send: 'Send',
+  settings: 'Settings',
+  camera: 'Camera',
+  check: 'Check',
+  x: 'X',
+  pause: 'Pause',
+  briefcase: 'Briefcase',
+  users: 'Users',
+  back: 'ArrowLeft',
+  music: 'Music',
+  calendar: 'Calendar',
+  edit: 'Pencil',
+  logout: 'LogOut',
+  globe: 'Globe',
+  lock: 'Lock',
+  chart: 'BarChart2',
+  more: 'MoreHorizontal',
+  attach: 'Paperclip',
+  mic: 'Mic',
+  gift: 'Gift',
+  share: 'Share2',
+  pin: 'MapPin',
+  mail: 'Mail',
+  phone: 'Phone',
+  sun: 'Sun',
+  trash: 'Trash2',
+  volume: 'Volume2',
+  mute: 'VolumeX',
+  instagram: 'Instagram',
+  image: 'Image',
+  video: 'Video',
+  reply: 'CornerUpLeft',
 };
 
 export function Icon({ name, size = 24, color = 'currentColor' }: IconProps) {
-  if (MATERIAL_ICONS[name]) {
-    return <MaterialIcons name={MATERIAL_ICONS[name]} size={size} color={color} />;
+  const lucideName = ICON_MAPPING[name] || 'Star';
+  const LucideIcon = (LucideIcons as any)[lucideName] || (LucideIcons as any).Star;
+  
+  if (!LucideIcon) {
+    return null;
   }
-  const featherName = FEATHER_MAP[name] ?? 'star';
-  return <Feather name={featherName} size={size} color={color} />;
+  
+  return <LucideIcon size={size} color={color} />;
 }

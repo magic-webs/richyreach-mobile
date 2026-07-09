@@ -1,5 +1,11 @@
 export type InviteStatus = 'pending' | 'accepted' | 'declined';
-export type ChatAttachmentType = 'audio';
+export type ChatAttachmentType = 'audio' | 'image' | 'video';
+
+export interface MessageReaction {
+  id: string;
+  userId: string;
+  reaction: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -18,6 +24,13 @@ export interface ChatMessage {
   attachmentType?: ChatAttachmentType | null;
   attachmentDurationSec?: number | null;
   readAt?: string | null;
+  replyToId?: string | null;
+  replyToContent?: string | null;
+  replyToSenderId?: string | null;
+  replyToSenderName?: string | null;
+  replyToAttachmentUrl?: string | null;
+  replyToAttachmentType?: ChatAttachmentType | null;
+  reactions?: MessageReaction[];
 }
 
 /** ChatMessage augmented with derived, render-only grouping flags. */
@@ -61,4 +74,5 @@ export interface SendMessagePayload {
   attachmentUrl?: string;
   attachmentType?: ChatAttachmentType;
   attachmentDurationSec?: number;
+  replyToId?: string;
 }

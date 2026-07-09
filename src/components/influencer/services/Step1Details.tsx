@@ -15,7 +15,7 @@ import { Controller } from 'react-hook-form';
 import {
   CATEGORIES,
   DELIVERY_TIMES,
-} from './CreateServiceSheet';
+} from './constants';
 
 import { TactileButton } from '@/components/ui/tactile-button';
 
@@ -37,6 +37,7 @@ interface Step1DetailsProps {
   handleNextStep: () => void;
   videoDuration: string;
   watch: any;
+  videoError?: string;
 }
 
 export function Step1Details({
@@ -57,6 +58,7 @@ export function Step1Details({
   handleNextStep,
   videoDuration,
   watch,
+  videoError,
 }: Step1DetailsProps) {
   const nameValue = watch('name') || '';
   const shortDescValue = watch('shortDesc') || '';
@@ -207,10 +209,9 @@ export function Step1Details({
         <View style={styles.cardHeader}>
           <View style={[styles.cardIconBox, { backgroundColor: Colors.roseDeep }]}><Icon name="play" size={15} color={Colors.white} /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Sample Video Preview</Text>
-            <Text style={styles.cardSub}>Upload a video so brands know what to expect</Text>
+            <Text style={styles.cardTitle}>Service Video <Text style={{ color: '#FF3B30' }}>*</Text></Text>
+            <Text style={styles.cardSub}>Upload your service video</Text>
           </View>
-          <View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>Optional</Text></View>
         </View>
 
         {/* Video Selector body */}
@@ -235,11 +236,14 @@ export function Step1Details({
             <Text style={styles.videoFootnote}>Max 100MB • MP4, MOV • 9:16 recommended</Text>
           </View>
         ) : (
-          <TouchableOpacity onPress={triggerVideoPicker} style={styles.dashedUploadBox} activeOpacity={0.75}>
-            <Icon name="plus" size={24} color="rgba(63, 3, 11, 0.3)" />
-            <Text style={styles.uploadBoxTitle}>Select Video File</Text>
-            <Text style={styles.uploadBoxSub}>Max 100MB • MP4, MOV • 9:16 recommended</Text>
+          <TouchableOpacity onPress={triggerVideoPicker} style={[styles.dashedUploadBox, !!videoError && { borderColor: '#FF3B30', backgroundColor: 'rgba(255, 59, 48, 0.05)' }]} activeOpacity={0.75}>
+            <Icon name="plus" size={24} color={!!videoError ? "#FF3B30" : "rgba(63, 3, 11, 0.3)"} />
+            <Text style={[styles.uploadBoxTitle, !!videoError && { color: '#FF3B30' }]}>Select Video File</Text>
+            <Text style={[styles.uploadBoxSub, !!videoError && { color: '#FF3B30' }]}>Max 100MB • MP4, MOV • 9:16 recommended</Text>
           </TouchableOpacity>
+        )}
+        {!!videoError && (
+          <Text style={{ color: '#FF3B30', fontSize: 11, marginTop: 8 }}>{videoError}</Text>
         )}
       </View>
 
@@ -540,7 +544,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: 'rgba(63, 3, 11, 0.2)',
+    borderColor: 'rgba(63, 3, 11, 0.08)',
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

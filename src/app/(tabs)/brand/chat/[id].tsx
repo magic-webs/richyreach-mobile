@@ -9,13 +9,14 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { api } from '@/lib/api';
-import { uploadVoiceNote } from '@/lib/uploadVoiceNote';
+import { uploadVoiceNote, uploadMediaFile } from '@/lib/uploadVoiceNote';
 import { useChatMessages } from '@/hooks/chat/useChatMessages';
 import { useChatSocket } from '@/hooks/chat/useChatSocket';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatInputBar } from '@/components/chat/ChatInputBar';
 import { CampaignPickerSheet } from '@/components/chat/CampaignPickerSheet';
+import type { ChatMessage } from '@/types/chat';
 
 export default function BrandChatConversationScreen() {
   const { id: routeId, name: routeName, avatar: routeAvatar } = useLocalSearchParams<{ id: string; name?: string; avatar?: string }>();
@@ -24,7 +25,7 @@ export default function BrandChatConversationScreen() {
   const { showModal } = useUIStore();
   const currentUserId = session?.user?.id;
 
-  const [roomId, setRoomId] = useState<string | null>(routeId && typeof routeId === 'string' && routeId.startsWith('ip_') ? null : (routeId || null));
+  const [roomId, setRoomId] = useState<string | null>(routeId && typeof routeId === 'string' && routeId.startsWith('bp_') ? null : (routeId || null));
   const [roomName, setRoomName] = useState<string | null>(routeName || null);
   const [roomAvatar, setRoomAvatar] = useState<string | null>(routeAvatar || null);
   const [isLoading, setIsLoading] = useState(!!routeId);
@@ -37,10 +38,10 @@ export default function BrandChatConversationScreen() {
 
   const [partnerIsTyping, setPartnerIsTyping] = useState(false);
   const [localIsTyping, setLocalIsTyping] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const localTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const partnerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
@@ -60,13 +61,10 @@ export default function BrandChatConversationScreen() {
         let resolvedId = routeId;
 
         if (active && typeof routeId === 'string') {
-          if (routeId.startsWith('ip_')) {
-            // Create (or get existing) room between this brand profile and the influencer
+          if (routeId.startsWith('bp_')) {
             const room = await api.chat.createRoom(routeId);
             resolvedId = room.id;
             setRoomId(room.id);
-            if (room.name) setRoomName(room.name);
-            if (room.avatar) setRoomAvatar(room.avatar);
           } else {
             setRoomId(routeId);
           }
@@ -75,8 +73,8 @@ export default function BrandChatConversationScreen() {
         const allRooms = await api.chat.rooms();
         const found = allRooms.find((r: any) => r.roomId === resolvedId);
         if (found && active) {
-          setRoomName(found.instagramHandle ? `@${found.instagramHandle}` : (found.name || routeName || 'Creator'));
-          setRoomAvatar(found.avatar || routeAvatar || null);
+          setRoomName(found.companyName || found.name || routeName || 'Creator');
+          setRoomAvatar(found.logo || found.avatar || routeAvatar || null);
         } else if (active) {
           if (routeName) setRoomName(routeName);
           if (routeAvatar) setRoomAvatar(routeAvatar);
@@ -95,7 +93,7 @@ export default function BrandChatConversationScreen() {
     return () => {
       active = false;
     };
-  }, [routeId]);
+  }, [routeId, routeName, routeAvatar]);
 
   const {
     messages,
@@ -106,6 +104,8 @@ export default function BrandChatConversationScreen() {
     handleIncomingWsMessage,
     handleInviteStatusUpdate,
     handleReadReceipt,
+    handleReactionUpdate,
+    toggleReaction,
     sendMessage,
   } = useChatMessages({ roomId, currentUserId });
 
@@ -115,6 +115,7 @@ export default function BrandChatConversationScreen() {
     onMessage: handleIncomingWsMessage,
     onInviteStatusUpdate: handleInviteStatusUpdate,
     onReadReceipt: handleReadReceipt,
+    onReactionUpdate: handleReactionUpdate,
     onTypingStatusChange: (userId, isTyping) => {
       if (userId === currentUserId) return;
       setPartnerIsTyping(isTyping);
@@ -122,7 +123,7 @@ export default function BrandChatConversationScreen() {
       if (isTyping) {
         partnerTypingTimeoutRef.current = setTimeout(() => {
           setPartnerIsTyping(false);
-        }, 5000); // 5s safety timeout
+        }, 5000);
       }
     },
   });
@@ -141,10 +142,7 @@ export default function BrandChatConversationScreen() {
       return;
     }
 
-    if (localTypingTimeoutRef.current) {
-      clearTimeout(localTypingTimeoutRef.current);
-    }
-
+    if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
     localTypingTimeoutRef.current = setTimeout(() => {
       setLocalIsTyping(false);
       sendJson({ type: 'typing', isTyping: false });
@@ -154,19 +152,36 @@ export default function BrandChatConversationScreen() {
   const send = async () => {
     const trimmed = text.trim();
     if (!trimmed || !roomId || isSending) return;
-
     setIsSending(true);
-    if (localTypingTimeoutRef.current) {
-      clearTimeout(localTypingTimeoutRef.current);
-    }
+    if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
     setLocalIsTyping(false);
     sendJson({ type: 'typing', isTyping: false });
-
     try {
       setText('');
-      await sendMessage({ content: trimmed }, sendJson);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
+      await sendMessage({ content: trimmed, replyToId: replyId }, sendJson);
     } catch (err) {
       console.error('Error sending message', err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const sendMedia = async (localUri: string, type: 'image' | 'video') => {
+    if (!roomId || isSending) return;
+    setIsSending(true);
+    try {
+      const { url } = await uploadMediaFile(localUri, type);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
+      await sendMessage({
+        attachment: { attachmentUrl: url, attachmentType: type, attachmentDurationSec: 0 },
+        replyToId: replyId,
+      }, sendJson);
+    } catch (err) {
+      console.error('Failed to send media', err);
+      showModal({ title: 'Upload Failed', message: 'Could not send the media attachment. Please try again.' });
     } finally {
       setIsSending(false);
     }
@@ -178,8 +193,11 @@ export default function BrandChatConversationScreen() {
     try {
       const { url } = await uploadVoiceNote(localUri);
       const attachmentDurationSec = Math.round(durationSec);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
       await sendMessage({
-        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec }
+        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec },
+        replyToId: replyId,
       }, sendJson);
     } catch (err) {
       console.error('Failed to send voice note', err);
@@ -215,15 +233,18 @@ export default function BrandChatConversationScreen() {
   };
 
   const respondToInvite = async (inviteId: string, status: 'accepted' | 'declined') => {
-    // Brands never respond to their own invites — kept for MessageList's shared prop signature.
+    // Brands never respond to their own invites — kept for MessageList's shared signature.
     void inviteId;
     void status;
+  };
+
+  const handleReact = (messageId: string, emoji: string) => {
+    toggleReaction(messageId, emoji, sendJson);
   };
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior="padding">
       <ChatHeader name={roomName || 'Creator'} avatarUrl={roomAvatar} onBackPress={() => router.replace('/brand/chat' as any)} />
-
       {isLoading || isLoadingInitial ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.rose} />
@@ -239,6 +260,8 @@ export default function BrandChatConversationScreen() {
           onRespondToInvite={respondToInvite}
           collabStepsRoute={(campaignId) => ({ pathname: '/brand/campaign/[id]', params: { id: campaignId } })}
           partnerIsTyping={partnerIsTyping}
+          onReply={setReplyingTo}
+          onReact={handleReact}
         />
       )}
 
@@ -249,6 +272,9 @@ export default function BrandChatConversationScreen() {
         isSending={isSending}
         onSendVoiceNote={sendVoiceNote}
         isSendingVoiceNote={isSendingVoiceNote}
+        onSendMedia={sendMedia}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
         attachSlot={
           <TouchableOpacity onPress={openCampaignPicker} style={styles.attachBtn} activeOpacity={0.8}>
             <HugeiconsIcon icon={Attachment01FreeIcons} size={20} color={Colors.oxblood} />

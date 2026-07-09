@@ -275,11 +275,17 @@ export const api = {
       roomId: string,
       content?: string,
       campaignId?: string,
-      attachment?: { attachmentUrl: string; attachmentType: ChatAttachmentType; attachmentDurationSec: number }
+      attachment?: { attachmentUrl: string; attachmentType: ChatAttachmentType; attachmentDurationSec: number },
+      replyToId?: string
     ) =>
       request<ChatMessage>(`/chat/message/${roomId}`, {
         method: 'POST',
-        body: JSON.stringify({ content, campaignId, ...(attachment ?? {}) }),
+        body: JSON.stringify({ content, campaignId, replyToId, ...(attachment ?? {}) }),
+      }),
+    react: (messageId: string, reaction: string, roomId: string, isAdmin?: boolean) =>
+      request<any>(`/chat/message/${messageId}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ reaction, roomId, isAdmin }),
       }),
     respondInvite: (inviteId: string, status: 'accepted' | 'declined') =>
       request(`/chat/invite/${inviteId}/respond`, { method: 'POST', body: JSON.stringify({ status }) }),

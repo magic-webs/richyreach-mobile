@@ -524,14 +524,14 @@ export default function MarketplaceScreen() {
         scrollEventThrottle={16}
         refreshing={refreshing}
         onRefresh={handleRefresh}
-        progressViewOffset={Platform.OS === 'android' ? headerHeight : undefined}
+        progressViewOffset={Platform.OS !== 'ios' ? headerHeight : undefined}
         contentInset={{ top: Platform.OS === 'ios' ? headerHeight : 0 }}
         contentOffset={{ x: 0, y: Platform.OS === 'ios' ? -headerHeight : 0 }}
         automaticallyAdjustContentInsets={false}
         ListHeaderComponent={
           <View>
-            {/* Spacer equal to header height so list items start below the header (only on Android, since iOS uses contentInset) */}
-            {Platform.OS === 'android' && <View style={{ height: headerHeight }} />}
+            {/* Spacer equal to header height so list items start below the header (only on Android/Web, since iOS uses contentInset) */}
+            {Platform.OS !== 'ios' && <View style={{ height: headerHeight }} />}
 
             {/* List Header content / Loading content */}
             <View style={{ paddingHorizontal: 18, paddingTop: 10 }}>

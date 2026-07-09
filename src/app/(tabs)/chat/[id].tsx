@@ -1,19 +1,19 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Colors } from '@/constants/brand';
-import { useAuthStore } from '@/store/auth';
-import { useProfilesStore } from '@/store/profiles';
-import { useUIStore } from '@/store/ui';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '@/lib/api';
-import { uploadVoiceNote } from '@/lib/uploadVoiceNote';
-import { useChatMessages } from '@/hooks/chat/useChatMessages';
-import { useChatSocket } from '@/hooks/chat/useChatSocket';
+import { Colors } from '@/constants/brand';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatInputBar } from '@/components/chat/ChatInputBar';
-import type { InviteStatus } from '@/types/chat';
+import { useChatMessages } from '@/hooks/chat/useChatMessages';
+import { uploadVoiceNote, uploadMediaFile } from '@/lib/uploadVoiceNote';
+import { useChatSocket } from '@/hooks/chat/useChatSocket';
+import { useProfilesStore } from '@/store/profiles';
+import { useAuthStore } from '@/store/auth';
+import { useUIStore } from '@/store/ui';
+import type { InviteStatus, ChatMessage } from '@/types/chat';
 
 export default function InfluencerChatConversationScreen() {
   const { id: routeId, name: routeName, avatar: routeAvatar } = useLocalSearchParams<{ id: string; name?: string; avatar?: string }>();
@@ -34,6 +34,8 @@ export default function InfluencerChatConversationScreen() {
   const [localIsTyping, setLocalIsTyping] = useState(false);
   const localTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const partnerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
 
   // Clean up timeouts on unmount
   useEffect(() => {
@@ -57,7 +59,6 @@ export default function InfluencerChatConversationScreen() {
 
         if (active && typeof routeId === 'string') {
           if (routeId.startsWith('bp_')) {
-            // Create (or get existing) room between this influencer profile and the brand
             const room = await api.chat.createRoom(routeId);
             resolvedId = room.id;
             setRoomId(room.id);
@@ -91,7 +92,7 @@ export default function InfluencerChatConversationScreen() {
     return () => {
       active = false;
     };
-  }, [routeId]);
+  }, [routeId, routeName, routeAvatar]);
 
   const {
     messages,
@@ -103,6 +104,8 @@ export default function InfluencerChatConversationScreen() {
     handleInviteStatusUpdate,
     handleReadReceipt,
     sendMessage,
+    handleReactionUpdate,
+    toggleReaction,
   } = useChatMessages({ roomId, currentUserId });
 
   const { sendJson } = useChatSocket({
@@ -111,6 +114,7 @@ export default function InfluencerChatConversationScreen() {
     onMessage: handleIncomingWsMessage,
     onInviteStatusUpdate: handleInviteStatusUpdate,
     onReadReceipt: handleReadReceipt,
+    onReactionUpdate: handleReactionUpdate,
     onTypingStatusChange: (userId, isTyping) => {
       if (userId === currentUserId) return;
       setPartnerIsTyping(isTyping);
@@ -118,7 +122,7 @@ export default function InfluencerChatConversationScreen() {
       if (isTyping) {
         partnerTypingTimeoutRef.current = setTimeout(() => {
           setPartnerIsTyping(false);
-        }, 5000); // 5s safety timeout
+        }, 5000);
       }
     },
   });
@@ -160,9 +164,30 @@ export default function InfluencerChatConversationScreen() {
 
     try {
       setText('');
-      await sendMessage({ content: trimmed }, sendJson);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
+      await sendMessage({ content: trimmed, replyToId: replyId }, sendJson);
     } catch (err) {
       console.error('Error sending message', err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const sendMedia = async (localUri: string, type: 'image' | 'video') => {
+    if (!roomId || isSending) return;
+    setIsSending(true);
+    try {
+      const { url } = await uploadMediaFile(localUri, type);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
+      await sendMessage({
+        attachment: { attachmentUrl: url, attachmentType: type, attachmentDurationSec: 0 },
+        replyToId: replyId,
+      }, sendJson);
+    } catch (err) {
+      console.error('Failed to send media', err);
+      showModal({ title: 'Upload Failed', message: 'Could not send the media attachment. Please try again.' });
     } finally {
       setIsSending(false);
     }
@@ -174,8 +199,11 @@ export default function InfluencerChatConversationScreen() {
     try {
       const { url } = await uploadVoiceNote(localUri);
       const attachmentDurationSec = Math.round(durationSec);
+      const replyId = replyingTo?.id;
+      setReplyingTo(null);
       await sendMessage({
-        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec }
+        attachment: { attachmentUrl: url, attachmentType: 'audio', attachmentDurationSec },
+        replyToId: replyId,
       }, sendJson);
     } catch (err) {
       console.error('Failed to send voice note', err);
@@ -194,6 +222,10 @@ export default function InfluencerChatConversationScreen() {
       console.error('Failed to respond to invite', err);
       showModal({ title: 'Action Failed', message: 'Could not update the invitation. Please try again.' });
     }
+  };
+
+  const handleReact = (messageId: string, emoji: string) => {
+    toggleReaction(messageId, emoji, sendJson);
   };
 
   return (
@@ -215,6 +247,8 @@ export default function InfluencerChatConversationScreen() {
           onRespondToInvite={respondToInvite}
           collabStepsRoute={(campaignId) => ({ pathname: '/collab/[id]', params: { id: campaignId } })}
           partnerIsTyping={partnerIsTyping}
+          onReply={setReplyingTo}
+          onReact={handleReact}
         />
       )}
 
@@ -225,6 +259,9 @@ export default function InfluencerChatConversationScreen() {
         isSending={isSending}
         onSendVoiceNote={sendVoiceNote}
         isSendingVoiceNote={isSendingVoiceNote}
+        onSendMedia={sendMedia}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
       />
     </KeyboardAvoidingView>
   );

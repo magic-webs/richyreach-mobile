@@ -10,22 +10,24 @@ interface UseChatSocketOptions {
   onInviteStatusUpdate: (inviteId: string, status: InviteStatus) => void;
   onReadReceipt: (messageIds: string[], readAt: string) => void;
   onTypingStatusChange?: (userId: string, isTyping: boolean) => void;
+  onReactionUpdate?: (messageId: string, userId: string, reaction: string) => void;
 }
 
 type OutgoingPayload =
   | SendMessagePayload
   | { type: 'status-update'; inviteId: string; status: InviteStatus }
-  | { type: 'typing'; isTyping: boolean };
+  | { type: 'typing'; isTyping: boolean }
+  | { type: 'reaction'; messageId: string; reaction: string };
 
-export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange }: UseChatSocketOptions) {
+export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange, onReactionUpdate }: UseChatSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callbacksRef = useRef({ onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange });
+  const callbacksRef = useRef({ onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange, onReactionUpdate });
 
   useEffect(() => {
-    callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange };
-  }, [onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange]);
+    callbacksRef.current = { onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange, onReactionUpdate };
+  }, [onMessage, onInviteStatusUpdate, onReadReceipt, onTypingStatusChange, onReactionUpdate]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -77,6 +79,8 @@ export function useChatSocket({ roomId, activeProfileId, onMessage, onInviteStat
               callbacksRef.current.onReadReceipt(data.messageIds, data.readAt);
             } else if (data.type === 'typing' && isMounted) {
               callbacksRef.current.onTypingStatusChange?.(data.userId, data.isTyping);
+            } else if (data.type === 'reaction-update' && isMounted) {
+              callbacksRef.current.onReactionUpdate?.(data.messageId, data.userId, data.reaction);
             }
           } catch (err) {
             console.error('[WS] Error parsing message:', err);

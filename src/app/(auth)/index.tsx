@@ -2,6 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { registerForPushNotificationsAsync } from '@/lib/push-notifications';
+import { playSound } from '@/lib/sound';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
@@ -19,8 +20,23 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
+  Modal
 } from 'react-native';
+
+const COUNTRY_CODES = [
+  { code: '91', name: 'India' },
+  { code: '1', name: 'USA/Canada' },
+  { code: '44', name: 'United Kingdom' },
+  { code: '61', name: 'Australia' },
+  { code: '971', name: 'UAE' },
+  { code: '65', name: 'Singapore' },
+  { code: '60', name: 'Malaysia' },
+  { code: '81', name: 'Japan' },
+  { code: '49', name: 'Germany' },
+  { code: '33', name: 'France' },
+];
+
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   if (Platform.OS === 'web') {
@@ -37,7 +53,12 @@ export default function AuthScreen() {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const setRole = useAuthStore((s) => s.setRole);
-  const showModal = useUIStore((s) => s.showModal);
+  const _showModal = useUIStore((s) => s.showModal);
+
+  const showModal = (params: Parameters<typeof _showModal>[0]) => {
+    playSound('error');
+    _showModal(params);
+  };
 
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -47,6 +68,8 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('91');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [otp, setOtp] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,7 +106,7 @@ export default function AuthScreen() {
   }, [method, methodAnim]);
 
   const getIdentifier = () => {
-    return method === 'email' ? email.trim() : `${phone.trim()}`;
+    return method === 'email' ? email.trim() : `${countryCode.trim()}${phone.trim()}`;
   };
 
   const handleRequestOtp = async () => {
@@ -133,10 +156,19 @@ export default function AuthScreen() {
       setStep('verify');
       setOtp(''); // Clear previous OTP entry if any
     } catch (err: any) {
-      showModal({
-        title: 'Request Failed',
-        message: err?.message || 'Failed to send verification code. Please check your details and try again.',
-      });
+      const errorMsg = err?.message?.toLowerCase() || '';
+      if (mode === 'login' && (errorMsg.includes('not found') || errorMsg.includes('does not exist') || errorMsg.includes('no account'))) {
+        setMode('signup');
+        showModal({
+          title: 'Account Not Found',
+          message: 'We could not find an account with these details. Please sign up instead.',
+        });
+      } else {
+        showModal({
+          title: 'Request Failed',
+          message: err?.message || 'Failed to send verification code. Please check your details and try again.',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -374,9 +406,17 @@ export default function AuthScreen() {
                       <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.ink, marginBottom: 8, marginLeft: 6 }}>WhatsApp Number</Text>
                       <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 20, height: 56 }, Shadow.card]}>
                         <Icon name="phone" size={18} color={Colors.rose} />
+                        <TouchableOpacity
+                          style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12, borderRightWidth: 1, borderRightColor: 'rgba(63,3,11,0.1)', paddingRight: 8 }}
+                          onPress={() => setShowCountryPicker(true)}
+                        >
+                          <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink }}>+</Text>
+                          <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, minWidth: 28, marginLeft: 2 }}>{countryCode}</Text>
+                          <Icon name="chevron-down" size={14} color="rgba(63,3,11,0.5)" />
+                        </TouchableOpacity>
                         <TextInput
-                          style={{ flex: 1, marginLeft: 12, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
-                          placeholder="+91 XXXXX XXXXX"
+                          style={{ flex: 1, marginLeft: 8, height: '100%', fontFamily: FontFamily.sansMedium, fontSize: 15, color: Colors.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) } as any}
+                          placeholder="XXXXX XXXXX"
                           placeholderTextColor="rgba(63,3,11,0.3)"
                           value={phone}
                           onChangeText={setPhone}
@@ -562,6 +602,53 @@ export default function AuthScreen() {
           </View>
         </PageWrapper>
       </ScrollView>
+
+      <Modal
+        visible={showCountryPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCountryPicker(false)}
+      >
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowCountryPicker(false)}>
+          <TouchableWithoutFeedback>
+            <View style={{ backgroundColor: Colors.creamLite, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <Icon name="globe" size={24} color={Colors.rose} />
+                <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 18, color: Colors.ink, marginLeft: 12, fontWeight: '700' }}>Select Country Code</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={{ gap: 8, paddingBottom: 40 }}>
+                  {COUNTRY_CODES.map((item) => (
+                    <TouchableOpacity
+                      key={item.code}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        backgroundColor: countryCode === item.code ? 'rgba(63,3,11,0.05)' : 'transparent',
+                        borderRadius: 12,
+                      }}
+                      onPress={() => {
+                        setCountryCode(item.code);
+                        setShowCountryPicker(false);
+                      }}
+                    >
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 16, color: Colors.ink, flex: 1 }}>{item.name}</Text>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 16, color: Colors.ink }}>+{item.code}</Text>
+                      {countryCode === item.code && (
+                        <View style={{ marginLeft: 12 }}>
+                          <Icon name="check" size={18} color={Colors.rose} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
