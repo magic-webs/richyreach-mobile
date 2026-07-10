@@ -1,15 +1,17 @@
-import { GradientView } from '@/components/ui/gradient-view';
-import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { DonutChart, TrendAreaChart, BudgetBarChart } from '@/components/brand/analytics/AnalyticsCharts';
 import { api } from '@/lib/api';
 import { useProfilesStore } from '@/store/profiles';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useMemo } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+
+const CHART_WIDTH = Dimensions.get('window').width - 64; // screen − scroll padding − card padding
 
 export default function BrandAnalyticsScreen() {
   const router = useRouter();
@@ -48,10 +50,54 @@ export default function BrandAnalyticsScreen() {
   const totalApplicants = brandDashboard?.influencerStats?.totalApplicants || 0;
   const totalInvitesSent = brandDashboard?.influencerStats?.totalInvitesSent || 0;
 
-  // Calculate campaign budget metrics for the chart
-  const maxBudget = campaignsList.length > 0
-    ? Math.max(...campaignsList.map((c: any) => c.budget || 0))
-    : 1;
+  // Campaign status breakdown (donut) — real data from the campaigns list.
+  const statusData = useMemo(() => {
+    const palette: Record<string, string> = {
+      active: Colors.green,
+      draft: Colors.gold,
+      completed: 'rgba(63,3,11,0.45)',
+      cancelled: Colors.rose,
+    };
+    const counts: Record<string, number> = {};
+    campaignsList.forEach((c: any) => {
+      const s = (c.status || 'draft') as string;
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return ['active', 'draft', 'completed', 'cancelled']
+      .filter((s) => counts[s])
+      .map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: counts[s], color: palette[s] || Colors.oxblood }));
+  }, [campaignsList]);
+
+  // Top campaigns by budget (bar chart) — real budgets (paise → rupees).
+  const budgetData = useMemo(
+    () =>
+      [...campaignsList]
+        .sort((a: any, b: any) => (b.budget || 0) - (a.budget || 0))
+        .slice(0, 6)
+        .map((c: any) => ({ label: (c.title || 'Camp').slice(0, 5), value: Math.round((c.budget || 0) / 100) })),
+    [campaignsList]
+  );
+
+  // Campaigns created per month over the last 6 months (real, from createdAt).
+  const hasTrend = campaignsList.some((c: any) => c.createdAt);
+  const trend = useMemo(() => {
+    const counts: Record<string, number> = {};
+    campaignsList.forEach((c: any) => {
+      if (!c.createdAt) return;
+      const d = new Date(c.createdAt);
+      if (isNaN(d.getTime())) return;
+      counts[`${d.getFullYear()}-${d.getMonth()}`] = (counts[`${d.getFullYear()}-${d.getMonth()}`] || 0) + 1;
+    });
+    const base = new Date();
+    const points: number[] = [];
+    const labels: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      points.push(counts[`${d.getFullYear()}-${d.getMonth()}`] || 0);
+      labels.push(d.toLocaleString('default', { month: 'short' }));
+    }
+    return { points, labels };
+  }, [campaignsList]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -60,7 +106,7 @@ export default function BrandAnalyticsScreen() {
         <TouchableOpacity
           style={styles.backBtn}
           activeOpacity={0.8}
-          onPress={() => router.replace("/(tabs)/brand/profile")}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/brand/profile"))}
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={20} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
@@ -139,67 +185,34 @@ export default function BrandAnalyticsScreen() {
             </View>
           </View>
 
-          {/* Budget Breakdown Chart */}
+          {/* Campaign Status Breakdown (donut) */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Campaign Budgets Breakdown</Text>
-            {campaignsList.length > 0 ? (
-              <View style={{ gap: 14, marginTop: 10 }}>
-                {campaignsList.map((c: any) => {
-                  const budgetInRupees = (c.budget || 0) / 100;
-                  const ratio = Math.max(0.05, (c.budget || 0) / maxBudget);
-                  return (
-                    <View key={c.id} style={styles.chartRow}>
-                      <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={styles.chartCampaignName} numberOfLines={1}>{c.title || 'Campaign'}</Text>
-                        <View style={styles.chartBarTrack}>
-                          <GradientView
-                            variant="oxblood"
-                            style={StyleSheet.flatten([styles.chartBarFill, { width: `${ratio * 100}%` }]) as ViewStyle}
-                          />
-                        </View>
-                      </View>
-                      <Text style={styles.chartCampaignValue}>₹{budgetInRupees.toLocaleString()}</Text>
-                    </View>
-                  );
-                })}
-              </View>
+            <Text style={styles.sectionTitle}>Campaign Status Breakdown</Text>
+            <DonutChart data={statusData} centerLabel="Campaigns" />
+          </View>
+
+          {/* Budget Breakdown Chart (bars) */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Top Campaign Budgets</Text>
+            {budgetData.length > 0 ? (
+              <BudgetBarChart
+                data={budgetData}
+                width={CHART_WIDTH}
+                color={Colors.oxblood}
+                formatValue={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
+              />
             ) : (
               <Text style={styles.emptyText}>Create your first campaign to generate insights.</Text>
             )}
           </View>
 
-          {/* Expected Reach Column Chart */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Expected Audience Reach by Campaign</Text>
-            {campaignsList.length > 0 ? (
-              <View style={styles.vChartContainer}>
-                <View style={styles.vChartBarsRow}>
-                  {campaignsList.map((c: any) => {
-                    const budgetVal = c.budget || 0;
-                    const reach = c.expectedReach || (budgetVal ? Math.round(budgetVal / 100 * 2.5) : 50000);
-                    const maxReach = Math.max(...campaignsList.map((cam: any) => cam.expectedReach || (cam.budget ? Math.round(cam.budget / 100 * 2.5) : 50000)), 1);
-                    const ratio = Math.max(0.1, reach / maxReach);
-
-                    return (
-                      <View key={c.id} style={styles.vChartCol}>
-                        <View style={styles.vChartBarContainer}>
-                          <Text style={styles.vChartBarVal}>{formatReach(reach)}</Text>
-                          <View style={[styles.vChartBar, { height: `${ratio * 100}%` }]}>
-                            <GradientView variant="oxblood" style={StyleSheet.flatten([StyleSheet.absoluteFill]) as ViewStyle} />
-                          </View>
-                        </View>
-                        <Text style={styles.vChartLabel} numberOfLines={1}>
-                          {(c.title || 'Campaign').substring(0, 6)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : (
-              <Text style={styles.emptyText}>No data available for reach chart.</Text>
-            )}
-          </View>
+          {/* Campaigns Over Time (trend) — only when we have real timestamps */}
+          {hasTrend && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Campaigns Created (last 6 months)</Text>
+              <TrendAreaChart points={trend.points} labels={trend.labels} width={CHART_WIDTH} color={Colors.roseDeep} />
+            </View>
+          )}
 
           {/* Detailed Performance List */}
           <View style={styles.sectionCard}>

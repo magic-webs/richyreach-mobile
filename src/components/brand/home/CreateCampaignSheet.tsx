@@ -444,6 +444,10 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
       }
 
       setIsLaunching(false);
+      // Refresh the campaigns list immediately once the campaign is persisted. Don't wait for the
+      // success animation's onAnimationFinish (which can fail to fire) — otherwise the new campaign
+      // won't appear in the list until a manual refresh.
+      onSuccess();
       setShowSuccessAnimation(true);
     } catch (err: any) {
       console.error('Failed to launch campaign, saving as draft:', err);
@@ -547,6 +551,17 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
     'Step 5: Media & Timeline Review',
   ];
 
+  // Safety net: the success Lottie's onAnimationFinish can fail to fire on some devices; ensure the
+  // overlay always dismisses (and the sheet closes) so the user isn't left stuck on the animation.
+  useEffect(() => {
+    if (!showSuccessAnimation) return;
+    const timer = setTimeout(() => {
+      setShowSuccessAnimation(false);
+      onClose();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [showSuccessAnimation]);
+
   return (
     <Modal
       visible={isOpen}
@@ -639,7 +654,6 @@ export function CreateCampaignSheet({ isOpen, onClose, onSuccess, campaign }: Cr
               setTimeout(() => {
                 setShowSuccessAnimation(false);
                 onClose();
-                onSuccess();
               }, 800);
             }}
           />

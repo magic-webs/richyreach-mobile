@@ -25,7 +25,7 @@ export function ActionGrid({ onNewCampaign }: ActionGridProps) {
         <TouchableOpacity
           style={[styles.gridBtn, { backgroundColor: Colors.roseDeep }]}
           activeOpacity={0.9}
-          onPress={() => router.push('/(tabs)/marketplace')}
+          onPress={() => router.push('/brand/find-creators')}
         >
           <Icon name="users" size={18} color={Colors.cream} />
           <Text style={[styles.gridBtnText, { color: Colors.cream }]}>Find creators</Text>
@@ -36,7 +36,7 @@ export function ActionGrid({ onNewCampaign }: ActionGridProps) {
         <TouchableOpacity
           style={[styles.gridBtn, styles.gridBtnLight]}
           activeOpacity={0.85}
-          onPress={() => router.push('/insights')}
+          onPress={() => router.push('/(tabs)/brand/analytics')}
         >
           <Icon name="chart" size={18} color={Colors.oxblood} />
           <Text style={[styles.gridBtnText, { color: Colors.oxblood }]}>Analytics</Text>
@@ -45,7 +45,7 @@ export function ActionGrid({ onNewCampaign }: ActionGridProps) {
         <TouchableOpacity
           style={[styles.gridBtn, styles.gridBtnLight]}
           activeOpacity={0.85}
-          onPress={() => router.push('/(tabs)/arena')}
+          onPress={() => router.push('/(tabs)/brand/arena')}
         >
           <Icon name="trophy" size={18} color={Colors.oxblood} />
           <Text style={[styles.gridBtnText, { color: Colors.oxblood }]}>My contests</Text>

@@ -5,11 +5,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
-import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useProfilesStore } from '@/store/profiles';
+import { useUIStore } from '@/store/ui';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { Trash2 } from 'lucide-react-native';
 
 interface CampaignCardProps {
   title: string;
@@ -20,11 +22,12 @@ interface CampaignCardProps {
   total: number;
   viewMode?: 'list' | 'grid';
   onPress?: () => void;
+  onDeletePress?: () => void;
   image?: string;
   status?: string;
 }
 
-function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list', onPress, image, status }: CampaignCardProps) {
+function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = 'list', onPress, onDeletePress, image, status }: CampaignCardProps) {
   const percentage = Math.round((spent / total) * 100);
   const isGrid = viewMode === 'grid';
   const isDraft = status === 'draft';
@@ -47,13 +50,24 @@ function CampaignCard({ title, tone, creators, reach, spent, total, viewMode = '
           <View style={styles.campaignInfo}>
             <View style={styles.titleRow}>
               <Text style={[styles.campaignTitle, isGrid && styles.campaignTitleGrid]} numberOfLines={isGrid ? 2 : 1}>{title}</Text>
-              {!isGrid && (
-                <View style={[styles.activeBadge, isDraft && styles.draftBadge]}>
-                  <Text style={[styles.activeText, isDraft && styles.draftText]}>
-                    {isDraft ? 'Draft' : 'Active'}
-                  </Text>
-                </View>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {!isGrid && (
+                  <View style={[styles.activeBadge, isDraft && styles.draftBadge]}>
+                    <Text style={[styles.activeText, isDraft && styles.draftText]}>
+                      {isDraft ? 'Draft' : 'Active'}
+                    </Text>
+                  </View>
+                )}
+                {isDraft && onDeletePress && (
+                  <TouchableOpacity
+                    onPress={(e) => { e.stopPropagation(); onDeletePress(); }}
+                    style={{ marginLeft: 8 }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Trash2 size={14} color={Colors.roseDeep} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <Text style={[styles.campaignMeta, isGrid && styles.campaignMetaGrid]}>
               <Text style={{ fontWeight: '700', color: Colors.oxblood }}>{creators}</Text> {isGrid ? 'crs' : 'creators'} {isGrid ? '\nReach: ' : '  Reach: '}
@@ -115,6 +129,33 @@ interface CampaignsSectionProps {
 export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectionProps) {
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const showModal = useUIStore((s) => s.showModal);
+
+  const handleDeleteDraft = (id: string) => {
+    showModal({
+      title: "Delete Draft",
+      message: "Are you sure you want to delete this draft campaign?",
+      actions: [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.campaigns.delete(id);
+              queryClient.invalidateQueries({ queryKey: ['brandCampaigns', activeProfileId] });
+            } catch (err: any) {
+              showModal({
+                title: 'Error',
+                message: err.message || 'Failed to delete draft'
+              });
+            }
+          }
+        }
+      ]
+    });
+  };
 
   const { data: campaignsData, isLoading: loading } = useQuery<any>({
     queryKey: ['brandCampaigns', activeProfileId],
@@ -232,6 +273,7 @@ export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectio
                     router.push({ pathname: '/brand/campaign/[id]', params: { id: c.id } } as any);
                   }
                 }}
+                onDeletePress={() => handleDeleteDraft(c.id)}
               />
             );
           })
@@ -315,17 +357,18 @@ const styles = StyleSheet.create({
   },
   campaignCardContainer: {
     borderRadius: Radius.lg,
-    ...Shadow.card,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   campaignCardGridContainer: {
     width: '48%',
   },
   campaignCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: Radius.lg,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
   },
   campaignHeader: {
     flexDirection: 'row',
