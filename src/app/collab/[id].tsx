@@ -838,9 +838,16 @@ export default function CollabDetail() {
               activeOpacity={0.8}
               disabled={acceptCounterMutation.isPending}
             >
-              <Text style={styles.applyBtnText}>
-                {acceptCounterMutation.isPending ? 'Accepting...' : `Accept: ₹${(myApplication.counterAmount / 100).toLocaleString()}`}
-              </Text>
+              {acceptCounterMutation.isPending ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.applyBtnText}>Accepting...</Text>
+                </View>
+              ) : (
+                <Text style={styles.applyBtnText}>
+                  Accept: ₹{(myApplication.counterAmount / 100).toLocaleString()}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         ) : (
