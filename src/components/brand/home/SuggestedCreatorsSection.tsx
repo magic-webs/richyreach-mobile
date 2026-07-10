@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   suggestedScrollContent: {
     gap: 14,
     paddingRight: 20,
+    paddingBottom: 20
   },
   creatorCard: {
     width: 130,

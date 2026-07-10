@@ -8,9 +8,18 @@ import { useProfilesStore } from '@/store/profiles';
 import type { ChatMessage, DisplayChatMessage, InviteStatus, ChatAttachmentType } from '@/types/chat';
 
 function deriveDisplayMessages(messages: ChatMessage[], currentUserId: string | undefined): DisplayChatMessage[] {
-  return messages.map((m, index) => {
-    const prevMsg = messages[index - 1];
-    const nextMsg = messages[index + 1];
+  const uniqueMessages: ChatMessage[] = [];
+  const seenIds = new Set<string>();
+  for (const m of messages) {
+    if (!seenIds.has(m.id)) {
+      seenIds.add(m.id);
+      uniqueMessages.push(m);
+    }
+  }
+
+  return uniqueMessages.map((m, index) => {
+    const prevMsg = uniqueMessages[index - 1];
+    const nextMsg = uniqueMessages[index + 1];
     const isMe = m.senderId === currentUserId;
     const showAvatar = !isMe && (!nextMsg || nextMsg.senderId !== m.senderId);
     const isGroupContinuation = !!prevMsg && prevMsg.senderId === m.senderId;

@@ -3,11 +3,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const THUMB_SIZE = 24;
@@ -113,7 +113,7 @@ export function BidSlider({ value, minValue, maxValue, onChange, disabled }: Bid
 
       translateX.value = getOffset(finalVal);
       startX.value = translateX.value;
-      runOnJS(fireChange)(finalVal);
+      scheduleOnRN(fireChange, finalVal);
     })
     .onUpdate((e) => {
       const targetOffset = clamp(startX.value + e.translationX, 0, maxTranslate);
@@ -122,7 +122,7 @@ export function BidSlider({ value, minValue, maxValue, onChange, disabled }: Bid
       const finalVal = clamp(steppedVal, minValue, maxValue);
 
       translateX.value = getOffset(finalVal);
-      runOnJS(fireChange)(finalVal);
+      scheduleOnRN(fireChange, finalVal);
     })
     .onFinalize(() => {
       isDragging.value = withSpring(0);

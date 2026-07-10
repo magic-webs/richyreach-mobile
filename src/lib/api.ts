@@ -182,6 +182,7 @@ export const api = {
     workspace: (campaignId: string) => request<any>(`/influencers/workspace/${campaignId}`),
     services: {
       list: () => request<any[]>('/influencers/services'),
+      getPublic: (id: string) => request<any>(`/influencers/services/public/${id}`),
       create: (data: FormData | any) => {
         const isFormData = data instanceof FormData;
         return request<any>('/influencers/services', {

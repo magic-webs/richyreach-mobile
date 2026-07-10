@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
@@ -167,7 +168,7 @@ export function MessageBubble({
     })
     .onEnd((e) => {
       if (translateX.value >= 50 && onReply) {
-        runOnJS(onReply)(message);
+        scheduleOnRN(onReply, message);
       }
       translateX.value = withTiming(0, { duration: 150 });
     });
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   msgRowMe: { justifyContent: 'flex-end' },
   bubbleAvatarWrap: { width: 32, height: 32, borderRadius: 16, overflow: 'hidden' },
   bubbleAvatar: { width: 32, height: 32 },
-  bubbleContentContainer: { maxWidth: '82%', flexDirection: 'column' },
+  bubbleContentContainer: { maxWidth: '75%', flexDirection: 'column' },
   bubbleContentContainerMe: { alignItems: 'flex-end' },
   bubbleContentContainerThem: { alignItems: 'flex-start' },
 
@@ -339,6 +340,7 @@ const styles = StyleSheet.create({
   bubbleMe: {
     backgroundColor: Colors.oxblood,
     borderBottomRightRadius: 4,
+    alignSelf: 'flex-end',
     shadowColor: Colors.oxblood,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -348,6 +350,7 @@ const styles = StyleSheet.create({
   bubbleThem: {
     backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
+    alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: 'rgba(63,3,11,0.05)',
     shadowColor: '#000',
@@ -405,9 +408,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   replyQuoteTextWrap: {
-    flex: 1,
+    flexShrink: 1,
     paddingRight: 4,
   },
   replyQuoteThumbnail: {

@@ -107,6 +107,7 @@ function NavigationLayout() {
 
       {/* Public Shared Pages */}
       <Stack.Screen name="shared/[id]" />
+      <Stack.Screen name="shared/service/[id]" />
     </Stack>
   );
 }

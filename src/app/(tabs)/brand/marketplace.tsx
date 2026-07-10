@@ -1,5 +1,4 @@
 import { ReelVideoPlayer } from '@/components/brand/marketplace/ReelVideoPlayer';
-import { Icon } from '@/components/ui/icon';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { Image } from 'expo-image';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
@@ -9,23 +8,24 @@ import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 import { useShortlistStore } from '@/store/shortlist';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { Dimensions, FlatList, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Bookmark02Icon, SentIcon, BadgeCheckIcon, MusicNote01Icon } from '@hugeicons/core-free-icons';
-import { SelectedServicesSheet } from '@/components/brand/marketplace/SelectedServicesSheet';
+import { Bookmark02Icon, Share01Icon, BadgeCheckIcon, MusicNote01Icon } from '@hugeicons/core-free-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-
 import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { InviteCreatorSheet } from '@/components/brand/marketplace/InviteCreatorSheet';
-import { Creator } from '@/components/brand/marketplace/MarketplaceCreatorCard';
 import { MarketplaceHeader } from '@/components/brand/marketplace/MarketplaceHeader';
+
+// Fly-out distance for a completed swipe — larger than any viewport so the card fully clears.
+const SWIPE_OUT_DISTANCE = Dimensions.get('window').width + 100;
+// Horizontal drag past this many px commits the swipe (select/skip).
+const SWIPE_THRESHOLD = 120;
 
 interface SwipeableServiceCardProps {
   item: any;
@@ -33,14 +33,14 @@ interface SwipeableServiceCardProps {
   containerHeight: number;
   activeVideoIndex: number;
   mode: 'creators' | 'services';
-  handleSelect: (item: any) => void;
+  handleSelect: (item: any, index: number) => void;
   handleReject: (index: number) => void;
   actionFeedback: { index: number | null; type: 'select' | 'reject' | null };
   handleViewCreator: (id: string) => void;
   isBookmarked: boolean;
   onToggleBookmark: () => void;
   isSelected: boolean;
-  onInvite: () => void;
+  onShare: () => void;
 }
 
 function SwipeableServiceCard({
@@ -56,7 +56,7 @@ function SwipeableServiceCard({
   isBookmarked,
   onToggleBookmark,
   isSelected,
-  onInvite,
+  onShare,
 }: SwipeableServiceCardProps) {
   const translateX = useSharedValue(0);
   const [showDesc, setShowDesc] = useState(false);
@@ -74,15 +74,19 @@ function SwipeableServiceCard({
       translateX.value = event.translationX;
     })
     .onEnd((event) => {
-      if (event.translationX > 120) {
-        translateX.value = withTiming(500, { duration: 250 }, () => {
-          runOnJS(handleSelect)(item);
-          translateX.value = 0;
+      if (event.translationX > SWIPE_THRESHOLD) {
+        translateX.value = withTiming(SWIPE_OUT_DISTANCE, { duration: 250 }, (finished) => {
+          if (finished) {
+            scheduleOnRN(handleSelect, item, index);
+            translateX.value = 0;
+          }
         });
-      } else if (event.translationX < -120) {
-        translateX.value = withTiming(-500, { duration: 250 }, () => {
-          runOnJS(handleReject)(index);
-          translateX.value = 0;
+      } else if (event.translationX < -SWIPE_THRESHOLD) {
+        translateX.value = withTiming(-SWIPE_OUT_DISTANCE, { duration: 250 }, (finished) => {
+          if (finished) {
+            scheduleOnRN(handleReject, index);
+            translateX.value = 0;
+          }
         });
       } else {
         translateX.value = withTiming(0, { duration: 200 });
@@ -144,16 +148,16 @@ function SwipeableServiceCard({
           <Text style={styles.reelsActionText}>{isBookmarked ? 'Saved' : 'Save'}</Text>
         </TouchableOpacity>
 
-        {/* Invite Button */}
+        {/* Share Button */}
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={onInvite}
+          onPress={onShare}
           style={styles.reelsActionBtn}
         >
           <View style={styles.reelsIconCircle}>
-            <HugeiconsIcon icon={SentIcon} size={18} color={Colors.white} />
+            <HugeiconsIcon icon={Share01Icon} size={18} color={Colors.white} />
           </View>
-          <Text style={styles.reelsActionText}>Invite</Text>
+          <Text style={styles.reelsActionText}>Share</Text>
         </TouchableOpacity>
       </View>
 
@@ -241,9 +245,10 @@ function SwipeableServiceCard({
     </Animated.View>
   );
 
-  return Platform.OS === 'web' ? (
-    cardContent
-  ) : (
+  // Wrap in GestureDetector on all platforms. RNGH v2 drives the pan via pointer events on
+  // web, and the card's `touchAction: 'pan-y'` lets the browser keep vertical scroll-snap while
+  // JS handles the horizontal swipe.
+  return (
     <GestureDetector gesture={gesture}>
       {cardContent}
     </GestureDetector>
@@ -472,29 +477,35 @@ export default function BrandMarketplaceScreen() {
     };
   }, []);
 
+  // Scroll the feed to the reel after the one that was just swiped.
+  const advanceToNext = (index: number) => {
+    if (flatListRef.current && index < services.length - 1) {
+      flatListRef.current.scrollToIndex({
+        index: index + 1,
+        animated: true,
+      });
+    }
+  };
+
   const handleReject = (index: number) => {
     setActionFeedback({ index, type: 'reject' });
     setTimeout(() => {
       setActionFeedback({ index: null, type: null });
-      if (flatListRef.current && index < services.length - 1) {
-        flatListRef.current.scrollToIndex({
-          index: index + 1,
-          animated: true,
-        });
-      }
+      advanceToNext(index);
     }, 350);
   };
 
-  const handleSelect = (service: any) => {
-    const index = services.findIndex((s) => s.id === service.id);
+  const handleSelect = (service: any, index: number) => {
     setActionFeedback({ index, type: 'select' });
-    setTimeout(() => {
-      setActionFeedback({ index: null, type: null });
-      if (!session?.user?.id) return;
+    if (session?.user?.id) {
       const isAlreadyShortlisted = useShortlistStore.getState().isShortlisted(service.id);
       if (!isAlreadyShortlisted) {
         toggleShortlist(session.user.id, service);
       }
+    }
+    setTimeout(() => {
+      setActionFeedback({ index: null, type: null });
+      advanceToNext(index);
     }, 350);
   };
 
@@ -515,9 +526,18 @@ export default function BrandMarketplaceScreen() {
     }
   }, [params]);
 
-  const handleOpenInvite = (creator: Creator) => {
-    setSelectedCreator(creator);
-    setInviteOpen(true);
+  // Share the service reel via a universal deep link. Only the service id travels in the link; the
+  // viewer at /shared/service/[id] fetches the reel from the public backend endpoint.
+  const handleShareService = async (service: any) => {
+    try {
+      const shareUrl = `https://app.richyreach.com/shared/service/${service.id}`;
+      await Share.share({
+        message: `Check out "${service.name}" by ${service.creator?.name || 'a creator'} on RichyReach 🎬\n${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch (err) {
+      console.error('Failed to share service:', err);
+    }
   };
 
   const handleSendInvite = async (campaignId: string, campaignTitle: string) => {
@@ -637,6 +657,7 @@ export default function BrandMarketplaceScreen() {
             snapToInterval={containerHeight}
             snapToAlignment="start"
             decelerationRate="fast"
+            getItemLayout={(_, i) => ({ length: containerHeight, offset: containerHeight * i, index: i })}
             removeClippedSubviews={Platform.OS === 'android'}
             initialNumToRender={2}
             maxToRenderPerBatch={3}
@@ -660,7 +681,7 @@ export default function BrandMarketplaceScreen() {
                 isBookmarked={shortlistedServices.some((s) => s.id === item.id)}
                 onToggleBookmark={() => handleToggleBookmark(item)}
                 isSelected={shortlistedServices.some((s) => s.id === item.id)}
-                onInvite={() => handleOpenInvite(item.creator)}
+                onShare={() => handleShareService(item)}
               />
             )}
           />
