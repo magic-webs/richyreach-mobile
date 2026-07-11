@@ -390,4 +390,52 @@ export const api = {
     withdraw: (coins: number) =>
       request<any>('/wallet/withdraw', { method: 'POST', body: JSON.stringify({ coins }) }),
   },
+  social: {
+    instagram: {
+      getLoginUrl: () => request<{ url: string }>('/v1/social/instagram/login'),
+      getProfile: () => request<{
+        connected: boolean;
+        id?: string;
+        username?: string;
+        profilePicture?: string;
+        followers?: number;
+        following?: number;
+        mediaCount?: number;
+        lastSyncedAt?: string;
+        connectedAt?: string;
+      }>('/v1/social/instagram/profile'),
+      getAnalytics: () => request<{
+        profile: {
+          username: string;
+          profilePicture: string;
+          followers: number;
+          following: number;
+          mediaCount: number;
+          biography: string;
+        };
+        analytics: {
+          engagementRate: number;
+          avgLikes: number;
+          avgComments: number;
+          reach: number;
+          impressions: number;
+          avgViews: number;
+          level: "nano" | "micro" | "mid" | "macro" | "mega";
+          niche: string;
+        };
+        posts: Array<{
+          id: string;
+          mediaUrl: string;
+          mediaType: string;
+          caption: string;
+          likeCount: number;
+          commentCount: number;
+          permalink: string;
+          timestamp: string;
+        }>;
+      }>('/v1/social/instagram/analytics'),
+      disconnect: () => request<void>('/v1/social/instagram/disconnect', { method: 'POST' }),
+      refresh: () => request<any>('/v1/social/instagram/refresh', { method: 'POST' }),
+    },
+  },
 };

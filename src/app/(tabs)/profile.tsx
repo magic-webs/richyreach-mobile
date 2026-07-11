@@ -1,6 +1,7 @@
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { CreateServiceSheet } from '@/components/influencer/services/CreateServiceSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
+import { InstagramConnectionCard } from '@/components/influencer/profile/InstagramConnectionCard';
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { AboutTab } from '@/components/influencer/profile/AboutTab';
 import { NotificationsContent } from '@/components/influencer/profile/NotificationsContent';
@@ -44,7 +45,7 @@ const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { create } = useLocalSearchParams();
+  const { create, status, error, username } = useLocalSearchParams<{ create?: string; status?: string; error?: string; username?: string }>();
   const queryClient = useQueryClient();
 
   const insets = useSafeAreaInsets();
@@ -56,6 +57,24 @@ export default function ProfileScreen() {
       router.setParams({ create: undefined });
     }
   }, [create]);
+
+  useEffect(() => {
+    if (status === 'success') {
+      showModal({
+        title: 'Instagram Connected! 🎉',
+        message: `Successfully connected @${username} to your RichyReach profile.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['instagramProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
+      router.setParams({ status: undefined, username: undefined });
+    } else if (status === 'error') {
+      showModal({
+        title: 'Connection Failed ❌',
+        message: error || 'An error occurred during Instagram login.',
+      });
+      router.setParams({ status: undefined, error: undefined });
+    }
+  }, [status, error, username]);
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
   const loadInfluencerProfiles = useProfilesStore((s) => s.loadInfluencerProfiles);
@@ -371,6 +390,12 @@ export default function ProfileScreen() {
               displayNiches={displayNiches}
             />
           )}
+
+          {/* Connected Accounts */}
+          <View style={{ marginTop: 24 }}>
+            <Text style={styles.settingsLabel}>Connected Accounts</Text>
+            <InstagramConnectionCard />
+          </View>
 
           {/* Settings */}
           <View style={{ marginTop: 24 }}>
