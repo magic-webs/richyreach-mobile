@@ -1,13 +1,7 @@
-import { SlideBrands } from '@/components/onboarding/SlideBrands';
-import { SlideGrow } from '@/components/onboarding/SlideGrow';
-import { SlideInfluencers } from '@/components/onboarding/SlideInfluencers';
-import { SlideWelcome } from '@/components/onboarding/SlideWelcome';
-import { Colors, FontFamily, Radius } from '@/constants/brand';
+import { Colors, FontFamily } from '@/constants/brand';
 import { useAuthStore } from '@/store/auth';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -17,27 +11,33 @@ import {
   TouchableOpacity,
   View,
   ViewToken,
+  StyleSheet,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TactileButton } from '@/components/ui/tactile-button';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft } from '@hugeicons/core-free-icons';
+
+import { SlideOne } from '@/components/onboarding/SlideOne';
+import { SlideTwo } from '@/components/onboarding/SlideTwo';
+import { SlideThree } from '@/components/onboarding/SlideThree';
+
 const { width } = Dimensions.get('window');
 
-// Slide meta
-
+// Slide IDs (Ordered as Welcome first, then Earn, then Get Paid)
 const SLIDES = [
-  { id: 'welcome' },
-  { id: 'influencers' },
-  { id: 'brands' },
-  { id: 'grow' },
+  { id: 'slide2' }, // Built for Creators / Welcome
+  { id: 'slide1' }, // Earn with Every Post
+  { id: 'slide3' }, // Get Paid Faster
 ];
 
-// Animated dot
-
+// Animated dot for page indicator
 function AnimatedDot({ active }: { active: boolean }) {
   const dotWidth = useSharedValue(active ? 24 : 8);
 
-  React.useEffect(() => {
+  useEffect(() => {
     dotWidth.value = withTiming(active ? 24 : 8, { duration: 300 });
   }, [active]);
 
@@ -45,17 +45,16 @@ function AnimatedDot({ active }: { active: boolean }) {
     width: dotWidth.value,
     height: 8,
     borderRadius: 4,
-    backgroundColor: active ? Colors.oxblood : Colors.roseSoft,
+    backgroundColor: active ? '#5a1018' : '#e0dbd5',
   }));
 
   return <Animated.View style={style} />;
 }
 
-// Dots row
-
+// Page Indicator dots row
 function DotsRow({ current, total }: { current: number; total: number }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 20 }}>
       {Array.from({ length: total }).map((_, i) => (
         <AnimatedDot key={i} active={i === current} />
       ))}
@@ -63,8 +62,7 @@ function DotsRow({ current, total }: { current: number; total: number }) {
   );
 }
 
-// Main screen
-
+// Main screen controller
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -93,132 +91,150 @@ export default function OnboardingScreen() {
     }
   };
 
+  const goBack = () => {
+    if (currentIndex > 0) {
+      if (Platform.OS === 'web') {
+        setCurrentIndex(currentIndex - 1);
+      } else {
+        flatListRef.current?.scrollToIndex({ index: currentIndex - 1, animated: true });
+      }
+    }
+  };
+
   const skip = async () => {
     await setOnboardingSeen(true);
     router.replace('/(auth)');
   };
 
-  const renderSlide = ({ item, index }: { item: { id: string }; index: number }) => {
+  const renderSlide = ({ index }: { index: number }) => {
     const active = index === currentIndex;
     switch (index) {
-      case 0: return <SlideWelcome active={active} />;
-      case 1: return <SlideInfluencers active={active} />;
-      case 2: return <SlideBrands active={active} />;
-      case 3: return <SlideGrow active={active} />;
-      default: return null;
+      case 0:
+        return <SlideTwo active={active} />;
+      case 1:
+        return <SlideOne active={active} />;
+      case 2:
+        return <SlideThree active={active} />;
+      default:
+        return null;
     }
   };
 
-  const isLast = currentIndex === SLIDES.length - 1;
-  const isFirst = currentIndex === 0;
-
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4ece4' }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f4ece4" />
+    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/*Skip button*/}
-      {!isLast && (
+      {/* Back Button */}
+      {currentIndex > 0 && (
         <TouchableOpacity
-          onPress={skip}
+          onPress={goBack}
           activeOpacity={0.7}
           style={{
             position: 'absolute',
-            right: 24,
+            left: 20,
             zIndex: 50,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
+            padding: 10,
             borderRadius: 999,
             top: insets.top + 10,
-            backgroundColor: Colors.oxblood + '12',
+            backgroundColor: 'rgba(63, 3, 11, 0.05)',
           }}
         >
-          <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 13, color: Colors.oxblood }}>
-            Skip
-          </Text>
+          <HugeiconsIcon icon={ArrowLeft} size={24} color="#3f030b" />
         </TouchableOpacity>
       )}
 
-      {/* Slides */}
-      {Platform.OS === 'web' ? (
-        <View style={{ flex: 1, marginTop: 32, width: '100%', maxWidth: 450, alignSelf: 'center' }}>
-          {renderSlide({ item: SLIDES[currentIndex], index: currentIndex })}
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={SLIDES}
-          renderItem={renderSlide}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onViewableItemsChanged={onViewRef.current}
-          viewabilityConfig={viewConfigRef.current}
-          scrollEventThrottle={16}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ marginTop: 32 }}
-        />
-      )}
-
-      {/*Bottom bar ─*/}
-      <View
-        style={{ paddingHorizontal: 28, backgroundColor: '#f4ece4', paddingBottom: insets.bottom + 20, paddingTop: 16 }}
-      >
-        {/* Dots */}
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <DotsRow current={currentIndex} total={SLIDES.length} />
+      <View style={styles.mainWrapper}>
+        {/* Scrollable Content (Slides) */}
+        <View style={{ flex: 1, width: '100%' }}>
+          {Platform.OS === 'web' ? (
+            renderSlide({ index: currentIndex })
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={SLIDES}
+              renderItem={({ index }) => renderSlide({ index })}
+              keyExtractor={(item) => item.id}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onViewableItemsChanged={onViewRef.current}
+              viewabilityConfig={viewConfigRef.current}
+              scrollEventThrottle={16}
+              style={{ flex: 1 }}
+            />
+          )}
         </View>
 
-        {/* CTA button */}
-        <TouchableOpacity
-          onPress={goNext}
-          activeOpacity={0.87}
-          style={{
-            shadowColor: Colors.oxblood,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.35,
-            shadowRadius: 16,
-            elevation: 8,
-            borderRadius: Radius.xl,
-          }}
-        >
-          <LinearGradient
-            colors={[Colors.oxblood, Colors.oxbloodDeep]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              paddingVertical: 17,
-              borderRadius: Radius.xl,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Text style={{ fontFamily: FontFamily.sans, fontSize: 16, color: Colors.cream, letterSpacing: 0.3 }}>
-              {isLast ? 'Start Exploring' : 'Next'}
-            </Text>
-            {isLast
-              ? <Ionicons name="rocket-outline" size={24} color={Colors.cream} />
-              : <Feather name="arrow-right" size={24} color={Colors.cream} />
+        {/* Fixed Footer Bottom Section */}
+        <View style={[styles.fixedBottomSection, { paddingBottom: insets.bottom + 20 }]}>
+          <DotsRow current={currentIndex} total={3} />
+
+          <TactileButton
+            text={
+              currentIndex === 0
+                ? "Let's Begin"
+                : currentIndex === 1
+                  ? "Get Started"
+                  : "Let's Begin"
             }
-          </LinearGradient>
-        </TouchableOpacity>
+            onPress={goNext}
+            variant="primary"
+            size="lg"
+            fullWidth
+            icon="arrow"
+            iconPosition="right"
+            borderRadius={20}
+          />
 
-        {/* Already have account - first & last screens */}
-        {(isFirst || isLast) && (
-          <TouchableOpacity
-            onPress={skip}
-            style={{ alignItems: 'center', marginTop: 16 }}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontFamily: FontFamily.sansRegular, fontSize: 13, color: Colors.rose }}>
-              Already have an account?{' '}
-              <Text style={{ fontFamily: FontFamily.sans, color: Colors.oxblood, fontWeight: '600' }}>Log in</Text>
-            </Text>
-          </TouchableOpacity>
-        )}
+          {currentIndex === 0 ? (
+            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
+              <Text style={styles.footerLinkText}>
+                Already have an account? <Text style={{ fontWeight: '700', color: Colors.oxblood }}>Sign In</Text>
+              </Text>
+            </TouchableOpacity>
+          ) : currentIndex === 1 ? (
+            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
+              <Text style={styles.footerLinkText}>Sign In</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
+              <Text style={styles.footerLinkText}>Skip</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  footerLinkContainer: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerLinkText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: '#8d4750', // Colors.roseDeep
+  },
+  mainWrapper: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#ffffff',
+    ...(Platform.OS === 'web'
+      ? {
+        maxWidth: 450,
+        alignSelf: 'center',
+      }
+      : {}),
+  },
+  fixedBottomSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    backgroundColor: '#ffffff',
+  },
+});

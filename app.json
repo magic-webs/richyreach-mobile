@@ -71,7 +71,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#e8d8cc",
           "android": {
             "image": "./assets/images/richyreach-logo.png",
             "imageWidth": 76
