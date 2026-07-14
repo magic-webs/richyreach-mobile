@@ -1,56 +1,91 @@
-# Welcome to your Expo app 👋
+# RichyReach Mobile App 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+RichyReach is a premium marketplace and gamified collaboration platform connecting influencers/creators and brands. Built on a modern mobile stack, it provides a seamless dual-role experience for managing social campaigns, participating in challenges, and facilitating real-time transactions.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Key Features
 
-   ```bash
-   npm install
-   ```
+### 🔄 Seamless Role Switching
+- **Dual-role Experience**: Toggle between **Brand** and **Influencer** profiles instantly within a single application.
+- **Dynamic Dashboards**: Displays tailored statistics, campaigns, and tools based on the currently active profile role.
 
-2. Start the app
+### 🤳 For Influencers (Creators)
+- **Profile Customization**: Manage categories, bios, and link/authenticate social media accounts (like Instagram).
+- **Marketplace**: Browse live brand campaigns, submit applications with custom bids (pricing, number of reels, stories), and negotiate counter-offers.
+- **Collaboration Workspace**: Track your active collaborations, upload draft scripts, submit videos/reels for approval, and share published links.
+- **Trending Audio**: Keep up with the latest viral songs and audio tracks to boost reach on Instagram Reels.
+- **Wallet & Earnings**: View real-time cash and coin balances, track history, and request secure withdrawals.
 
-   ```bash
-   npx expo start
-   ```
+### 🏢 For Brands
+- **Campaign Creator**: Post marketing campaigns with templates, outline required deliverables (reels, stories), specify budget, and invite creators.
+- **Review & Feedback System**: Review scripts and videos submitted by influencers. Provide precise text inputs or upload voice feedback.
+- **Budget & Wallet (Razorpay)**: Deposit coins securely using the integrated Razorpay payment gateway to pay for campaigns.
+- **Direct Orders**: Browse pre-configured packages/services offered by influencers and order them directly.
 
-In the output, you'll find options to open the app in a
+### 🏆 The Arena (Gamified Challenges)
+- **Reel Reach**: Influencers join reach-based performance challenges to compete for top positions.
+- **Google Reviews**: Influencers write review submissions to earn coins and rewards.
+- **Leaderboards**: Live rankings of creators based on participation metrics.
+- **Smart Tools**: Generate reviews automatically utilizing AI-powered templates.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 💬 Communication & Infrastructure
+- **Real-time Chat**: Fully featured chat rooms between brands and influencers supporting text messages, voice notes, attachments, reply threads, and direct campaign invites.
+- **Push Notifications**: Receive instant alerts for message replies, campaign statuses, bid offers, and payments.
+- **Referral System**: Invite new users to the platform, earn referral points, and convert them to coins.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🛠️ Technology Stack
 
-When you're ready, run:
+- **Framework**: [Expo SDK 57](https://expo.dev) with [React Native](https://reactnative.dev)
+- **Navigation & Routing**: [Expo Router](https://docs.expo.dev/router/introduction) (file-based routing under `src/app`)
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand) (global store caching)
+- **Data Fetching**: [TanStack React Query](https://tanstack.com/query/latest) (query caching, offline support, caching)
+- **Animations**: [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/) and [Lottie](https://github.com/lottie-react-native/lottie-react-native)
+- **Styling**: Sleek modern UI built with glassmorphism, linear gradients (`expo-linear-gradient`), custom bottom sheets (`@gorhom/bottom-sheet`), and responsive icons (`@hugeicons/react-native` and `lucide-react-native`)
+- **Payments**: Integrated with [Razorpay SDK](https://github.com/razorpay/react-native-razorpay)
 
+---
+
+## 📂 Project Structure
+
+All source code resides inside the `src/` directory:
+- [src/app](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/app): File-based routing system (contains `(auth)`, `(tabs)`, and specific routes like `collab`, `brand`, `arena`, `profile`)
+- [src/components](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/components): Reusable UI components grouped by feature (home, brand, influencer, ui)
+- [src/constants](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/constants): Global styling definitions and brand colors
+- [src/data](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/data): Mock datasets for development
+- [src/hooks](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/hooks): Custom hooks for media capture, gestures, etc.
+- [src/lib](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/lib): API integration clients, local storage helpers, and third-party utilities
+- [src/store](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/store): Zustand stores for managing authentication, active profiles, and UI overlays
+- [src/types](file:///d:/development/magicwebs/RichyReach/richyreach-mobile/src/types): TypeScript interfaces and types
+
+---
+
+## ⚙️ Getting Started
+
+### 1. Prerequisites
+Make sure you have Node.js and Bun installed on your system.
+
+### 2. Install Dependencies
 ```bash
-npm run reset-project
+bun install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Environment Variables
+Create a `.env` file in the root folder and configure the API endpoint URL:
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000/api
+```
 
-### Other setup steps
+### 4. Start the Application
+To launch the development server, run:
+```bash
+bun run start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Use the options in the terminal to run the app on:
+- **Android Emulator**: Press `a`
+- **iOS Simulator**: Press `i`
+- **Web Browser**: Press `w` (running `bun start --web`)
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
