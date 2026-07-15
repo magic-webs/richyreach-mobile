@@ -318,12 +318,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansRegular,
     fontSize: 14,
     color: Colors.ink,
-    ...Shadow.card,
   },
   inputDisabled: {
     backgroundColor: 'rgba(63,3,11,0.03)',
     color: 'rgba(63,3,11,0.5)',
     borderColor: 'rgba(63,3,11,0.08)',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   inputLoader: {
     position: 'absolute',

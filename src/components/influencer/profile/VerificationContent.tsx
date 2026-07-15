@@ -5,6 +5,8 @@ import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
+import { useAuthStore } from '@/store/auth';
+import { useProfilesStore } from '@/store/profiles';
 
 interface VerificationContentProps {
   profile: any;
@@ -27,16 +29,32 @@ export function VerificationContent({ profile, servicesCount }: VerificationCont
 
   const verifyMutation = useMutation({
     mutationFn: () => api.influencers.verifyProfile(),
-    onSuccess: () => {
+    onSuccess: (updatedProfile: any) => {
       showModal({
-        title: 'Application Submitted! 🎉',
-        message: 'Your verification request has been successfully submitted. Our team will review your profile within 2-3 business days.',
+        title: 'Profile Verified! 🎉',
+        message: 'Your profile has been successfully verified! You now have the verified creator badge and can apply to campaigns.',
       });
+      
+      const userId = useAuthStore.getState().session?.user?.id;
+      if (userId && updatedProfile) {
+        useProfilesStore.getState().saveInfluencerProfile(userId, {
+          id: updatedProfile.id,
+          instagramHandle: updatedProfile.instagramHandle,
+          niche: updatedProfile.niche,
+          pricing: updatedProfile.pricing,
+          followers: updatedProfile.followers,
+          level: updatedProfile.level,
+          avatar: updatedProfile.avatar,
+          bio: updatedProfile.bio,
+          verified: updatedProfile.verified ?? true,
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
     },
     onError: (err: any) => {
       showModal({
-        title: 'Submission Failed',
+        title: 'Verification Failed',
         message: err.message || 'Something went wrong. Please try again.',
       });
     },

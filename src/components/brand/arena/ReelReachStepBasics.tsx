@@ -1,3 +1,4 @@
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
@@ -6,10 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Image } from 'expo-image';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Cancel01Icon, Image01Icon } from '@hugeicons/core-free-icons';
+import { Cancel01Icon, Image01Icon, Film01Icon } from '@hugeicons/core-free-icons';
 import * as ImagePicker from 'expo-image-picker';
-
-
 
 const CATEGORIES = ['General', 'Fashion', 'Beauty', 'Tech', 'Food', 'Travel', 'Fitness', 'Lifestyle', 'Gaming', 'Education'];
 
@@ -22,67 +21,11 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
-function InputField({ label, control, name, placeholder, multiline, rules, keyboardType }: any) {
-  return (
-    <View style={styles.field}>
-      <FieldLabel label={label} required={!!rules?.required} />
-      <Controller
-        control={control}
-        name={name}
-        rules={rules}
-        render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
-          <>
-            <TextInput
-              style={[styles.input, multiline && styles.textArea, error && styles.inputError]}
-              placeholder={placeholder}
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={String(value ?? '')}
-              multiline={multiline}
-              numberOfLines={multiline ? 4 : 1}
-              keyboardType={keyboardType || 'default'}
-              textAlignVertical={multiline ? 'top' : 'auto'}
-            />
-            {error && <Text style={styles.errorText}>{error.message || 'Required'}</Text>}
-          </>
-        )}
-      />
-    </View>
-  );
-}
-
-function DateField({ label, control, name }: { label: string; control: any; name: string }) {
-  return (
-    <View style={[styles.field, { flex: 1 }]}>
-      <FieldLabel label={label} required />
-      <Controller
-        control={control}
-        name={name}
-        rules={{ required: 'Required' }}
-        render={({ field: { onChange, value }, fieldState: { error } }) => (
-          <>
-            <TextInput
-              style={[styles.input, error && styles.inputError]}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="rgba(63,3,11,0.35)"
-              onChangeText={onChange}
-              value={value}
-              keyboardType="numeric"
-            />
-            {error && <Text style={styles.errorText}>{error.message}</Text>}
-          </>
-        )}
-      />
-    </View>
-  );
-}
-
-export function ArenaStepBasics() {
+export function ReelReachStepBasics() {
   const { control, watch, setValue } = useFormContext();
 
-  const currentCategory = watch('category');
   const bannerUrl = watch('bannerUrl');
+  const currentCategory = watch('category');
 
   const { data: templates = [] } = useQuery<any[]>({
     queryKey: ['arenaTemplates'],
@@ -107,7 +50,6 @@ export function ArenaStepBasics() {
       allowsEditing: true,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setValue('bannerUrl', result.assets[0].uri, { shouldValidate: true, shouldDirty: true });
     }
@@ -119,22 +61,72 @@ export function ArenaStepBasics() {
 
   return (
     <View style={styles.container}>
-      <InputField
-        label="Arena Title"
-        control={control}
-        name="title"
-        placeholder="e.g. Summer Glow Reel Challenge"
-        rules={{ required: 'Title is required', minLength: { value: 5, message: 'Min 5 characters' } }}
-      />
+      <Text style={styles.heading}>Reel Reach Details</Text>
+      <Text style={styles.subheading}>
+        Configure basics, dates, and preview parameters for the Reel Reach Arena.
+      </Text>
 
-      <InputField
-        label="Description"
-        control={control}
-        name="description"
-        placeholder="Describe what creators need to do, what they win, and any special rules..."
-        multiline
-        rules={{ required: 'Description is required' }}
-      />
+      {/* Guidelines Info Card */}
+      <View style={styles.infoCard}>
+        <View style={styles.infoTitleRow}>
+          <HugeiconsIcon icon={Film01Icon} size={14} color={Colors.green} strokeWidth={2} />
+          <Text style={styles.infoTitle}>How Reel Reach Works</Text>
+        </View>
+        <Text style={styles.infoItem}>1. Influencer joins and pays the 2,000 coin entry fee</Text>
+        <Text style={styles.infoItem}>2. They create a Reel showcasing your brand</Text>
+        <Text style={styles.infoItem}>3. They invite @richyreach_official and your brand's Instagram as collaborators</Text>
+        <Text style={styles.infoItem}>4. They submit the collaboration reel link — reach is auto-fetched via Instagram API</Text>
+        <Text style={styles.infoItem}>5. Highest reach wins 50% of the prize pool</Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      <View style={styles.field}>
+        <FieldLabel label="Arena Title" required />
+        <Controller
+          control={control}
+          name="title"
+          rules={{ required: 'Title is required', minLength: { value: 5, message: 'Min 5 characters' } }}
+          render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+            <>
+              <TextInput
+                style={[styles.input, error && styles.inputError]}
+                placeholder="e.g. Summer Glow Reel Challenge"
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={String(value ?? '')}
+              />
+              {error && <Text style={styles.errorText}>{error.message || 'Required'}</Text>}
+            </>
+          )}
+        />
+      </View>
+
+      <View style={styles.field}>
+        <FieldLabel label="Description" required />
+        <Controller
+          control={control}
+          name="description"
+          rules={{ required: 'Description is required' }}
+          render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+            <>
+              <TextInput
+                style={[styles.input, styles.textArea, error && styles.inputError]}
+                placeholder="Describe what creators need to do, what they win, and any special rules..."
+                placeholderTextColor="rgba(63,3,11,0.35)"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={String(value ?? '')}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              {error && <Text style={styles.errorText}>{error.message || 'Required'}</Text>}
+            </>
+          )}
+        />
+      </View>
 
       {/* Category */}
       <View style={styles.field}>
@@ -162,7 +154,7 @@ export function ArenaStepBasics() {
         />
       </View>
 
-      {/* Arena Banner Selector */}
+      {/* Banner Image Selector */}
       <View style={styles.field}>
         <FieldLabel label="Arena Banner Image" required />
         <Controller
@@ -238,7 +230,7 @@ export function ArenaStepBasics() {
         />
       </View>
 
-      {/* Dates */}
+      {/* Duration */}
       <View style={styles.field}>
         <FieldLabel label="Arena Duration" required />
         <Controller
@@ -285,6 +277,11 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   field: { gap: 8 },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(63,3,11,0.08)',
+    marginVertical: 4,
+  },
   label: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 13,
@@ -365,10 +362,6 @@ const styles = StyleSheet.create({
   counterBtnTextActive: {
     color: '#fff',
   },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
   imagePreviewContainer: {
     position: 'relative',
     height: 120,
@@ -437,5 +430,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  infoCard: {
+    backgroundColor: 'rgba(42,122,90,0.07)',
+    borderRadius: Radius.lg,
+    padding: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(42,122,90,0.2)',
+  },
+  infoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  infoTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.green,
+  },
+  infoItem: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(42,122,90,0.85)',
+    lineHeight: 18,
   },
 });

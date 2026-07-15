@@ -20,9 +20,11 @@ import { useProfilesStore } from '@/store/profiles';
 import { useUIStore } from '@/store/ui';
 
 import { ArenaStepType } from '../arena/ArenaStepType';
-import { ArenaStepBasics } from '../arena/ArenaStepBasics';
-import { ArenaStepGoogleReview } from '../arena/ArenaStepGoogleReview';
-import { ArenaStepReview } from '../arena/ArenaStepReview';
+import { GoogleReviewStepBasics } from '../arena/GoogleReviewStepBasics';
+import { GoogleReviewStepReview } from '../arena/GoogleReviewStepReview';
+import { ReelReachStepBasics } from '../arena/ReelReachStepBasics';
+import { ReelReachStepBudget } from '../arena/ReelReachStepBudget';
+import { ReelReachStepReview } from '../arena/ReelReachStepReview';
 import { TactileButton } from '@/components/ui/tactile-button';
 
 interface CreateArenaSheetProps {
@@ -31,7 +33,7 @@ interface CreateArenaSheetProps {
   onSuccess: () => void;
 }
 
-const TOTAL_STEPS = 3;
+
 
 const REEL_DEFAULTS = {
   reviewGuidelines:
@@ -54,7 +56,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   const showModal = useUIStore((s) => s.showModal);
   const { activeBrandProfileId, brandProfiles } = useProfilesStore();
   const scrollViewRef = useRef<ScrollView>(null);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get today + 30 days as default dates
@@ -85,12 +87,21 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
   });
 
   const arenaType = methods.watch('arenaType');
+  const steps = arenaType === 'google_review' ? [1, 2, 3] : [1, 2, 3, 4];
+  const totalSteps = steps.length;
 
-  const stepTitles = [
-    'Step 1: Arena Type',
-    'Step 2: Basic Details',
-    'Step 3: Review & Launch',
-  ];
+  const stepTitles = arenaType === 'google_review'
+    ? [
+        'Step 1: Arena Type',
+        'Step 2: Basic Details',
+        'Step 3: Review & Launch',
+      ]
+    : [
+        'Step 1: Arena Type',
+        'Step 2: Basic Details',
+        'Step 3: Budget & Coins',
+        'Step 4: Review & Launch',
+      ];
 
   useEffect(() => {
     if (isOpen) {
@@ -115,6 +126,12 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (currentStep > totalSteps) {
+      setCurrentStep(totalSteps as any);
+    }
+  }, [arenaType, totalSteps, currentStep]);
+
   // When arena type changes, update entry fee and pre-fill type-appropriate defaults
   // When arena type or maxParticipants changes, update entry fee, default budget, guidelines, etc.
   useEffect(() => {
@@ -126,6 +143,13 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
           methods.setValue('entryFeeCoins', 0, { shouldDirty: false });
           methods.setValue('rewardPerReview', 2500, { shouldDirty: false });
           methods.setValue('totalBudgetCoins', maxP * 5000, { shouldDirty: false });
+        } else if (type === 'reel_reach') {
+          methods.setValue('entryFeeCoins', 2000, { shouldDirty: false });
+          methods.setValue('rewardPerReview', 0, { shouldDirty: false });
+          const currentBudget = methods.getValues('totalBudgetCoins');
+          if (!currentBudget || currentBudget === maxP * 5000) {
+            methods.setValue('totalBudgetCoins', 200000, { shouldDirty: false });
+          }
         }
       }
       if (name === 'arenaType') {
@@ -155,7 +179,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
 
   const getStepFields = (step: number, type: string): string[] => {
     if (step === 1) return ['arenaType'];
-    
+
     if (step === 2) {
       if (type === 'google_review') {
         return [
@@ -181,6 +205,11 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
         ];
       }
     }
+
+    if (step === 3) {
+      return ['totalBudgetCoins', 'entryFeeCoins', 'rewardPerReview'];
+    }
+
     return [];
   };
 
@@ -189,7 +218,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     const fields = getStepFields(currentStep, type);
     const isValid = await methods.trigger(fields as any);
     if (!isValid) return;
-    if (currentStep < TOTAL_STEPS) {
+    if (currentStep < totalSteps) {
       setCurrentStep((s) => (s + 1) as any);
     }
   };
@@ -320,7 +349,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
     }
   };
 
-  const isLastStep = currentStep === TOTAL_STEPS;
+  const isLastStep = currentStep === totalSteps;
   const isFirstStep = currentStep === 1;
 
   return (
@@ -350,7 +379,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
 
           {/* Step Indicator */}
           <View style={styles.indicatorContainer}>
-            {([1, 2, 3] as const).map((step) => {
+            {steps.map((step) => {
               const active = currentStep === step;
               const completed = currentStep > step;
               return (
@@ -366,7 +395,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
                       <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{step}</Text>
                     )}
                   </TouchableOpacity>
-                  {step < 3 && (
+                  {step < totalSteps && (
                     <View style={[styles.stepLine, completed && styles.stepLineCompleted]} />
                   )}
                 </React.Fragment>
@@ -388,21 +417,23 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
               {currentStep === 1 && <ArenaStepType />}
               {currentStep === 2 && (
                 arenaType === 'google_review' ? (
-                  <>
-                    <ArenaStepGoogleReview />
-                    <View style={{ height: 24 }} />
-                    <ArenaStepBasics />
-                  </>
+                  <GoogleReviewStepBasics />
                 ) : (
-                  <>
-                    <ArenaStepBasics />
-                    <View style={{ height: 24 }} />
-                    <ArenaStepGoogleReview />
-                  </>
+                  <ReelReachStepBasics />
                 )
               )}
               {currentStep === 3 && (
-                <ArenaStepReview
+                arenaType === 'google_review' ? (
+                  <GoogleReviewStepReview
+                    onPublish={methods.handleSubmit(handleLaunch)}
+                    isLoading={isSubmitting}
+                  />
+                ) : (
+                  <ReelReachStepBudget />
+                )
+              )}
+              {currentStep === 4 && arenaType === 'reel_reach' && (
+                <ReelReachStepReview
                   onPublish={methods.handleSubmit(handleLaunch)}
                   isLoading={isSubmitting}
                 />
@@ -422,7 +453,7 @@ export function CreateArenaSheet({ isOpen, onClose, onSuccess }: CreateArenaShee
                   )}
                   <TactileButton
                     onPress={nextStep}
-                    text={currentStep === TOTAL_STEPS - 1 ? 'Review' : 'Continue'}
+                    text={currentStep === totalSteps - 1 ? 'Review' : 'Continue'}
                     variant="primary"
                     icon="arrow"
                     iconPosition="right"

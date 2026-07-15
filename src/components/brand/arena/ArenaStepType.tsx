@@ -20,7 +20,7 @@ const ARENA_TYPES = [
     subtitle: 'Influencers post reels. Highest reach wins the prize pool.',
     icon: StarIcon,
     gradient: ['#b46a74', '#3f030b'] as [string, string],
-    tag: 'Coming Soon',
+    tag: 'Contest',
   }
 ] as const;
 
@@ -48,17 +48,6 @@ export function ArenaStepType() {
                   key={type.id}
                   activeOpacity={0.85}
                   onPress={() => {
-                    if (type.id === 'reel_reach') {
-                      if (Platform.OS === 'web') {
-                        alert('Coming Soon 🎬\n\nReel Reach Arena is coming soon! For now, you can create a Google Review Arena.');
-                      } else {
-                        Alert.alert(
-                          'Coming Soon 🎬',
-                          'Reel Reach Arena is coming soon! For now, you can create a Google Review Arena.'
-                        );
-                      }
-                      return;
-                    }
                     onChange(type.id);
                   }}
                   style={[styles.optionCard, isSelected && styles.optionCardSelected]}

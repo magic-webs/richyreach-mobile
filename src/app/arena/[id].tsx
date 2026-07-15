@@ -356,7 +356,7 @@ export default function ArenaDetailScreen() {
   const handleJoin = () => {
     if (!arena) return;
 
-    if (infProfile && !infProfile.verified) {
+    if (infProfile && !infProfile.verified && arena.arenaType !== 'google_review') {
       showModal({
         title: 'Verification Required 🔒',
         message: 'Only verified creators can join Arena contests. Please connect your Instagram and apply for verification in your Profile settings first.',
@@ -535,7 +535,7 @@ export default function ArenaDetailScreen() {
               {isGoogleReview ? (
                 <View style={styles.prizeRow}>
                   <Text style={styles.prizeRowLabel}>Per Verified Review</Text>
-                  <Text style={[styles.prizeRowValue, { color: Colors.gold }]}>
+                  <Text style={[styles.prizeRowValue, { color: Colors.oxblood2 }]}>
                     {(arena.rewardPerReview || 2500).toLocaleString()} coins
                   </Text>
                 </View>
@@ -847,7 +847,7 @@ export default function ArenaDetailScreen() {
           {/* Leaderboard */}
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Trophy size={16} color={Colors.cream} />
+              <Trophy size={16} color={Colors.oxblood2} />
               <Text style={styles.sectionTitle}>Leaderboard</Text>
             </View>
             {leaderboard.length === 0 ? (
@@ -1025,6 +1025,10 @@ const styles = StyleSheet.create({
     color: Colors.oxblood,
   },
   businessCard: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
     padding: 14,
@@ -1412,7 +1416,7 @@ const styles = StyleSheet.create({
   heroBannerContainer: {
     marginHorizontal: 16,
     marginTop: 16,
-    height: 180,
+    height: 220,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     backgroundColor: Colors.cream,

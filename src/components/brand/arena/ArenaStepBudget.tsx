@@ -76,12 +76,19 @@ export function ArenaStepBudget() {
   const availableCoins = (walletData as any)?.balance?.coins || 0;
   const calculatedBudget = maxP * 5000;
 
-  // Reactively sync budget fields for google review arenas
+  // Reactively sync budget fields for both arena types
   React.useEffect(() => {
     if (arenaType === 'google_review') {
       setValue('totalBudgetCoins', calculatedBudget, { shouldValidate: true, shouldDirty: true });
       setValue('rewardPerReview', 2500, { shouldValidate: true, shouldDirty: true });
       setValue('entryFeeCoins', 0, { shouldValidate: true, shouldDirty: true });
+    } else if (arenaType === 'reel_reach') {
+      setValue('entryFeeCoins', 2000, { shouldValidate: true, shouldDirty: true });
+      setValue('rewardPerReview', 0, { shouldValidate: true, shouldDirty: true });
+      const currentBudget = watch('totalBudgetCoins');
+      if (!currentBudget || currentBudget === calculatedBudget) {
+        setValue('totalBudgetCoins', 200000, { shouldValidate: true, shouldDirty: true });
+      }
     }
   }, [arenaType, maxP, calculatedBudget]);
 
@@ -249,6 +256,8 @@ const styles = StyleSheet.create({
   coinInputRowLocked: {
     backgroundColor: 'rgba(63,3,11,0.03)',
     borderStyle: 'dashed',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   coinSymbol: { fontSize: 20 },
   coinInput: {

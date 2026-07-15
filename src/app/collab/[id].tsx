@@ -31,31 +31,62 @@ function CollabDetailSkeleton() {
 
   return (
     <View style={styles.root}>
-      {/* Hero skeleton */}
-      <View style={[styles.heroWrap, { backgroundColor: Colors.creamLite }]}>
-        {/* Top nav */}
-        <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-        <View style={StyleSheet.absoluteFill}>
-          <Skeleton width="100%" height={300} borderRadius={0} />
-        </View>
-      </View>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Hero skeleton */}
+        <View style={styles.heroWrap}>
+          <View style={StyleSheet.absoluteFill}>
+            <Skeleton width="100%" height={300} borderRadius={0} />
+          </View>
+          <LinearGradient
+            colors={['rgba(42,2,7,0.45)', 'transparent', 'rgba(42,2,7,0.85)']}
+            style={styles.heroOverlay}
+          />
+          {/* Top nav */}
+          <View style={[styles.heroNav, { top: Math.max(insets.top, 16) + 12 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.8}>
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={styles.navBtn}>
+                <HugeiconsIcon icon={Share01Icon} size={19} color={Colors.oxblood} strokeWidth={2} />
+              </View>
+              <View style={styles.navBtn}>
+                <UnsavedBookmarkIcon size={20} color={Colors.oxblood} strokeWidth={2} />
+              </View>
+            </View>
+          </View>
+          {/* Title overlay skeleton */}
+          <View style={styles.heroTitle}>
+            <View style={styles.brandRow}>
+              <Skeleton width={30} height={30} borderRadius={15} />
+              <Skeleton width={80} height={14} borderRadius={4} />
+              <Skeleton width={50} height={10} borderRadius={4} />
+            </View>
+            <Skeleton width="90%" height={24} borderRadius={6} style={{ marginTop: 8 }} />
+            <Skeleton width="60%" height={24} borderRadius={6} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+
         {/* Body skeleton */}
         <View style={styles.body}>
           {/* Budget strip */}
-          <Skeleton width="100%" height={80} borderRadius={18} />
+          <View style={[styles.budgetStrip, { backgroundColor: Colors.oxblood, height: 80, padding: 16 }]}>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton width={120} height={12} borderRadius={4} />
+              <Skeleton width={160} height={20} borderRadius={4} />
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Skeleton width={80} height={12} borderRadius={4} />
+              <Skeleton width={100} height={10} borderRadius={4} />
+            </View>
+          </View>
 
           {/* Facts grid */}
           <View style={[styles.factsWrap, { marginTop: 24 }]}>
-            {[...Array(4)].map((_, i) => (
+            {[...Array(2)].map((_, i) => (
               <View key={i} style={[styles.factCard, { borderWidth: 0 }]}>
-                <Skeleton width={30} height={30} borderRadius={15} />
-                <Skeleton width={80} height={16} borderRadius={4} style={{ marginTop: 10 }} />
+                <Skeleton width={20} height={20} borderRadius={10} />
+                <Skeleton width={85} height={16} borderRadius={4} style={{ marginTop: 10 }} />
                 <Skeleton width={60} height={10} borderRadius={4} style={{ marginTop: 6 }} />
               </View>
             ))}
@@ -66,13 +97,48 @@ function CollabDetailSkeleton() {
             <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
             <Skeleton width="100%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
             <Skeleton width="95%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
-            <Skeleton width="70%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+            <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+          </View>
+
+          {/* Campaign Details Section */}
+          <View style={styles.detailsSectionContainer}>
+            <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+            <View style={styles.detailsGrid}>
+              {[...Array(4)].map((_, i) => (
+                <View key={i} style={[styles.detailGridItem, { borderWidth: 0 }]}>
+                  <Skeleton width={18} height={18} borderRadius={9} />
+                  <View style={[styles.detailItemTextContainer, { gap: 4 }]}>
+                    <Skeleton width={45} height={10} borderRadius={3} />
+                    <Skeleton width={80} height={13} borderRadius={3} />
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
           {/* Deliverables section */}
           <View style={{ marginTop: 28 }}>
             <Skeleton width={140} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
-            <Skeleton width="100%" height={60} borderRadius={18} />
+            <View style={styles.deliverablesList}>
+              {[...Array(2)].map((_, i) => (
+                <View key={i} style={[styles.deliverableRow, i < 1 && styles.deliverableBorder]}>
+                  <Skeleton width={22} height={22} borderRadius={8} />
+                  <Skeleton width={120} height={14} borderRadius={4} />
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Brand section */}
+          <View style={{ marginTop: 28 }}>
+            <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 12 }} />
+            <View style={[styles.brandCard, { borderWidth: 0 }]}>
+              <Skeleton width={52} height={52} borderRadius={14} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton width={100} height={16} borderRadius={4} />
+                <Skeleton width={140} height={12} borderRadius={4} />
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -788,22 +854,24 @@ export default function CollabDetail() {
                 </View>
                 <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => {
-                  if (cm?.brandId) {
-                    router.push({
-                      pathname: '/chat/[id]' as any,
-                      params: {
-                        id: cm.brandId,
-                      }
-                    });
-                  }
-                }}
-                style={styles.messageBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.messageBtnText}>Message</Text>
-              </TouchableOpacity>
+              {myApplication?.status === 'accepted' && (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (cm?.brandId) {
+                      router.push({
+                        pathname: '/chat/[id]' as any,
+                        params: {
+                          id: cm.brandId,
+                        }
+                      });
+                    }
+                  }}
+                  style={styles.messageBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.messageBtnText}>Message</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </Animated.View>
@@ -814,23 +882,25 @@ export default function CollabDetail() {
         colors={['rgba(244,236,228,0)', 'rgba(244,236,228,0.95)']}
         style={[styles.applyBar, { paddingBottom: insets.bottom + 14 }]}
       >
-        <TouchableOpacity
-          onPress={() => {
-            // Find or create chat room for this campaign
-            if (cm?.brandId) {
-              router.push({
-                pathname: '/chat/[id]' as any,
-                params: {
-                  id: cm.brandId,
-                }
-              });
-            }
-          }}
-          style={styles.chatBtn}
-          activeOpacity={0.8}
-        >
-          <HugeiconsIcon icon={ChatIcon} size={22} color={Colors.oxblood} strokeWidth={2} />
-        </TouchableOpacity>
+        {myApplication?.status === 'accepted' && (
+          <TouchableOpacity
+            onPress={() => {
+              // Find or create chat room for this campaign
+              if (cm?.brandId) {
+                router.push({
+                  pathname: '/chat/[id]' as any,
+                  params: {
+                    id: cm.brandId,
+                  }
+                });
+              }
+            }}
+            style={styles.chatBtn}
+            activeOpacity={0.8}
+          >
+            <HugeiconsIcon icon={ChatIcon} size={22} color={Colors.oxblood} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
 
         {myApplication && myApplication.status === 'negotiating' && myApplication.lastActionBy === 'brand' ? (
           <View style={{ flex: 1, flexDirection: 'row', gap: 10, height: 52 }}>

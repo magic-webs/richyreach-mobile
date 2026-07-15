@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUIStore } from '@/store/ui';
 import { useProfilesStore } from '@/store/profiles';
+import { TactileButton } from '@/components/ui/tactile-button';
 
 const ARENA_FILTER_TABS = [
   { key: null, label: 'All', icon: null },
@@ -113,14 +114,7 @@ function ArenaCard({
             <Text style={styles.joinedFullBadgeText}>You're In! Tap to view</Text>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.joinFullBtn}
-            activeOpacity={0.85}
-            onPress={onPress}
-          >
-            <Text style={styles.joinFullBtnText}>Join Arena</Text>
-            <Icon name="arrow" size={12} color={Colors.cream} />
-          </TouchableOpacity>
+          <TactileButton text="Join Arena" onPress={onPress} fullWidth variant='rose' />
         )}
       </View>
     </TouchableOpacity>
@@ -578,16 +572,16 @@ const styles = StyleSheet.create({
   arenaCard: {
     backgroundColor: Colors.cream,
     borderRadius: Radius.lg,
-    padding: 18,
+    padding: 10,
     borderWidth: 0.5,
     borderColor: 'rgba(63,3,11,0.1)',
     gap: 10,
     ...Shadow.card,
   },
   cardBannerContainer: {
-    height: 150,
+    height: 200,
     width: '100%',
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
     marginBottom: 4,
   },

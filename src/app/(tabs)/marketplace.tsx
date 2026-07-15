@@ -8,10 +8,13 @@ import { useProfilesStore } from '@/store/profiles';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, FlatList, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, FlatList, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
+import { ShareCardView } from '@/components/brand/marketplace/ShareCardView';
 
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
@@ -97,8 +100,11 @@ function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: 
 
 function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any; onPress: () => void; isBookmarked: boolean; onToggleBookmark: () => void }) {
   const [liked, setLiked] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const viewShotRef = useRef<any>(null);
 
-  const handleShare = async () => {
+  const handleShareText = async () => {
+    setShareSheetVisible(false);
     const pay = cm.numCreators > 1 && cm.costPerCreator
       ? `\u20b9${cm.costPerCreator.toLocaleString('en-IN')} per spot`
       : cm.budget;
@@ -110,6 +116,35 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
         url: shareUrl,   // iOS picks this up as a separate URL (opens in browser)
       });
     } catch (_) { }
+  };
+
+  const handleShareImage = async () => {
+    try {
+      if (viewShotRef.current) {
+        const uri = await captureRef(viewShotRef, {
+          format: 'png',
+          quality: 0.95,
+        });
+
+        setShareSheetVisible(false);
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/png',
+            dialogTitle: cm.title,
+          });
+        } else {
+          Alert.alert('Sharing Unavailable', 'Sharing is not supported on this device.');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to capture and share card:', err);
+      Alert.alert('Error', 'Failed to generate campaign share card.');
+    }
+  };
+
+  const handleShare = () => {
+    setShareSheetVisible(true);
   };
 
   // Dynamic hashtags based on category & reach
@@ -150,9 +185,10 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.moreBtn}>
+        {/* TODO: Not for now implemet latter */}
+        {/* <TouchableOpacity style={styles.moreBtn}>
           <Icon name="more" size={20} color="rgba(63,3,11,0.5)" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Banner & Title */}
@@ -242,11 +278,59 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
         <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.arrowCtaBtn}>
           <HugeiconsIcon
             icon={ArrowRightIcon}
-            size={18}
-            color={Colors.oxblood}
+            size={28}
+            color={Colors.roseDeep}
           />
         </TouchableOpacity>
       </View>
+
+      {/* Off-screen ShareCardView for capture */}
+      <View style={{ position: 'absolute', left: -9999, opacity: 0 }} pointerEvents="none">
+        <ShareCardView ref={viewShotRef} cm={cm} />
+      </View>
+
+      {/* Premium Share Options Modal */}
+      <Modal
+        visible={shareSheetVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShareSheetVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShareSheetVisible(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>Share Campaign</Text>
+            <Text style={styles.modalSubtitle}>Choose how you want to invite others</Text>
+            
+            <TouchableOpacity style={styles.modalOption} onPress={handleShareText} activeOpacity={0.85}>
+              <View style={styles.optionIconWrap}>
+                <HugeiconsIcon icon={SendToBackIcon} size={20} color={Colors.oxblood} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionTitle}>Share Text Invitation</Text>
+                <Text style={styles.optionDesc}>Copy details and referral link to clipboard or share as text message.</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.modalOption, { marginTop: 12 }]} onPress={handleShareImage} activeOpacity={0.85}>
+              <View style={styles.optionIconWrap}>
+                <HugeiconsIcon icon={InstagramIcon} size={20} color={Colors.oxblood} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionTitle}>Share Campaign Card Image</Text>
+                <Text style={styles.optionDesc}>Generate a beautiful brand-styled image card to share on social media.</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShareSheetVisible(false)} activeOpacity={0.85}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -372,7 +456,7 @@ export default function MarketplaceScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refetch().catch(() => {});
+    await refetch().catch(() => { });
     setRefreshing(false);
   };
 
@@ -782,7 +866,7 @@ const styles = StyleSheet.create({
 
   // Banner Container
   bannerContainer: {
-    height: 190,
+    height: 220,
     borderRadius: 18,
     overflow: 'hidden',
     position: 'relative',
@@ -979,5 +1063,75 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 10,
+  },
+
+  // Premium Share Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(24, 1, 4, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FAF6F0',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
+  },
+  modalTitle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 18,
+    color: Colors.oxblood,
+    fontWeight: '800',
+  },
+  modalSubtitle: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.5)',
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.06)',
+  },
+  optionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FAF5F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionTitle: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.oxblood,
+    fontWeight: '700',
+  },
+  optionDesc: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  cancelBtn: {
+    marginTop: 20,
+    alignSelf: 'center',
+    padding: 12,
+  },
+  cancelBtnText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13.5,
+    color: Colors.roseDeep,
+    fontWeight: '700',
   },
 });
