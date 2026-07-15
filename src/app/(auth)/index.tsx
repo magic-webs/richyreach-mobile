@@ -228,7 +228,6 @@ export default function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: 'rgba(244,236,228,0.9)' }}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -473,10 +472,18 @@ export default function AuthScreen() {
                 </TouchableOpacity>
 
                 <View style={{ alignItems: 'center', marginTop: 32 }}>
-                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', textAlign: 'center', lineHeight: 18 }}>
-                    By continuing, you agree to {"RichyReach's"}{'\n'}
-                    <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Terms of Service</Text> and <Text style={{ color: Colors.roseDeep, fontWeight: '700' }}>Privacy Policy</Text>
+                  <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)', textAlign: 'center' }}>
+                    By continuing, you agree to {"RichyReach's"}
                   </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 4 }}>
+                    <TouchableOpacity onPress={() => router.push('/(auth)/terms')} activeOpacity={0.7}>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.roseDeep, fontWeight: '700' }}>Terms of Service</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: 'rgba(63,3,11,0.5)' }}>and</Text>
+                    <TouchableOpacity onPress={() => router.push('/(auth)/privacy')} activeOpacity={0.7}>
+                      <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 12, color: Colors.roseDeep, fontWeight: '700' }}>Privacy Policy</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </>
             ) : (
@@ -484,7 +491,7 @@ export default function AuthScreen() {
                 {/* Back Button */}
                 <TouchableOpacity
                   onPress={() => setStep('request')}
-                  style={[{ position: 'absolute', top: 48, left: 24, padding: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.4)' }, Shadow.card]}
+                  style={[{ position: 'absolute', top: 48, left: 24, padding: 8, borderRadius: 999 }]}
                 >
                   <Icon name="back" size={20} color={Colors.oxblood} />
                 </TouchableOpacity>

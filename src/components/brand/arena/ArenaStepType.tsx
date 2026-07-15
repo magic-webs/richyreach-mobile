@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     borderColor: Colors.oxblood,
-    backgroundColor: 'rgba(63,3,11,0.03)',
+    backgroundColor: '#FAF5F6', // Solid opaque brand pink-grey tint to mask shadow leak
   },
   radioOuter: {
     width: 20,

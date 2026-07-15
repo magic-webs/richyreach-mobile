@@ -104,6 +104,7 @@ export default function InfluencerChatConversationScreen() {
     handleInviteStatusUpdate,
     handleReadReceipt,
     sendMessage,
+    sendMediaMessage,
     handleReactionUpdate,
     toggleReaction,
   } = useChatMessages({ roomId, currentUserId });
@@ -175,21 +176,13 @@ export default function InfluencerChatConversationScreen() {
   };
 
   const sendMedia = async (localUri: string, type: 'image' | 'video') => {
-    if (!roomId || isSending) return;
-    setIsSending(true);
+    if (!roomId) return;
+    const replyId = replyingTo?.id;
+    setReplyingTo(null);
     try {
-      const { url } = await uploadMediaFile(localUri, type);
-      const replyId = replyingTo?.id;
-      setReplyingTo(null);
-      await sendMessage({
-        attachment: { attachmentUrl: url, attachmentType: type, attachmentDurationSec: 0 },
-        replyToId: replyId,
-      }, sendJson);
+      await sendMediaMessage(localUri, type, replyId, sendJson);
     } catch (err) {
-      console.error('Failed to send media', err);
       showModal({ title: 'Upload Failed', message: 'Could not send the media attachment. Please try again.' });
-    } finally {
-      setIsSending(false);
     }
   };
 

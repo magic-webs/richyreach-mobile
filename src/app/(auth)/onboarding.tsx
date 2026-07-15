@@ -12,6 +12,7 @@ import {
   View,
   ViewToken,
   StyleSheet,
+  PanResponder,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,6 +71,8 @@ export default function OnboardingScreen() {
   const flatListRef = useRef<FlatList>(null);
   const setOnboardingSeen = useAuthStore((s) => s.setOnboardingSeen);
 
+
+
   const onViewRef = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index ?? 0);
@@ -100,6 +103,35 @@ export default function OnboardingScreen() {
       }
     }
   };
+  const goNextRef = useRef(goNext);
+  const goBackRef = useRef(goBack);
+
+  useEffect(() => {
+    goNextRef.current = goNext;
+    goBackRef.current = goBack;
+  }, [goNext, goBack]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        // Only trigger horizontal swipe if movement is mostly horizontal
+        return Math.abs(dx) > 15 && Math.abs(dy) < 15;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const { dx } = gestureState;
+        if (dx > 50) {
+          // Swipe Right (moves left-to-right) -> Back
+          goBackRef.current();
+        } else if (dx < -50) {
+          // Swipe Left (moves right-to-left) -> Next
+          goNextRef.current();
+        }
+      },
+    })
+  ).current;
+
 
   const skip = async () => {
     await setOnboardingSeen(true);
@@ -147,7 +179,9 @@ export default function OnboardingScreen() {
         {/* Scrollable Content (Slides) */}
         <View style={{ flex: 1, width: '100%' }}>
           {Platform.OS === 'web' ? (
-            renderSlide({ index: currentIndex })
+            <View {...panResponder.panHandlers} style={{ flex: 1 }}>
+              {renderSlide({ index: currentIndex })}
+            </View>
           ) : (
             <FlatList
               ref={flatListRef}
@@ -171,11 +205,9 @@ export default function OnboardingScreen() {
 
           <TactileButton
             text={
-              currentIndex === 0
-                ? "Let's Begin"
-                : currentIndex === 1
-                  ? "Get Started"
-                  : "Let's Begin"
+              currentIndex === 2
+                ? "Get Started"
+                : "Continue"
             }
             onPress={goNext}
             variant="primary"
@@ -186,19 +218,15 @@ export default function OnboardingScreen() {
             borderRadius={20}
           />
 
-          {currentIndex === 0 ? (
+          {currentIndex === 1 ? (
+            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
+              <Text style={styles.footerLinkText}>Skip</Text>
+            </TouchableOpacity>
+          ) : (
             <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
               <Text style={styles.footerLinkText}>
                 Already have an account? <Text style={{ fontWeight: '700', color: Colors.oxblood }}>Sign In</Text>
               </Text>
-            </TouchableOpacity>
-          ) : currentIndex === 1 ? (
-            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
-              <Text style={styles.footerLinkText}>Sign In</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={skip} style={styles.footerLinkContainer} activeOpacity={0.7}>
-              <Text style={styles.footerLinkText}>Skip</Text>
             </TouchableOpacity>
           )}
         </View>

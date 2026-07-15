@@ -8,13 +8,15 @@ import { NotificationsContent } from '@/components/influencer/profile/Notificati
 import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
 import { ReviewsTab } from '@/components/influencer/profile/ReviewsTab';
 import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
+import { InstagramTab } from '@/components/influencer/profile/InstagramTab';
 import { VerificationContent } from '@/components/influencer/profile/VerificationContent';
 import { PrivacyContent } from '@/components/influencer/profile/PrivacyContent';
 import { LanguageContent } from '@/components/influencer/profile/LanguageContent';
 import { HelpContent } from '@/components/influencer/profile/HelpContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { InstagramIcon } from '@hugeicons/core-free-icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -29,7 +31,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About';
+type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About' | 'Instagram';
 type SheetType = 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
 
 const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
@@ -142,7 +144,15 @@ export default function ProfileScreen() {
   const coinBalance = walletData?.coinBalance ?? 0;
 
   const stats = [
-    ['Followers', infProfile?.followers ? `${(infProfile.followers / 1000).toFixed(0)}k` : '0'],
+    [
+      'Followers',
+      (() => {
+        const count = infProfile?.followers ?? 0;
+        if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+        if (count >= 1000) return `${(count / 1000).toFixed(0)}k`;
+        return String(count);
+      })(),
+    ],
     ['Campaigns', dashboardData?.activeCampaigns ? String(dashboardData.activeCampaigns) : '0'],
     ['Earned', dashboardData?.totalEarnings ? `₹${(dashboardData.totalEarnings / 100).toLocaleString()}` : '₹0'],
     ['Rating', '4.8'],
@@ -351,7 +361,7 @@ export default function ProfileScreen() {
 
           {/* Tabs */}
           <View style={styles.tabsRow}>
-            {(['Services', 'Portfolio', 'Reviews', 'About'] as ProfileTab[]).map((t) => (
+            {(['Services', 'Instagram', 'Portfolio', 'Reviews', 'About'] as ProfileTab[]).map((t) => (
               <TouchableOpacity key={t} onPress={() => setActiveTab(t)} activeOpacity={0.8} style={styles.tabBtn}>
                 <Text style={[styles.tabBtnText, activeTab === t && styles.tabBtnTextActive]}>{t}</Text>
                 {activeTab === t && <View style={styles.tabIndicator} />}
@@ -379,6 +389,10 @@ export default function ProfileScreen() {
             />
           )}
 
+          {activeTab === 'Instagram' && (
+            <InstagramTab profile={infProfile} />
+          )}
+
           {activeTab === 'Reviews' && (
             <ReviewsTab infProfile={infProfile} />
           )}
@@ -391,11 +405,7 @@ export default function ProfileScreen() {
             />
           )}
 
-          {/* Connected Accounts */}
-          <View style={{ marginTop: 24 }}>
-            <Text style={styles.settingsLabel}>Connected Accounts</Text>
-            <InstagramConnectionCard />
-          </View>
+
 
           {/* Settings */}
           <View style={{ marginTop: 24 }}>

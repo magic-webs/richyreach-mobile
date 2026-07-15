@@ -9,7 +9,7 @@ import { CurvyUnderline } from './CurvyUnderline';
 
 const { width, height } = Dimensions.get('window');
 const isSmallDevice = height < 750;
-const artworkHeight = isSmallDevice ? 180 : height * 0.35;
+const artworkHeight = isSmallDevice ? 180 : height * 0.45;
 
 interface SlideThreeProps {
   active: boolean;
@@ -58,7 +58,7 @@ export function SlideThree({ active }: SlideThreeProps) {
       bounces={false}
     >
       <View style={{ width: '100%' }}>
-        <LogoHeader />
+        {/* <LogoHeader /> */}
 
         <Animated.View style={[styles.imageContainer, imageAnimStyle]}>
           <Image
@@ -69,7 +69,7 @@ export function SlideThree({ active }: SlideThreeProps) {
         </Animated.View>
       </View>
 
-      <View style={{ alignItems: 'center', width: '100%', marginVertical: 16 }}>
+      <View style={{ alignItems: 'center', width: '100%' }}>
         <Animated.View style={[{ alignItems: 'center', width: '100%' }, bottomAnimStyle]}>
           {/* Title */}
           <Text style={styles.titleText}>

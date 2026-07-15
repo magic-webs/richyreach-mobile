@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, Modal, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native';
+import { StyleSheet, Text, View, Modal, TouchableOpacity, TouchableWithoutFeedback, Platform, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
@@ -263,21 +263,41 @@ export function MessageBubble({
                     <VoiceMessageContent url={message.attachmentUrl!} durationSec={message.attachmentDurationSec ?? 0} isMe={isMe} />
                   ) : isImage ? (
                     <TouchableOpacity
-                      onPress={() => setFullscreenMedia({ url: message.attachmentUrl!, type: 'image' })}
-                      activeOpacity={0.95}
+                      onPress={() => !message.id.startsWith('temp_') && setFullscreenMedia({ url: message.attachmentUrl!, type: 'image' })}
+                      activeOpacity={message.id.startsWith('temp_') ? 1 : 0.95}
+                      style={{ position: 'relative' }}
                     >
-                      <Image source={{ uri: message.attachmentUrl || undefined }} style={styles.attachmentMedia} contentFit="cover" />
+                      <Image
+                        source={{ uri: message.attachmentUrl || undefined }}
+                        style={[styles.attachmentMedia, message.id.startsWith('temp_') && { opacity: 0.6 }]}
+                        contentFit="cover"
+                      />
+                      {message.id.startsWith('temp_') && (
+                        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 12 }]}>
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   ) : isVideo ? (
                     <TouchableOpacity
-                      onPress={() => setFullscreenMedia({ url: message.attachmentUrl!, type: 'video' })}
-                      activeOpacity={0.9}
-                      style={styles.videoThumbnailContainer}
+                      onPress={() => !message.id.startsWith('temp_') && setFullscreenMedia({ url: message.attachmentUrl!, type: 'video' })}
+                      activeOpacity={message.id.startsWith('temp_') ? 1 : 0.9}
+                      style={[styles.videoThumbnailContainer, { position: 'relative' }]}
                     >
-                      <Image source={{ uri: message.attachmentUrl || undefined }} style={styles.attachmentMedia} contentFit="cover" />
-                      <View style={styles.playButtonOverlay}>
-                        <Icon name="play" size={24} color="#ffffff" />
-                      </View>
+                      <Image
+                        source={{ uri: message.attachmentUrl || undefined }}
+                        style={[styles.attachmentMedia, message.id.startsWith('temp_') && { opacity: 0.6 }]}
+                        contentFit="cover"
+                      />
+                      {!message.id.startsWith('temp_') ? (
+                        <View style={styles.playButtonOverlay}>
+                          <Icon name="play" size={24} color="#ffffff" />
+                        </View>
+                      ) : (
+                        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 12 }]}>
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   ) : (
                     <TextMessageContent content={message.content} isMe={isMe} />

@@ -12,6 +12,8 @@ export default function AuthLayout() {
       <Stack.Protected guard={!!onboardingSeen}>
         <Stack.Screen name="index" />
         <Stack.Screen name="magic-login" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="privacy" />
       </Stack.Protected>
     </Stack>
   );

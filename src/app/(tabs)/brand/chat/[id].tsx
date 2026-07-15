@@ -107,6 +107,7 @@ export default function BrandChatConversationScreen() {
     handleReactionUpdate,
     toggleReaction,
     sendMessage,
+    sendMediaMessage,
   } = useChatMessages({ roomId, currentUserId });
 
   const { sendJson } = useChatSocket({
@@ -169,21 +170,13 @@ export default function BrandChatConversationScreen() {
   };
 
   const sendMedia = async (localUri: string, type: 'image' | 'video') => {
-    if (!roomId || isSending) return;
-    setIsSending(true);
+    if (!roomId) return;
+    const replyId = replyingTo?.id;
+    setReplyingTo(null);
     try {
-      const { url } = await uploadMediaFile(localUri, type);
-      const replyId = replyingTo?.id;
-      setReplyingTo(null);
-      await sendMessage({
-        attachment: { attachmentUrl: url, attachmentType: type, attachmentDurationSec: 0 },
-        replyToId: replyId,
-      }, sendJson);
+      await sendMediaMessage(localUri, type, replyId, sendJson);
     } catch (err) {
-      console.error('Failed to send media', err);
       showModal({ title: 'Upload Failed', message: 'Could not send the media attachment. Please try again.' });
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -275,20 +268,20 @@ export default function BrandChatConversationScreen() {
         onSendMedia={sendMedia}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
-        attachSlot={
-          <TouchableOpacity onPress={openCampaignPicker} style={styles.attachBtn} activeOpacity={0.8}>
-            <HugeiconsIcon icon={Attachment01FreeIcons} size={20} color={Colors.oxblood} />
-          </TouchableOpacity>
-        }
+      // attachSlot={
+      //   <TouchableOpacity onPress={openCampaignPicker} style={styles.attachBtn} activeOpacity={0.8}>
+      //     <HugeiconsIcon icon={Attachment01FreeIcons} size={20} color={Colors.oxblood} />
+      //   </TouchableOpacity>
+      // }
       />
-
-      <CampaignPickerSheet
+      {/* TODO: Campaign picker sheet */}
+      {/* <CampaignPickerSheet
         visible={showCampaignModal}
         isLoading={isLoadingCampaigns}
         campaigns={campaigns}
         onClose={() => setShowCampaignModal(false)}
         onInvite={inviteCampaign}
-      />
+      /> */}
     </KeyboardAvoidingView>
   );
 }

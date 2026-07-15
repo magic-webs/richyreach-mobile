@@ -69,7 +69,7 @@ export function SlideTwo({ active }: SlideTwoProps) {
       bounces={false}
     >
       <View style={{ width: '100%' }}>
-        <LogoHeader />
+        {/* <LogoHeader /> */}
 
         {/* Header Text */}
         <Animated.View style={topAnimStyle}>

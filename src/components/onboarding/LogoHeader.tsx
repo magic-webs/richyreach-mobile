@@ -36,13 +36,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   logoText: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 26,
     fontWeight: '700',
     color: '#3f030b', // Colors.oxblood
   },
   logoStar: {
-    fontFamily: FontFamily.serif,
+    fontFamily: FontFamily.sansMedium,
     fontSize: 18,
     color: '#8d4750',
     marginLeft: 2,

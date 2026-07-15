@@ -190,6 +190,12 @@ export default function ArenaDetailScreen() {
     enabled: !!activeInfluencerProfileId,
   });
 
+  const { data: infProfile } = useQuery<any>({
+    queryKey: ['influencerProfile', activeInfluencerProfileId],
+    queryFn: () => api.influencers.profile().catch(() => null),
+    enabled: !!activeInfluencerProfileId,
+  });
+
   const myParticipation = participations.find((p: any) => p.arenaId === id);
   const isJoined = !!myParticipation;
   const isGoogleReview = arena?.arenaType === 'google_review';
@@ -349,6 +355,15 @@ export default function ArenaDetailScreen() {
 
   const handleJoin = () => {
     if (!arena) return;
+
+    if (infProfile && !infProfile.verified) {
+      showModal({
+        title: 'Verification Required 🔒',
+        message: 'Only verified creators can join Arena contests. Please connect your Instagram and apply for verification in your Profile settings first.',
+      });
+      return;
+    }
+
     const isFree = arena.entryFeeCoins === 0;
     const message = isFree
       ? `Join "${arena.title}" for free. No entry fee for this Google Review arena.`

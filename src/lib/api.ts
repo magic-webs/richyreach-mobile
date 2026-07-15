@@ -426,14 +426,27 @@ export const api = {
         posts: Array<{
           id: string;
           mediaUrl: string;
+          thumbnailUrl?: string;
           mediaType: string;
           caption: string;
           likeCount: number;
           commentCount: number;
           permalink: string;
           timestamp: string;
+          reach?: number;
+          impressions?: number;
+          plays?: number;
+          saved?: number;
+          carouselUrls?: string[];
         }>;
       }>('/v1/social/instagram/analytics'),
+      getPostComments: (postId: string) => request<Array<{
+        id: string;
+        username: string;
+        text: string;
+        timestamp: string;
+        likeCount: number;
+      }>>(`/v1/social/instagram/post/${postId}/comments`),
       disconnect: () => request<void>('/v1/social/instagram/disconnect', { method: 'POST' }),
       refresh: () => request<any>('/v1/social/instagram/refresh', { method: 'POST' }),
     },

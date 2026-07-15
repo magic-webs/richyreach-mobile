@@ -58,7 +58,7 @@ export function SlideOne({ active }: SlideOneProps) {
       bounces={false}
     >
       <View style={{ width: '100%' }}>
-        <LogoHeader />
+        {/* <LogoHeader /> */}
 
         <Animated.View style={[styles.imageContainer, imageAnimStyle]}>
           <Image

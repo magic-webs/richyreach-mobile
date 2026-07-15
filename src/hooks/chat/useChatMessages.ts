@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useValue } from '@legendapp/state/react';
 import { api } from '@/lib/api';
 import { playSound } from '@/lib/sound';
+import { uploadMediaFile } from '@/lib/uploadVoiceNote';
 import { chatStore$, syncPendingMessages } from '@/store/chatStore';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
@@ -276,6 +277,114 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     }
   }, [roomId, currentUserId, roomMessages$]);
 
+  const sendMediaMessage = useCallback(async (
+    localUri: string,
+    type: 'image' | 'video',
+    replyToId?: string,
+    sendJson?: (p: any) => boolean
+  ) => {
+    if (!roomId || !roomMessages$ || !currentUserId) return;
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const session = useAuthStore.getState().session;
+    const activeInfluencerProfileId = useProfilesStore.getState().activeInfluencerProfileId;
+    const activeInfluencer = useProfilesStore.getState().influencerProfiles.find((p) => p.id === activeInfluencerProfileId);
+    const activeBrandProfileId = useProfilesStore.getState().activeBrandProfileId;
+    const activeBrand = useProfilesStore.getState().brandProfiles.find((p) => p.id === activeBrandProfileId);
+
+    let senderName = 'Me';
+    let senderAvatar = undefined;
+
+    if (activeInfluencer) {
+      senderName = activeInfluencer.instagramHandle ? `@${activeInfluencer.instagramHandle}` : (session?.user?.name || 'Me');
+      senderAvatar = activeInfluencer.avatar || undefined;
+    } else if (activeBrand) {
+      senderName = activeBrand.companyName || session?.user?.name || 'Me';
+      senderAvatar = activeBrand.logo || undefined;
+    }
+
+    let replyToContent = undefined;
+    let replyToSenderName = undefined;
+    const currentList = roomMessages$.list.peek() || [];
+    if (replyToId) {
+      const parent = currentList.find(m => m.id === replyToId);
+      if (parent) {
+        replyToContent = parent.content;
+        replyToSenderName = parent.senderName;
+      }
+    }
+
+    const tempMsg: ChatMessage = {
+      id: tempId,
+      content: '',
+      createdAt: new Date().toISOString(),
+      senderId: currentUserId,
+      senderName,
+      senderAvatar,
+      attachmentUrl: localUri,
+      attachmentType: type,
+      attachmentDurationSec: 0,
+      replyToId,
+      replyToContent,
+      replyToSenderName,
+    };
+
+    // 1. Optimistic append local message with local uri
+    roomMessages$.list.set([...currentList, tempMsg]);
+    playSound('messageSent');
+
+    try {
+      // 2. Upload the file to S3 in background
+      const { url } = await uploadMediaFile(localUri, type);
+
+      // 3. Update the local temporary message's attachmentUrl to the public URL
+      const latestList = roomMessages$.list.peek() || [];
+      const idx = latestList.findIndex(m => m.id === tempId);
+      if (idx !== -1) {
+        const updated = [...latestList];
+        updated[idx] = { ...updated[idx], attachmentUrl: url };
+        roomMessages$.list.set(updated);
+      }
+
+      // 4. Dispatch using WS or fallback REST with the final public URL
+      const payload = {
+        attachment: { attachmentUrl: url, attachmentType: type, attachmentDurationSec: 0 },
+        replyToId,
+      };
+
+      const wsPayload = {
+        attachmentUrl: url,
+        attachmentType: type,
+        attachmentDurationSec: 0,
+        replyToId,
+      };
+
+      if (sendJson && sendJson(wsPayload)) {
+        // Sent successfully via WebSocket
+        return;
+      }
+
+      // Fallback: Send via REST API
+      const res = await api.chat.send(roomId, undefined, undefined, payload.attachment, replyToId);
+      
+      // Update optimistic item with resolved message
+      const finalIndexList = roomMessages$.list.peek() || [];
+      const fIdx = finalIndexList.findIndex(m => m.id === tempId);
+      if (fIdx !== -1) {
+        const updated = [...finalIndexList];
+        updated[fIdx] = res;
+        roomMessages$.list.set(updated);
+      }
+    } catch (err) {
+      console.error('[useChatMessages] Failed to upload/send media optimistically', err);
+      // Remove the optimistic temporary message on complete failure
+      const finalIndexList = roomMessages$.list.peek() || [];
+      const updated = finalIndexList.filter(m => m.id !== tempId);
+      roomMessages$.list.set(updated);
+      throw err;
+    }
+  }, [roomId, currentUserId, roomMessages$]);
+
   const handleReactionUpdate = useCallback((messageId: string, userId: string, reaction: string) => {
     if (!roomId || !roomMessages$) return;
     const currentList = roomMessages$.list.peek() || [];
@@ -356,6 +465,7 @@ export function useChatMessages({ roomId, currentUserId, pageSize = 30 }: UseCha
     handleReadReceipt,
     appendLocalMessage,
     sendMessage,
+    sendMediaMessage,
     handleReactionUpdate,
     toggleReaction,
   };

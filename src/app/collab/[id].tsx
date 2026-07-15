@@ -406,6 +406,15 @@ export default function CollabDetail() {
       return;
     }
 
+    const activeProfile = profiles.find((p: any) => p.id === activeInfluencerProfileId) || profiles[0];
+    if (activeProfile && !activeProfile.verified) {
+      useUIStore.getState().showModal({
+        title: 'Verification Required 🔒',
+        message: 'Only verified creators can apply for campaigns. Please connect your Instagram and apply for verification in your Profile settings first.',
+      });
+      return;
+    }
+
     setApplySheetOpen(true);
   };
 
