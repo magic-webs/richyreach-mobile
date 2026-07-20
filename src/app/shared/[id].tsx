@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon, Share01Icon, BadgeCheckIcon, Clock01Icon, InstagramIcon, Camera01Icon, UserGroupIcon, Calendar01Icon, CheckIcon } from '@hugeicons/core-free-icons';
 import { Icon } from '@/components/ui/icon';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 function PublicDetailSkeleton() {
   const insets = useSafeAreaInsets();
@@ -121,6 +122,7 @@ export default function PublicCampaignDetail() {
       imageUrl: campaign.imageUrl || null,
       numCreators,
       costPerCreator,
+      audioInstructionUrl: campaign.audioInstructionUrl || campaign.audioUrl || null,
       category: campaign.category || null,
       objective: campaign.objective || null,
       gender: campaign.gender || null,
@@ -137,6 +139,25 @@ export default function PublicCampaignDetail() {
       paymentType: campaign.paymentType || 'Paid',
     };
   }, [campaign]);
+
+  // Audio Player hook for voice note instructions
+  const player = useAudioPlayer(cm?.audioInstructionUrl || undefined);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  const handlePlayPause = () => {
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      player.seekTo(0);
+      player.play();
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const handleShareCampaign = async () => {
     try {
@@ -252,8 +273,17 @@ export default function PublicCampaignDetail() {
 
           {/* Specifications cards grid */}
           <View style={{ marginTop: 24 }}>
-            <SectionHead title="Campaign guidelines & rules" action={null} />
+            <SectionHead title="Campaign Details" action={null} />
             <View style={styles.detailGridContainer}>
+              {cm.category && (
+                <View style={styles.detailGridItem}>
+                  <Icon name="briefcase" size={16} color={Colors.roseDeep} />
+                  <View style={styles.detailItemTextContainer}>
+                    <Text style={styles.detailLabel}>Category</Text>
+                    <Text style={styles.detailValue}>{cm.category}</Text>
+                  </View>
+                </View>
+              )}
               {cm.objective && (
                 <View style={styles.detailGridItem}>
                   <Icon name="star" size={16} color={Colors.roseDeep} />
@@ -313,40 +343,72 @@ export default function PublicCampaignDetail() {
                 <Text style={[styles.requirementBannerText, { color: Colors.roseDeep, fontWeight: '700' }]}>{cm.hashtags}</Text>
               </View>
             )}
+
+            {/* Audio Instructions Player */}
+            {cm.audioInstructionUrl && (
+              <View style={styles.audioInstructionsCard}>
+                <Text style={styles.audioSectionHeading}>Audio Instructions</Text>
+                <View style={styles.audioPlayerControlsRow}>
+                  <TouchableOpacity style={styles.audioPlayBtn} onPress={handlePlayPause} activeOpacity={0.8}>
+                    <Icon name={playerStatus.playing ? 'pause' : 'play'} size={18} color="#fff" />
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.audioInstructionsText}>
+                      {playerStatus.playing
+                        ? `Playing instructions...`
+                        : `Listen to voice instructions`}
+                    </Text>
+                    <Text style={styles.audioDurationText}>
+                      {formatDuration(playerStatus.currentTime)} / {formatDuration(playerStatus.duration ?? 0)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Barter Product Details */}
-          {cm.paymentType !== 'Paid' && cm.prodName && (
-            <View style={{ marginTop: 24 }}>
-              <SectionHead title="Product specifications" action={null} />
-              <View style={styles.barterCard}>
-                <Text style={styles.barterHeading}>Barter Product details</Text>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsRowLabel}>Product name:</Text>
-                  <Text style={styles.detailsRowValue}>{cm.prodName}</Text>
+          {cm.prodName && (
+            <View style={styles.barterDetailsCard}>
+              <View style={styles.barterHeader}>
+                <Icon name="gift" size={18} color={Colors.roseDeep} />
+                <Text style={styles.barterCardTitle}>Barter Product Details</Text>
+              </View>
+
+              <View style={styles.barterDetailsGrid}>
+                <View style={styles.barterDetailRow}>
+                  <Text style={styles.barterLabel}>Product Name</Text>
+                  <Text style={styles.barterValue}>{cm.prodName}</Text>
                 </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsRowLabel}>Estimated Retail value:</Text>
-                  <Text style={styles.detailsRowValuePrice}>₹{(cm.prodValue || 0).toLocaleString()}</Text>
-                </View>
+
+                {cm.prodValue > 0 && (
+                  <View style={styles.barterDetailRow}>
+                    <Text style={styles.barterLabel}>Product Value</Text>
+                    <Text style={styles.barterValuePrice}>₹{cm.prodValue.toLocaleString()}</Text>
+                  </View>
+                )}
+
                 {cm.prodSku && (
-                  <View style={styles.detailsRow}>
-                    <Text style={styles.detailsRowLabel}>Product SKU:</Text>
-                    <Text style={styles.detailsRowValue}>{cm.prodSku}</Text>
+                  <View style={styles.barterDetailRow}>
+                    <Text style={styles.barterLabel}>SKU / Code</Text>
+                    <Text style={styles.barterValue}>{cm.prodSku}</Text>
                   </View>
                 )}
+
                 {cm.prodShipping && (
-                  <View style={styles.detailsRow}>
-                    <Text style={styles.detailsRowLabel}>Shipping instructions:</Text>
-                    <Text style={styles.detailsRowValue}>{cm.prodShipping}</Text>
+                  <View style={styles.barterDetailRowCol}>
+                    <Text style={styles.barterLabel}>Shipping Details</Text>
+                    <Text style={styles.barterValueDesc}>{cm.prodShipping}</Text>
                   </View>
                 )}
+
                 {cm.prodDescription && (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={[styles.detailsRowLabel, { marginBottom: 4 }]}>Product details:</Text>
-                    <Text style={styles.barterProductDesc}>{cm.prodDescription}</Text>
+                  <View style={styles.barterDetailRowCol}>
+                    <Text style={styles.barterLabel}>Product Description</Text>
+                    <Text style={styles.barterValueDesc}>{cm.prodDescription}</Text>
                   </View>
                 )}
+
                 {cm.prodUrl && (
                   <TouchableOpacity
                     style={styles.barterLinkBtn}
@@ -361,17 +423,38 @@ export default function PublicCampaignDetail() {
           )}
 
           {/* Deliverables */}
+          {cm.deliverables.length > 0 && (
+            <View style={{ marginTop: 24 }}>
+              <SectionHead title="What you'll deliver" action={null} />
+              <View style={styles.deliverablesList}>
+                {cm.deliverables.map((d: string, k: number) => (
+                  <View key={k} style={[styles.deliverableRow, k < cm.deliverables.length - 1 && styles.deliverableBorder]}>
+                    <GradientView variant="rose" style={styles.checkCircle}>
+                      <HugeiconsIcon icon={CheckIcon} size={14} color="#fff" strokeWidth={2} />
+                    </GradientView>
+                    <Text style={styles.deliverableText}>{d}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Brand Card Info */}
           <View style={{ marginTop: 24 }}>
-            <SectionHead title="What you'll deliver" action={null} />
-            <View style={styles.deliverablesList}>
-              {cm.deliverables.map((d: string, k: number) => (
-                <View key={k} style={[styles.deliverableRow, k < cm.deliverables.length - 1 && styles.deliverableBorder]}>
-                  <GradientView variant="rose" style={styles.checkCircle}>
-                    <HugeiconsIcon icon={CheckIcon} size={14} color="#fff" strokeWidth={2} />
-                  </GradientView>
-                  <Text style={styles.deliverableText}>{d}</Text>
+            <SectionHead title="About the brand" action={null} />
+            <View style={styles.brandCard}>
+              {cm.brandLogo ? (
+                <Image source={{ uri: cm.brandLogo }} style={{ height: 52, width: 52, borderRadius: 14 }} contentFit="cover" />
+              ) : (
+                <PlaceholderImage tone={cm.tone === 'rose' ? 'rose' : 'ox'} height={52} width={52} borderRadius={14} />
+              )}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={styles.brandCardName}>{cm.brand}</Text>
+                  {cm.verified && <HugeiconsIcon icon={BadgeCheckIcon} size={14} color={Colors.rose} strokeWidth={2} />}
                 </View>
-              ))}
+                <Text style={styles.brandCardMeta}>{cm.cat} · 12 active campaigns · 4.9 ★</Text>
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -449,21 +532,131 @@ const styles = StyleSheet.create({
   requirementBannerTitle: { fontFamily: FontFamily.sansMedium, fontSize: 11, color: Colors.roseDeep, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   requirementBannerText: { fontSize: 13.5, color: Colors.ink, lineHeight: 18 },
 
-  barterCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)', ...Shadow.card },
-  barterHeading: { fontFamily: FontFamily.sansMedium, fontSize: 14, fontWeight: '800', textTransform: 'uppercase', color: Colors.oxblood, marginBottom: 12, letterSpacing: 0.5 },
-  detailsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.05)' },
-  detailsRowLabel: { fontSize: 13, color: 'rgba(63,3,11,0.45)', fontWeight: '600' },
-  detailsRowValue: { fontSize: 13, color: Colors.ink, fontFamily: FontFamily.sansMedium },
-  detailsRowValuePrice: { fontSize: 13.5, color: Colors.roseDeep, fontFamily: FontFamily.sansMedium, fontWeight: '700' },
-  barterProductDesc: { fontSize: 13.5, color: 'rgba(42,2,7,0.7)', lineHeight: 19 },
-  barterLinkBtn: { marginTop: 16, backgroundColor: 'rgba(63,3,11,0.02)', borderWidth: 1, borderColor: 'rgba(63,3,11,0.06)', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  barterLinkBtnText: { fontFamily: FontFamily.sansMedium, fontWeight: '700', fontSize: 13, color: Colors.oxblood },
-
   deliverablesList: { backgroundColor: '#fff', borderRadius: 18, paddingVertical: 6, paddingHorizontal: 4, ...Shadow.card, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)' },
   deliverableRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
   deliverableBorder: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.07)' },
   checkCircle: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   deliverableText: { fontFamily: FontFamily.sansMedium, fontSize: 14, color: Colors.ink },
+
+  audioInstructionsCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 12,
+    ...Shadow.card,
+  },
+  audioSectionHeading: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.oxblood,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  audioPlayerControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  audioPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.oxblood,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioInstructionsText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.ink,
+  },
+  audioDurationText: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 11,
+    color: 'rgba(63,3,11,0.45)',
+    marginTop: 2,
+  },
+  barterDetailsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(63,3,11,0.06)',
+    ...Shadow.card,
+  },
+  barterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.06)',
+    paddingBottom: 8,
+  },
+  barterCardTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.oxblood,
+  },
+  barterDetailsGrid: {
+    gap: 12,
+  },
+  barterDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.04)',
+    paddingBottom: 8,
+  },
+  barterDetailRowCol: {
+    flexDirection: 'column',
+    gap: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(63,3,11,0.04)',
+    paddingBottom: 8,
+  },
+  barterLabel: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12,
+    color: 'rgba(63,3,11,0.5)',
+  },
+  barterValue: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  barterValuePrice: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.roseDeep,
+  },
+  barterValueDesc: {
+    fontFamily: FontFamily.sansRegular,
+    fontSize: 12.5,
+    color: 'rgba(63,3,11,0.7)',
+    lineHeight: 18,
+  },
+  barterLinkBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  barterLinkBtnText: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 12.5,
+    color: Colors.roseDeep,
+    textDecorationLine: 'underline',
+  },
+  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 18, padding: 16, ...Shadow.card, borderWidth: 0.5, borderColor: 'rgba(63,3,11,0.04)' },
+  brandCardName: { fontFamily: FontFamily.sansMedium, fontWeight: '700', fontSize: 15, color: Colors.ink },
+  brandCardMeta: { fontSize: 12.5, color: 'rgba(63,3,11,0.55)', marginTop: 2 },
 
   applyBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 14, flexDirection: 'row', gap: 12, alignItems: 'center' },
   applyBtn: { flex: 1, height: 52, borderRadius: 16, backgroundColor: Colors.oxblood, alignItems: 'center', justifyContent: 'center', ...Shadow.button },

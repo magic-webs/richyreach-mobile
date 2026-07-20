@@ -124,9 +124,10 @@ interface CampaignsSectionProps {
   onNewCampaign: () => void;
   onEditDraft?: (campaign: any) => void;
   refreshTrigger?: number;
+  isLoadingProfile?: boolean;
 }
 
-export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectionProps) {
+export function CampaignsSection({ onNewCampaign, onEditDraft, isLoadingProfile = false }: CampaignsSectionProps) {
   const activeProfileId = useProfilesStore((s) => s.activeProfileId);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -210,7 +211,7 @@ export function CampaignsSection({ onNewCampaign, onEditDraft }: CampaignsSectio
       </View>
 
       <View style={[styles.campaignList, viewMode === 'grid' && styles.campaignListGrid]}>
-        {(!activeProfileId || loading) ? (
+        {(isLoadingProfile || (activeProfileId && loading)) ? (
           <>
             <CampaignCardSkeleton viewMode={viewMode} />
             <CampaignCardSkeleton viewMode={viewMode} />

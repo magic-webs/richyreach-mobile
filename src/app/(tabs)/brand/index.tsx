@@ -29,7 +29,7 @@ export default function BrandHomeScreen() {
   const [editingCampaign, setEditingCampaign] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  const { data: brandProfile } = useQuery({
+  const { data: brandProfile, isLoading: loadingProfile } = useQuery({
     queryKey: ['brandProfile', activeProfileId],
     queryFn: () => api.brands.profile().catch(() => null),
   });
@@ -88,7 +88,7 @@ export default function BrandHomeScreen() {
 
         <View style={styles.body}>
           <ActionGrid onNewCampaign={handleNewCampaign} />
-          <CampaignsSection onNewCampaign={handleNewCampaign} onEditDraft={handleEditDraft} />
+          <CampaignsSection onNewCampaign={handleNewCampaign} onEditDraft={handleEditDraft} isLoadingProfile={loadingProfile} />
           <PendingReviewsSection />
           <SuggestedCreatorsSection onInviteCreator={(creator) => {
             setSelectedCreator(creator);

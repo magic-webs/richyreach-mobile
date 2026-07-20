@@ -44,7 +44,23 @@ type BrandProfileFormValues = {
   instagramPage: string;
 };
 
-const CATEGORIES = ['Fashion', 'Tech', 'Beauty', 'Lifestyle', 'Food', 'Other'];
+const CATEGORIES = [
+  'Fashion',
+  'Beauty',
+  'Tech',
+  'Food',
+  'Travel',
+  'Fitness',
+  'Lifestyle',
+  'Gaming',
+  'Education',
+  'Finance',
+  'Entertainment',
+  'Automobile',
+  'Real Estate',
+  'E-Commerce',
+  'Other'
+];
 
 const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
@@ -130,6 +146,9 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
       let payload: any;
       if (logoFile) {
         payload = new FormData();
+        if ((initialData as any)?.id) {
+          payload.append('id', (initialData as any).id);
+        }
         payload.append('companyName', data.companyName.trim());
         payload.append('website', formattedWebsite);
         payload.append('category', data.category);
@@ -147,6 +166,7 @@ export function CreateBrandProfileSheet({ isOpen, onClose, onSuccess, initialDat
         }
       } else {
         payload = {
+          id: (initialData as any)?.id || null,
           companyName: data.companyName.trim(),
           website: formattedWebsite,
           logo: logo.trim() || null,

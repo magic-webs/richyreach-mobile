@@ -1,11 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Image } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import { Colors, FontFamily, Radius } from '@/constants/brand';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
-import { HugeiconsIcon } from '@hugeicons/react-native';
-import { CrownIcon, Calendar01Icon, Coins01Icon, UserGroupIcon, Task01Icon } from '@hugeicons/core-free-icons';
+import { Crown, Calendar, Coins, Users, CheckSquare } from 'lucide-react-native';
 
 interface ShareCardViewProps {
   cm: any;
@@ -43,7 +41,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
         {/* Header Logo */}
         <View style={styles.header}>
           <View style={styles.logoWrap}>
-            <HugeiconsIcon icon={CrownIcon} size={16} color={Colors.oxblood} strokeWidth={2} />
+            <Crown size={16} color={Colors.oxblood} strokeWidth={2} />
           </View>
           <View>
             <Text style={styles.logoText}>RichyReach</Text>
@@ -57,7 +55,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
         {/* Campaign Banner Image or Fallback Gradient */}
         <View style={styles.bannerContainer}>
           {cm.imageUrl ? (
-            <Image source={{ uri: cm.imageUrl }} style={styles.bannerImage} contentFit="cover" />
+            <Image source={{ uri: cm.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
           ) : (
             <LinearGradient
               colors={['#b46a74', '#3f030b']}
@@ -80,7 +78,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
           {/* Payout */}
           <View style={styles.statBox}>
             <View style={styles.statIconWrap}>
-              <HugeiconsIcon icon={Coins01Icon} size={15} color={Colors.oxblood} strokeWidth={2.5} />
+              <Coins size={15} color={Colors.oxblood} strokeWidth={2.5} />
             </View>
             <View>
               <Text style={styles.statValue}>{pay}</Text>
@@ -91,7 +89,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
           {/* Spots / Creators */}
           <View style={styles.statBox}>
             <View style={styles.statIconWrap}>
-              <HugeiconsIcon icon={UserGroupIcon} size={15} color={Colors.oxblood} strokeWidth={2.5} />
+              <Users size={15} color={Colors.oxblood} strokeWidth={2.5} />
             </View>
             <View>
               <Text style={styles.statValue}>{cm.numCreators || 'Multiple'}</Text>
@@ -104,7 +102,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
           {/* Deadline */}
           <View style={styles.statBox}>
             <View style={styles.statIconWrap}>
-              <HugeiconsIcon icon={Calendar01Icon} size={15} color={Colors.oxblood} strokeWidth={2.5} />
+              <Calendar size={15} color={Colors.oxblood} strokeWidth={2.5} />
             </View>
             <View>
               <Text style={styles.statValue}>{cm.deadline}</Text>
@@ -115,7 +113,7 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
           {/* Platform verification */}
           <View style={styles.statBox}>
             <View style={styles.statIconWrap}>
-              <HugeiconsIcon icon={Task01Icon} size={15} color={Colors.oxblood} strokeWidth={2.5} />
+              <CheckSquare size={15} color={Colors.oxblood} strokeWidth={2.5} />
             </View>
             <View>
               <Text style={styles.statValue}>Verified</Text>
@@ -131,14 +129,12 @@ export const ShareCardView = React.forwardRef<any, ShareCardViewProps>(({ cm }, 
             <Text style={styles.footerLink}>richyreach.com/shared/{cm.id}</Text>
           </View>
           
-          {/* Decorative QR Code styling */}
+          {/* Real QR Code */}
           <View style={styles.qrCodeWrapper}>
-            <View style={styles.qrCornerTopLeft} />
-            <View style={styles.qrCornerTopRight} />
-            <View style={styles.qrCornerBottomLeft} />
-            <View style={styles.qrCornerBottomRight} />
-            <View style={styles.qrInnerSquare} />
-            <View style={styles.qrCenterDot} />
+            <Image
+              source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://app.richyreach.com/shared/${cm.id}`)}` }}
+              style={styles.qrCodeImage}
+            />
           </View>
         </View>
       </View>
@@ -331,63 +327,16 @@ const styles = StyleSheet.create({
     color: Colors.roseDeep,
   },
   qrCodeWrapper: {
-    width: 32,
-    height: 32,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    backgroundColor: '#ffffff',
+    padding: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(63,3,11,0.08)',
   },
-  qrCornerTopLeft: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 10,
-    height: 10,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: Colors.oxblood,
-  },
-  qrCornerTopRight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderColor: Colors.oxblood,
-  },
-  qrCornerBottomLeft: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: 10,
-    height: 10,
-    borderBottomWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: Colors.oxblood,
-  },
-  qrCornerBottomRight: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderColor: Colors.oxblood,
-  },
-  qrInnerSquare: {
-    width: 18,
-    height: 18,
-    borderWidth: 2,
-    borderColor: Colors.oxblood,
-  },
-  qrCenterDot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    backgroundColor: Colors.oxblood,
-    borderRadius: 1,
+  qrCodeImage: {
+    width: '100%',
+    height: '100%',
   },
 });

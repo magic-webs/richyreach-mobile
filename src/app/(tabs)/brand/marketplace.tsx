@@ -245,11 +245,8 @@ function SwipeableServiceCard({
     </Animated.View>
   );
 
-  // Wrap in GestureDetector on all platforms. RNGH v2 drives the pan via pointer events on
-  // web, and the card's `touchAction: 'pan-y'` lets the browser keep vertical scroll-snap while
-  // JS handles the horizontal swipe.
   return (
-    <GestureDetector gesture={gesture}>
+    <GestureDetector gesture={gesture} touchAction="pan-y">
       {cardContent}
     </GestureDetector>
   );

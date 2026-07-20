@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
+import * as Clipboard from 'expo-clipboard';
 import { ShareCardView } from '@/components/brand/marketplace/ShareCardView';
 
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
@@ -100,11 +101,9 @@ function StripedBanner({ tone, budget, costPerCreator, numCreators, imageUrl }: 
 
 function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any; onPress: () => void; isBookmarked: boolean; onToggleBookmark: () => void }) {
   const [liked, setLiked] = useState(false);
-  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const viewShotRef = useRef<any>(null);
 
   const handleShareText = async () => {
-    setShareSheetVisible(false);
     const pay = cm.numCreators > 1 && cm.costPerCreator
       ? `\u20b9${cm.costPerCreator.toLocaleString('en-IN')} per spot`
       : cm.budget;
@@ -112,8 +111,8 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
     try {
       await Share.share({
         title: cm.title,
-        message: `\ud83c\udfaf *${cm.title}*\n\n\ud83c\udfe2 Brand: ${cm.brand}\n\ud83d\udcb0 Pay: ${pay}\n\u23f0 Deadline: ${cm.deadline}\n\n\ud83d\udd17 View & apply here:\n${shareUrl}\n\n_Powered by RichyReach_`,
-        url: shareUrl,   // iOS picks this up as a separate URL (opens in browser)
+        message: `🎯 *${cm.title}*\n\n🏢 Brand: ${cm.brand}\n💰 Pay: ${pay}\n⏳ Deadline: ${cm.deadline}\n\n🔗 View & apply here:\n${shareUrl}\n\n_Powered by RichyReach_`,
+        url: shareUrl,
       });
     } catch (_) { }
   };
@@ -126,13 +125,26 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
           quality: 0.95,
         });
 
-        setShareSheetVisible(false);
-
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/png',
-            dialogTitle: cm.title,
-          });
+          const pay = cm.numCreators > 1 && cm.costPerCreator
+            ? `\u20b9${cm.costPerCreator.toLocaleString('en-IN')} per spot`
+            : cm.budget;
+          const shareUrl = `https://app.richyreach.com/shared/${cm.id}`;
+          const textMessage = `🎯 *${cm.title}*\n\n🏢 Brand: ${cm.brand}\n💰 Pay: ${pay}\n⏳ Deadline: ${cm.deadline}\n\n🔗 View & apply here:\n${shareUrl}\n\n_Powered by RichyReach_`;
+
+          if (Platform.OS === 'ios') {
+            await Share.share({
+              url: uri,
+              message: textMessage,
+            });
+          } else {
+            // Android: Copy invitation text to clipboard, then share the image card
+            await Clipboard.setStringAsync(textMessage);
+            await Sharing.shareAsync(uri, {
+              mimeType: 'image/png',
+              dialogTitle: cm.title,
+            });
+          }
         } else {
           Alert.alert('Sharing Unavailable', 'Sharing is not supported on this device.');
         }
@@ -143,8 +155,12 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
     }
   };
 
-  const handleShare = () => {
-    setShareSheetVisible(true);
+  const handleShare = async () => {
+    if (Platform.OS === 'web') {
+      await handleShareText();
+    } else {
+      await handleShareImage();
+    }
   };
 
   // Dynamic hashtags based on category & reach
@@ -285,52 +301,11 @@ function CampaignCard({ cm, onPress, isBookmarked, onToggleBookmark }: { cm: any
       </View>
 
       {/* Off-screen ShareCardView for capture */}
-      <View style={{ position: 'absolute', left: -9999, opacity: 0 }} pointerEvents="none">
+      <View style={{ position: 'absolute', left: -9999, top: -9999 }} pointerEvents="none" collapsable={false}>
         <ShareCardView ref={viewShotRef} cm={cm} />
       </View>
 
-      {/* Premium Share Options Modal */}
-      <Modal
-        visible={shareSheetVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShareSheetVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShareSheetVisible(false)}
-        >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-            <Text style={styles.modalTitle}>Share Campaign</Text>
-            <Text style={styles.modalSubtitle}>Choose how you want to invite others</Text>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={handleShareText} activeOpacity={0.85}>
-              <View style={styles.optionIconWrap}>
-                <HugeiconsIcon icon={SendToBackIcon} size={20} color={Colors.oxblood} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.optionTitle}>Share Text Invitation</Text>
-                <Text style={styles.optionDesc}>Copy details and referral link to clipboard or share as text message.</Text>
-              </View>
-            </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.modalOption, { marginTop: 12 }]} onPress={handleShareImage} activeOpacity={0.85}>
-              <View style={styles.optionIconWrap}>
-                <HugeiconsIcon icon={InstagramIcon} size={20} color={Colors.oxblood} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.optionTitle}>Share Campaign Card Image</Text>
-                <Text style={styles.optionDesc}>Generate a beautiful brand-styled image card to share on social media.</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShareSheetVisible(false)} activeOpacity={0.85}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
