@@ -157,7 +157,6 @@ export const api = {
     earnings: () => request<any[]>('/influencers/earnings'),
     profile: () => request('/influencers/profile'),
     profiles: () => request<any[]>('/influencers/profiles'),
-    verifyProfile: () => request<any>('/influencers/profile/verify', { method: 'POST' }),
     updateProfile: (data: FormData | any) => {
       const isFormData = data instanceof FormData;
       return request('/influencers/profile', {

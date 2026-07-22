@@ -1,64 +1,16 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
-import { api } from '@/lib/api';
-import { useUIStore } from '@/store/ui';
-import { useAuthStore } from '@/store/auth';
-import { useProfilesStore } from '@/store/profiles';
 
 interface VerificationContentProps {
   profile: any;
-  servicesCount: number;
+  onGoToInstagram: () => void;
 }
 
-export function VerificationContent({ profile, servicesCount }: VerificationContentProps) {
-  const showModal = useUIStore((s) => s.showModal);
-  const queryClient = useQueryClient();
-
+export function VerificationContent({ profile, onGoToInstagram }: VerificationContentProps) {
   const isVerified = profile?.verified ?? false;
-  const followersCount = profile?.followers ?? 0;
   const hasInstagram = !!profile?.instagramHandle;
-  const hasBio = !!profile?.bio && profile.bio.trim().length > 0;
-  const hasService = servicesCount > 0;
-
-  const followersReq = followersCount >= 5000;
-
-  const meetAllCriteria = followersReq && hasInstagram && hasBio && hasService;
-
-  const verifyMutation = useMutation({
-    mutationFn: () => api.influencers.verifyProfile(),
-    onSuccess: (updatedProfile: any) => {
-      showModal({
-        title: 'Profile Verified! 🎉',
-        message: 'Your profile has been successfully verified! You now have the verified creator badge and can apply to campaigns.',
-      });
-      
-      const userId = useAuthStore.getState().session?.user?.id;
-      if (userId && updatedProfile) {
-        useProfilesStore.getState().saveInfluencerProfile(userId, {
-          id: updatedProfile.id,
-          instagramHandle: updatedProfile.instagramHandle,
-          niche: updatedProfile.niche,
-          pricing: updatedProfile.pricing,
-          followers: updatedProfile.followers,
-          level: updatedProfile.level,
-          avatar: updatedProfile.avatar,
-          bio: updatedProfile.bio,
-          verified: updatedProfile.verified ?? true,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
-    },
-    onError: (err: any) => {
-      showModal({
-        title: 'Verification Failed',
-        message: err.message || 'Something went wrong. Please try again.',
-      });
-    },
-  });
 
   if (isVerified) {
     return (
@@ -80,67 +32,36 @@ export function VerificationContent({ profile, servicesCount }: VerificationCont
     <View style={styles.container}>
       <Text style={styles.title}>Get Verified Creator Badge</Text>
       <Text style={styles.subtitle}>
-        A blue verification badge shows brands that your profile is authentic, active, and meets our quality standards.
+        Verification is automatic — connect your Instagram Business/Creator account and your profile is verified right away. A verified badge shows brands that your profile is authentic and active.
       </Text>
 
-      <View style={styles.criteriaList}>
-        <View style={styles.criterionRow}>
-          <View style={[styles.statusIcon, followersReq ? styles.checked : styles.unchecked]}>
-            <Icon name={followersReq ? 'verified' : 'close'} size={14} color={followersReq ? Colors.cream : 'rgba(63,3,11,0.4)'} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.criterionName}>5,000+ Followers</Text>
-            <Text style={styles.criterionDesc}>Your profile currently lists {followersCount.toLocaleString()} followers.</Text>
-          </View>
+      <View style={styles.infoBox}>
+        <View style={[styles.statusIcon, hasInstagram ? styles.checked : styles.unchecked]}>
+          <Icon name={hasInstagram ? 'verified' : 'close'} size={14} color={hasInstagram ? Colors.cream : 'rgba(63,3,11,0.4)'} />
         </View>
-
-        <View style={styles.criterionRow}>
-          <View style={[styles.statusIcon, hasInstagram ? styles.checked : styles.unchecked]}>
-            <Icon name={hasInstagram ? 'verified' : 'close'} size={14} color={hasInstagram ? Colors.cream : 'rgba(63,3,11,0.4)'} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.criterionName}>Linked Instagram Account</Text>
-            <Text style={styles.criterionDesc}>
-              {hasInstagram ? `Connected handle: @${profile.instagramHandle}` : 'No Instagram handle linked in profile.'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.criterionRow}>
-          <View style={[styles.statusIcon, hasBio ? styles.checked : styles.unchecked]}>
-            <Icon name={hasBio ? 'verified' : 'close'} size={14} color={hasBio ? Colors.cream : 'rgba(63,3,11,0.4)'} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.criterionName}>Completed Bio</Text>
-            <Text style={styles.criterionDesc}>{hasBio ? 'Bio details successfully provided.' : 'Please add a bio introducing yourself to brands.'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.criterionRow}>
-          <View style={[styles.statusIcon, hasService ? styles.checked : styles.unchecked]}>
-            <Icon name={hasService ? 'verified' : 'close'} size={14} color={hasService ? Colors.cream : 'rgba(63,3,11,0.4)'} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.criterionName}>At least 1 Active Service</Text>
-            <Text style={styles.criterionDesc}>{hasService ? 'Active collaboration offerings published.' : 'Please list at least one service/offering you sell.'}</Text>
-          </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.criterionName}>Linked Instagram Account</Text>
+          <Text style={styles.criterionDesc}>
+            {hasInstagram
+              ? `Connected as @${profile.instagramHandle}. If your profile isn't showing as verified yet, try reconnecting or contact support.`
+              : 'Connect your Instagram account to get verified instantly.'}
+          </Text>
         </View>
       </View>
 
       <TouchableOpacity
-        style={[styles.applyBtn, !meetAllCriteria && styles.disabledBtn]}
-        disabled={!meetAllCriteria || verifyMutation.isPending}
-        onPress={() => verifyMutation.mutate()}
+        style={styles.applyBtn}
+        onPress={onGoToInstagram}
         activeOpacity={0.8}
       >
-        {verifyMutation.isPending ? (
-          <ActivityIndicator color={Colors.cream} size="small" />
-        ) : (
-          <Text style={styles.applyBtnText}>
-            {meetAllCriteria ? 'Apply for Verification' : 'Criteria Not Met Yet'}
-          </Text>
-        )}
+        <Text style={styles.applyBtnText}>
+          {hasInstagram ? 'Manage Instagram Connection' : 'Connect Instagram'}
+        </Text>
       </TouchableOpacity>
+
+      <Text style={styles.adminNote}>
+        Admins can also verify your profile manually in special cases.
+      </Text>
     </View>
   );
 }
@@ -193,20 +114,16 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginBottom: 20,
   },
-  criteriaList: {
+  infoBox: {
     backgroundColor: '#fff',
     borderRadius: 18,
     paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 24,
-    ...Shadow.card,
-  },
-  criterionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(63,3,11,0.06)',
+    ...Shadow.card,
   },
   statusIcon: {
     width: 24,
@@ -246,7 +163,11 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: Colors.cream,
   },
-  disabledBtn: {
-    backgroundColor: 'rgba(63,3,11,0.3)',
+  adminNote: {
+    fontFamily: FontFamily.sans,
+    fontSize: 11.5,
+    color: 'rgba(63,3,11,0.45)',
+    textAlign: 'center',
+    marginTop: 14,
   },
 });

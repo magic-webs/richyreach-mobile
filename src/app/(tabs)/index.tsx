@@ -16,14 +16,11 @@ import { CreateBrandProfileSheet } from '@/components/brand/home/CreateBrandProf
 import { SwitchBrandProfileSheet } from '@/components/brand/home/SwitchBrandProfileSheet';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { SwitchInfluencerProfileSheet } from '@/components/influencer/SwitchInfluencerProfileSheet';
-import { PremiumOfferModal } from '@/components/influencer/PremiumOfferModal';
 import { Colors } from '@/constants/brand';
 import * as mock from '@/data/mock';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
-import { useUIStore } from '@/store/ui';
-import { getPremiumOfferSeen, setPremiumOfferSeen } from '@/lib/storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FloatingChatButton } from '@/components/floating-chat-button';
 
@@ -55,7 +52,6 @@ export default function HomeScreen() {
   const session = useAuthStore((s) => s.session);
   const userName = session?.user?.name || 'Muskan';
   const queryClient = useQueryClient();
-  const showModal = useUIStore((s) => s.showModal);
 
   // Switcher and creation sheets state
   const [isInfluencerSwitcherOpen, setIsInfluencerSwitcherOpen] = useState(false);
@@ -63,29 +59,6 @@ export default function HomeScreen() {
   const [isCreateBrandOpen, setIsCreateBrandOpen] = useState(false);
   const [isCreateInfluencerOpen, setIsCreateInfluencerOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isPremiumOfferOpen, setIsPremiumOfferOpen] = useState(false);
-
-  // Handle Premium Membership Offer Modal after 5 seconds
-  useEffect(() => {
-    let timer: any;
-    if (role === 'influencer') {
-      getPremiumOfferSeen().then((seen) => {
-        if (!seen) {
-          timer = setTimeout(() => {
-            setIsPremiumOfferOpen(true);
-          }, 5000);
-        }
-      });
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [role]);
-
-  const handleClosePremiumOffer = async () => {
-    setIsPremiumOfferOpen(false);
-    await setPremiumOfferSeen();
-  };
 
   const {
     influencerProfiles,
@@ -340,30 +313,6 @@ export default function HomeScreen() {
         onClose={() => setIsNotificationsOpen(false)}
       />
 
-      <PremiumOfferModal
-        isOpen={isPremiumOfferOpen}
-        onClose={handleClosePremiumOffer}
-        onUnlockPress={async () => {
-          try {
-            await api.influencers.verifyProfile();
-            queryClient.invalidateQueries({ queryKey: ['influencerProfile'] });
-            queryClient.invalidateQueries({ queryKey: ['campaignsMarketplace'] });
-            if (session?.user?.id) {
-              await loadInfluencerProfiles(session.user.id);
-            }
-            showModal({
-              title: 'Membership Unlocked! 👑',
-              message: 'Congratulations! You now have premium membership. Enjoy a golden sign next to your profile.',
-            });
-          } catch (err: any) {
-            console.error('Failed to unlock premium membership:', err);
-            showModal({
-              title: 'Error',
-              message: err.message || 'Failed to unlock premium membership.',
-            });
-          }
-        }}
-      />
     </View>
   );
 }

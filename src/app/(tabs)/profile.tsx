@@ -217,7 +217,15 @@ export default function ProfileScreen() {
     verification: {
       title: 'Verification',
       icon: 'verified',
-      content: <VerificationContent profile={infProfile} servicesCount={services.length} />
+      content: (
+        <VerificationContent
+          profile={infProfile}
+          onGoToInstagram={() => {
+            setSheet(null);
+            setActiveTab('Instagram');
+          }}
+        />
+      )
     },
     notifications: {
       title: 'Notifications',

@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 
 const TOKEN_KEY = 'rr_session_token';
 const ONBOARDING_KEY = 'rr_onboarding_seen';
-const PREMIUM_OFFER_KEY = 'rr_premium_offer_seen';
 const DEVICE_ID_KEY = 'rr_device_id';
 
 function generateDeviceId(): string {
@@ -69,18 +68,3 @@ export async function setOnboardingSeen() {
   }
 }
 
-export async function getPremiumOfferSeen(): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return !!localStorage.getItem(PREMIUM_OFFER_KEY);
-  }
-  const val = await SecureStore.getItemAsync(PREMIUM_OFFER_KEY);
-  return val === 'true';
-}
-
-export async function setPremiumOfferSeen() {
-  if (Platform.OS === 'web') {
-    localStorage.setItem(PREMIUM_OFFER_KEY, 'true');
-  } else {
-    await SecureStore.setItemAsync(PREMIUM_OFFER_KEY, 'true');
-  }
-}
