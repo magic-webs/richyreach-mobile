@@ -76,7 +76,7 @@ export function Step3Review({
             <View style={styles.reviewThumbContainer}>
               <Image
                 source={
-                  thumbnailUrl
+                  selectedFrameIdx === -1 && thumbnailUrl
                     ? { uri: thumbnailUrl }
                     : getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0]
                     ? (typeof getFrames()[selectedFrameIdx >= 0 ? selectedFrameIdx : 0] === 'string'
@@ -99,7 +99,7 @@ export function Step3Review({
               <View style={styles.tagsRow}>
                 <View style={styles.platformBadge}>
                   <Icon
-                    name="grid"
+                    name="category"
                     size={11}
                     color={Colors.roseDeep}
                   />
@@ -208,27 +208,7 @@ export function Step3Review({
             </View>
           </View>
 
-          {/* Service Highlights */}
-          <View style={styles.asideCard}>
-            <Text style={styles.asideTitle}>Service Highlights</Text>
-            <View style={styles.asideDivider} />
-            <View style={styles.highlightRow}>
-              <Icon name="edit" size={12} color={Colors.roseDeep} />
-              <Text style={styles.highlightText}>High quality content</Text>
-            </View>
-            <View style={styles.highlightRow}>
-              <Icon name="sparkle" size={12} color={Colors.roseDeep} />
-              <Text style={styles.highlightText}>Engaging & authentic</Text>
-            </View>
-            <View style={styles.highlightRow}>
-              <Icon name="clock" size={12} color={Colors.roseDeep} />
-              <Text style={styles.highlightText}>On-time delivery</Text>
-            </View>
-            <View style={styles.highlightRow}>
-              <Icon name="star" size={12} color={Colors.roseDeep} />
-              <Text style={styles.highlightText}>100% satisfaction</Text>
-            </View>
-          </View>
+
 
           {/* Tips to get orders */}
           <View style={styles.asideCard}>

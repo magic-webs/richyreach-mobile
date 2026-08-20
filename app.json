@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "richyreach",
+    "name": "RichyReach",
     "slug": "richyreach",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -108,7 +108,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -117,15 +118,11 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "cf50aeb2-27b7-47d4-9ccd-dadd175774c7"
+        "projectId": "230e5696-39a8-4701-88d9-5dca07eb5cdd"
       }
     },
-    "owner": "richyreach",
     "runtimeVersion": {
       "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/cf50aeb2-27b7-47d4-9ccd-dadd175774c7"
     }
   }
 }

@@ -118,7 +118,7 @@ export function Step1Details({
                 rules={{ required: 'Please select a category.' }}
                 render={({ field: { onChange, value } }) => (
                   <View style={[styles.dropdownPicker, errors.category && { borderColor: '#FF3B30' }]}>
-                    <Icon name="grid" size={14} color={Colors.roseDeep} />
+                    <Icon name="category" size={14} color={Colors.roseDeep} />
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         {CATEGORIES.map((cat) => (
@@ -252,7 +252,12 @@ export function Step1Details({
         <View style={styles.cardHeader}>
           <View style={styles.cardIconBox}><Icon name="edit" size={15} color={Colors.white} /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Description</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.cardTitle}>Description</Text>
+              <View style={styles.optionalBadge}>
+                <Text style={styles.optionalBadgeText}>Optional</Text>
+              </View>
+            </View>
             <Text style={styles.cardSub}>Explain what brands will get from this service</Text>
           </View>
           <Text style={styles.counterText}>{shortDescValue.length}/1000</Text>
@@ -262,7 +267,6 @@ export function Step1Details({
           control={control}
           name="shortDesc"
           rules={{
-            required: 'Please write a description for this service.',
             maxLength: { value: 1000, message: 'Description cannot exceed 1000 characters.' }
           }}
           render={({ field: { onChange, onBlur, value } }) => (
@@ -287,7 +291,7 @@ export function Step1Details({
       {/* Add Tags */}
       <View style={styles.formCard}>
         <View style={styles.cardHeader}>
-          <View style={styles.cardIconBox}><Icon name="grid" size={14} color={Colors.white} /></View>
+          <View style={styles.cardIconBox}><Icon name="tag" size={14} color={Colors.white} /></View>
           <Text style={styles.cardTitle}>Add Tags</Text>
         </View>
 

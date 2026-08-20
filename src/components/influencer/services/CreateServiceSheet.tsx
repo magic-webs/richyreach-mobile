@@ -1,5 +1,5 @@
 import { Icon } from '@/components/ui/icon';
-import { Colors, FontFamily, Shadow } from '@/constants/brand';
+import { Colors, FontFamily } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { useMutation } from '@tanstack/react-query';
@@ -7,15 +7,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import LottieView from 'lottie-react-native';
 import {
-  KeyboardAvoidingView,
   Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Step1Details } from './Step1Details';
@@ -84,8 +83,21 @@ function CreateServiceForm({
   }, [videoUrl]);
 
   const [thumbnailFile, setThumbnailFile] = useState<any>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState(service?.thumbnailUrl || '');
-  const [selectedFrameIdx, setSelectedFrameIdx] = useState(service?.selectedFrameIdx || 0);
+  const [selectedFrameIdx, setSelectedFrameIdx] = useState<number>(() => {
+    if (service) {
+      return typeof service.selectedFrameIdx === 'number' ? service.selectedFrameIdx : -1;
+    }
+    return 0;
+  });
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>(() => {
+    if (service) {
+      const frameIdx = typeof service.selectedFrameIdx === 'number' ? service.selectedFrameIdx : -1;
+      if (frameIdx === -1) {
+        return service.thumbnailUrl || '';
+      }
+    }
+    return '';
+  });
   const [localExtractedFrames, setLocalExtractedFrames] = useState<any[]>([]);
   const [extractingFrames, setExtractingFrames] = useState(false);
   const [videoDuration, setVideoDuration] = useState('');
@@ -310,12 +322,12 @@ function CreateServiceForm({
   const handleNextStep = async () => {
     if (step === 1) {
       const isValid = await trigger(['name', 'price', 'shortDesc', 'category']);
-      
+
       if (!isValid || !videoUrl) {
         try {
           const { playSound } = require('@/lib/sound');
           playSound('error');
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (!isValid) {
@@ -347,8 +359,8 @@ function CreateServiceForm({
     if (delivInput.trim()) {
       setDeliverables([...deliverables, delivInput.trim()]);
       setDelivInput('');
-      setShowDelivInput(false);
     }
+    setShowDelivInput(false);
   };
 
   const removeDeliverable = (idx: number) => {
@@ -360,8 +372,8 @@ function CreateServiceForm({
     if (tagInput.trim()) {
       setTags([...tags, tagInput.trim()]);
       setTagInput('');
-      setShowTagInput(false);
     }
+    setShowTagInput(false);
   };
 
   const removeTag = (idx: number) => {
@@ -420,6 +432,7 @@ function CreateServiceForm({
             size: asset.fileSize || 0,
           });
           setThumbnailUrl(asset.uri);
+          setSelectedFrameIdx(-1);
         }
       } catch (err: any) {
         console.error('Failed to pick thumbnail:', err);
@@ -455,6 +468,7 @@ function CreateServiceForm({
     if (step !== 3) return;
 
     const formattedPrice = Number(data.price.trim()).toFixed(2);
+    const trimmedDesc = data.shortDesc ? data.shortDesc.trim() : '';
 
     // On native, React Native's FormData polyfill has issues with string-only
     // multipart bodies. Use FormData ONLY when there are actual local file URIs
@@ -467,7 +481,7 @@ function CreateServiceForm({
       // ── JSON path (native, no files picked) ────────────────────────────────
       const frames = getFrames();
       const frame = frames[selectedFrameIdx >= 0 ? selectedFrameIdx : 0];
-      const thumbUrl = thumbnailUrl && isRemoteUrl(thumbnailUrl)
+      const thumbUrl = selectedFrameIdx === -1 && thumbnailUrl && isRemoteUrl(thumbnailUrl)
         ? thumbnailUrl
         : isRemoteUrl(frame) ? (frame as string) : '';
 
@@ -478,7 +492,7 @@ function CreateServiceForm({
         deliveryTime,
         category: data.category,
         subCategory: data.category,
-        description: data.shortDesc.trim(),
+        description: trimmedDesc,
         tags,
         deliverables,
         selectedFrameIdx,
@@ -497,7 +511,7 @@ function CreateServiceForm({
     payload.append('deliveryTime', deliveryTime);
     payload.append('category', data.category);
     payload.append('subCategory', data.category);
-    payload.append('description', data.shortDesc.trim());
+    payload.append('description', trimmedDesc);
     payload.append('tags', JSON.stringify(tags));
     payload.append('deliverables', JSON.stringify(deliverables));
     payload.append('selectedFrameIdx', String(selectedFrameIdx));
@@ -520,7 +534,7 @@ function CreateServiceForm({
       } else {
         payload.append('thumbnail', { uri: thumbnailFile.uri, name: thumbnailFile.name || 'image.jpg', type: thumbnailFile.type || 'image/jpeg' } as any);
       }
-    } else if (thumbnailUrl && isRemoteUrl(thumbnailUrl)) {
+    } else if (selectedFrameIdx === -1 && thumbnailUrl && isRemoteUrl(thumbnailUrl)) {
       payload.append('thumbnailUrl', thumbnailUrl);
     } else {
       const frames = getFrames();
@@ -566,6 +580,7 @@ function CreateServiceForm({
                 if (file) {
                   setThumbnailFile(file);
                   setThumbnailUrl(URL.createObjectURL(file));
+                  setSelectedFrameIdx(-1);
                 }
               }}
             />
@@ -631,116 +646,118 @@ function CreateServiceForm({
         )}
 
         {/* Main Form Body Scrollable */}
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          {step === 4 ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
-              <LottieView
-                source={require('@/assets/lottie-animation/success.json')}
-                autoPlay
-                loop={false}
-                style={{ width: 180, height: 180 }}
+        {step === 4 ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
+            <LottieView
+              source={require('@/assets/lottie-animation/success.json')}
+              autoPlay
+              loop={false}
+              style={{ width: 180, height: 180 }}
+            />
+            <Text style={{ fontFamily: FontFamily.sans, fontSize: 22, fontWeight: '800', color: Colors.ink, textAlign: 'center' }}>
+              {service ? 'Service Saved! 🎉' : 'Service Published! 🚀'}
+            </Text>
+            <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: 'rgba(63, 3, 11, 0.5)', textAlign: 'center', lineHeight: 20 }}>
+              {service
+                ? `"${watch('name')}" has been successfully updated.`
+                : `"${watch('name')}" is now live and visible to brands.`
+              }
+            </Text>
+            <TactileButton
+              text="Done"
+              onPress={() => {
+                onSuccess(null);
+                onClose();
+              }}
+              variant="primary"
+              fullWidth
+              style={{ marginTop: 24 }}
+            />
+          </View>
+        ) : (
+          <KeyboardAwareScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+
+            {/* ================= STEP 1 DETAILS ================= */}
+            {step === 1 && (
+              <Step1Details
+                control={control}
+                errors={errors}
+                deliveryTime={deliveryTime}
+                setDeliveryTime={setDeliveryTime}
+                videoUrl={videoUrl}
+                triggerVideoPicker={triggerVideoPicker}
+                getFrames={getFrames}
+                tags={tags}
+                removeTag={removeTag}
+                showTagInput={showTagInput}
+                setShowTagInput={setShowTagInput}
+                tagInput={tagInput}
+                setTagInput={setTagInput}
+                addTag={addTag}
+                handleNextStep={handleNextStep}
+                videoDuration={videoDuration}
+                watch={watch}
+                videoError={videoError}
               />
-              <Text style={{ fontFamily: FontFamily.sans, fontSize: 22, fontWeight: '800', color: Colors.ink, textAlign: 'center' }}>
-                {service ? 'Service Saved! 🎉' : 'Service Published! 🚀'}
-              </Text>
-              <Text style={{ fontFamily: FontFamily.sansMedium, fontSize: 14, color: 'rgba(63, 3, 11, 0.5)', textAlign: 'center', lineHeight: 20 }}>
-                {service
-                  ? `"${watch('name')}" has been successfully updated.`
-                  : `"${watch('name')}" is now live and visible to brands.`
-                }
-              </Text>
-              <TactileButton
-                text="Done"
-                onPress={() => {
-                  onSuccess(null);
-                  onClose();
-                }}
-                variant="primary"
-                fullWidth
-                style={{ marginTop: 24 }}
+            )}
+
+            {/* ================= STEP 2 MEDIA ================= */}
+            {step === 2 && (
+              <Step2Media
+                videoFile={videoFile}
+                videoUrl={videoUrl}
+                thumbnailUrl={thumbnailUrl}
+                selectedFrameIdx={selectedFrameIdx}
+                setSelectedFrameIdx={setSelectedFrameIdx}
+                setThumbnailFile={setThumbnailFile}
+                setThumbnailUrl={setThumbnailUrl}
+                extractingFrames={extractingFrames}
+                getFrames={getFrames}
+                triggerVideoPicker={triggerVideoPicker}
+                triggerThumbnailPicker={triggerThumbnailPicker}
+                deliverables={deliverables}
+                removeDeliverable={removeDeliverable}
+                showDelivInput={showDelivInput}
+                setShowDelivInput={setShowDelivInput}
+                delivInput={delivInput}
+                setDelivInput={setDelivInput}
+                addDeliverable={addDeliverable}
+                handleBackStep={handleBackStep}
+                handleNextStep={handleNextStep}
+                videoDuration={videoDuration}
               />
-            </View>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            )}
 
-              {/* ================= STEP 1 DETAILS ================= */}
-              {step === 1 && (
-                <Step1Details
-                  control={control}
-                  errors={errors}
-                  deliveryTime={deliveryTime}
-                  setDeliveryTime={setDeliveryTime}
-                  videoUrl={videoUrl}
-                  triggerVideoPicker={triggerVideoPicker}
-                  getFrames={getFrames}
-                  tags={tags}
-                  removeTag={removeTag}
-                  showTagInput={showTagInput}
-                  setShowTagInput={setShowTagInput}
-                  tagInput={tagInput}
-                  setTagInput={setTagInput}
-                  addTag={addTag}
-                  handleNextStep={handleNextStep}
-                  videoDuration={videoDuration}
-                  watch={watch}
-                  videoError={videoError}
-                />
-              )}
+            {/* ================= STEP 3 REVIEW ================= */}
+            {step === 3 && (
+              <Step3Review
+                control={control}
+                errors={errors}
+                thumbnailUrl={thumbnailUrl}
+                getFrames={getFrames}
+                selectedFrameIdx={selectedFrameIdx}
+                name={watch('name')}
+                category={watch('category')}
+                price={watch('price')}
+                deliveryTime={deliveryTime}
+                shortDesc={watch('shortDesc')}
+                deliverables={deliverables}
+                tags={tags}
+                submitting={submitMutation.isPending}
+                handleBackStep={handleBackStep}
+                handleSubmit={handleSubmit(onSubmit)}
+                setStep={setStep}
+                service={service}
+                videoDuration={videoDuration}
+              />
+            )}
 
-              {/* ================= STEP 2 MEDIA ================= */}
-              {step === 2 && (
-                <Step2Media
-                  videoFile={videoFile}
-                  videoUrl={videoUrl}
-                  thumbnailUrl={thumbnailUrl}
-                  selectedFrameIdx={selectedFrameIdx}
-                  setSelectedFrameIdx={setSelectedFrameIdx}
-                  setThumbnailFile={setThumbnailFile}
-                  setThumbnailUrl={setThumbnailUrl}
-                  extractingFrames={extractingFrames}
-                  getFrames={getFrames}
-                  triggerVideoPicker={triggerVideoPicker}
-                  triggerThumbnailPicker={triggerThumbnailPicker}
-                  deliverables={deliverables}
-                  removeDeliverable={removeDeliverable}
-                  showDelivInput={showDelivInput}
-                  setShowDelivInput={setShowDelivInput}
-                  delivInput={delivInput}
-                  setDelivInput={setDelivInput}
-                  addDeliverable={addDeliverable}
-                  handleBackStep={handleBackStep}
-                  handleNextStep={handleNextStep}
-                  videoDuration={videoDuration}
-                />
-              )}
-
-              {/* ================= STEP 3 REVIEW ================= */}
-              {step === 3 && (
-                <Step3Review
-                  control={control}
-                  errors={errors}
-                  thumbnailUrl={thumbnailUrl}
-                  getFrames={getFrames}
-                  selectedFrameIdx={selectedFrameIdx}
-                  name={watch('name')}
-                  category={watch('category')}
-                  price={watch('price')}
-                  deliveryTime={deliveryTime}
-                  shortDesc={watch('shortDesc')}
-                  deliverables={deliverables}
-                  tags={tags}
-                  submitting={submitMutation.isPending}
-                  handleBackStep={handleBackStep}
-                  handleSubmit={handleSubmit(onSubmit)}
-                  setStep={setStep}
-                  service={service}
-                  videoDuration={videoDuration}
-                />
-              )}
-
-            </ScrollView>
-          )}
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+        )}
       </SafeAreaView>
     </Modal>
   );

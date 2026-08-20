@@ -137,17 +137,15 @@ export function Step2Media({
                     key={idx}
                     onPress={() => {
                       setSelectedFrameIdx(idx);
-                      setThumbnailFile(null);
-                      setThumbnailUrl(''); // reset custom
                     }}
                     style={[
                       styles.frameCard,
-                      selectedFrameIdx === idx && !thumbnailUrl && styles.frameCardActive,
+                      selectedFrameIdx === idx && styles.frameCardActive,
                     ]}
                     activeOpacity={0.8}
                   >
                     <Image source={frameSource} style={styles.frameImage} contentFit="cover" />
-                    {selectedFrameIdx === idx && !thumbnailUrl && (
+                    {selectedFrameIdx === idx && (
                       <View style={styles.frameChecked}>
                         <Icon name="check" size={11} color={Colors.white} />
                       </View>
@@ -161,13 +159,21 @@ export function Step2Media({
           {/* Custom Thumbnail display if uploaded */}
           {thumbnailUrl && (
             <TouchableOpacity
-              onPress={() => setSelectedFrameIdx(-1)}
-              style={[styles.frameCard, styles.frameCardActive]}
+              onPress={() => {
+                setSelectedFrameIdx(-1);
+              }}
+              style={[
+                styles.frameCard,
+                selectedFrameIdx === -1 && styles.frameCardActive,
+              ]}
+              activeOpacity={0.8}
             >
               <Image source={{ uri: thumbnailUrl }} style={styles.frameImage} contentFit="cover" />
-              <View style={styles.frameChecked}>
-                <Icon name="check" size={11} color={Colors.white} />
-              </View>
+              {selectedFrameIdx === -1 && (
+                <View style={styles.frameChecked}>
+                  <Icon name="check" size={11} color={Colors.white} />
+                </View>
+              )}
             </TouchableOpacity>
           )}
 

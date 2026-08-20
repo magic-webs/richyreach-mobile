@@ -21,6 +21,8 @@ const ICON_MAPPING: Record<string, string> = {
   addUser: 'UserPlus',
   trophy: 'Trophy',
   ticket: 'Ticket',
+  tag: 'Tag',
+  category: 'LayoutGrid',
   
   home: 'Home',
   grid: 'Grid',
