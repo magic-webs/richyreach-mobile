@@ -5,7 +5,7 @@ import { useUIStore } from '@/store/ui';
 import LottieView from 'lottie-react-native';
 import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { getOnboardingSeen, getToken } from '@/lib/storage';
-import { registerForPushNotificationsAsync, setupNotificationResponseListener, setupNotificationReceivedListener } from '@/lib/push-notifications';
+import { registerForPushNotificationsAsync, setupNotificationResponseListener, setupNotificationReceivedListener, setupAndroidNotificationChannelAsync } from '@/lib/push-notifications';
 import { playSound } from '@/lib/sound';
 import { useAuthStore } from '@/store/auth';
 import {
@@ -83,6 +83,10 @@ function NavigationLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Must exist before the first push lands, otherwise Android falls back to a
+    // system channel and the custom tone never plays.
+    void setupAndroidNotificationChannelAsync();
+
     const unsubResponse = setupNotificationResponseListener(router);
     const unsubReceived = setupNotificationReceivedListener(() => {
       playSound('notification');

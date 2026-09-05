@@ -8,6 +8,57 @@ import type { DeviceRegistrationInfo } from './api';
 
 type Router = ReturnType<typeof useRouter>;
 
+/**
+ * Android channel the backend targets via `android.channelId` in the Expo push payload.
+ *
+ * Channels are immutable once created — Android only allows `name` and `description` to
+ * change afterwards — so the importance/vibration/visibility below apply to fresh installs
+ * only. Changing any of those for existing users means bumping this id AND updating
+ * `channelId` in richyreach-backend/src/services/push-notification.service.ts to match,
+ * or pushes land on a fallback channel that plays the stock system tone.
+ *
+ * The sound is the one exception, as long as the raw resource keeps its name: the channel
+ * stores `android.resource://<package>/raw/main_notification`, which re-resolves on every
+ * app update. That is why the tone was swapped in place rather than shipped under a new
+ * filename — existing installs pick it up without a channel migration.
+ */
+const ANDROID_CHANNEL_ID = 'default';
+
+/** Basename must match an entry in the expo-notifications `sounds` array in app.json. */
+const NOTIFICATION_SOUND = 'main_notification.wav';
+
+/**
+ * Creates or updates the Android notification channel. Idempotent, and safe to call before
+ * permission is granted. Must run before the first push arrives: a payload naming a channel
+ * that does not exist falls back to expo_notifications_fallback_notification_channel, which
+ * plays the default system sound instead of ours.
+ */
+export async function setupAndroidNotificationChannelAsync(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+
+  try {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+      name: 'General',
+      description: 'Campaign updates, chat messages and wallet activity.',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: NOTIFICATION_SOUND,
+      // Without this the tone can be routed to the media stream and track media volume.
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.NOTIFICATION,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
+      vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
+      enableLights: true,
+      lightColor: '#208AEF',
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      showBadge: true,
+    });
+  } catch (err) {
+    console.warn('[push-notifications] Failed to configure Android notification channel:', err);
+  }
+}
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: false, // Disables system double-sound in foreground; we trigger playSound('notification') programmatically
@@ -27,13 +78,7 @@ export async function registerForPushNotificationsAsync(): Promise<DeviceRegistr
     return null;
   }
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Default',
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: 'main_notification',
-    });
-  }
+  await setupAndroidNotificationChannelAsync();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
