@@ -9,7 +9,6 @@ import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
 import { InstagramTab } from '@/components/influencer/profile/InstagramTab';
 import { VerificationContent } from '@/components/influencer/profile/VerificationContent';
 import { PrivacyContent } from '@/components/influencer/profile/PrivacyContent';
-import { LanguageContent } from '@/components/influencer/profile/LanguageContent';
 import { HelpContent } from '@/components/influencer/profile/HelpContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -38,7 +37,7 @@ function resolveProfileTab(value?: string): ProfileTab | null {
   if (!value) return null;
   return PROFILE_TABS.find((t) => t.toLowerCase() === value.trim().toLowerCase()) ?? null;
 }
-type SheetType = 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
+type SheetType = 'verification' | 'notifications' | 'privacy' | 'help' | 'referral' | null;
 
 const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
   ['wallet', 'Wallet & payouts', '', 'wallet'],
@@ -47,7 +46,6 @@ const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
   ['verified', 'Verification', 'Verified', 'verification'],
   ['bell', 'Notifications', '', 'notifications'],
   ['lock', 'Privacy & security', '', 'privacy'],
-  ['globe', 'Language', 'EN', 'language'],
   ['settings', 'Help & support', '', 'help'],
 ];
 
@@ -293,11 +291,6 @@ export default function ProfileScreen() {
       title: 'Privacy & security',
       icon: 'lock',
       content: <PrivacyContent />
-    },
-    language: {
-      title: 'Language',
-      icon: 'globe',
-      content: <LanguageContent />
     },
     help: {
       title: 'Help & support',

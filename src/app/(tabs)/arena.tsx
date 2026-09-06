@@ -269,8 +269,8 @@ export default function ArenaScreen() {
         {/* Your stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: 'rgba(212,175,55,0.12)' }]}>
-              <Coins size={18} color={Colors.gold} strokeWidth={2} />
+            <View style={[styles.statIconPill, { backgroundColor: Colors.gold }]}>
+              <Coins size={18} color={Colors.oxblood} strokeWidth={2.4} />
             </View>
             <View style={styles.statTextBlock}>
               <Text style={styles.statValue}>{totalCoinsWon.toLocaleString()}</Text>
@@ -278,8 +278,8 @@ export default function ArenaScreen() {
             </View>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: 'rgba(180,106,116,0.12)' }]}>
-              <Swords size={18} color={Colors.roseDeep} strokeWidth={2} />
+            <View style={[styles.statIconPill, { backgroundColor: Colors.roseDeep }]}>
+              <Swords size={18} color={Colors.cream} strokeWidth={2.4} />
             </View>
             <View style={styles.statTextBlock}>
               <Text style={styles.statValue}>{participations.length}</Text>
@@ -287,8 +287,8 @@ export default function ArenaScreen() {
             </View>
           </View>
           <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: 'rgba(42,122,90,0.12)' }]}>
-              <Zap size={18} color="#2a7a5a" strokeWidth={2} />
+            <View style={[styles.statIconPill, { backgroundColor: Colors.green }]}>
+              <Zap size={18} color={Colors.cream} strokeWidth={2.4} />
             </View>
             <View style={styles.statTextBlock}>
               <Text style={styles.statValue}>{activeParticipations}</Text>
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.cream,
+    backgroundColor: '#fff',
     borderRadius: Radius.md,
     paddingHorizontal: 10,
     paddingVertical: 13,
@@ -479,15 +479,16 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.oxblood,
   },
   statLabel: {
-    fontFamily: FontFamily.sansRegular,
-    fontSize: 9.5,
-    color: 'rgba(63,3,11,0.5)',
-    lineHeight: 13,
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: 'rgba(63,3,11,0.68)',
+    lineHeight: 14,
   },
   myArenasSection: { paddingHorizontal: 18, marginTop: 16 },
   sectionLabel: {

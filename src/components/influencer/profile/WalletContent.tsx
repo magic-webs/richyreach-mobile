@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { WalletBalanceCard } from '@/components/wallet/WalletBalanceCard';
 import { WalletConvertPoints } from '@/components/wallet/WalletConvertPoints';
 import { WalletTransactionHistory } from '@/components/wallet/WalletTransactionHistory';
+import { PayoutMethodsCard } from '@/components/wallet/PayoutMethodsCard';
 
 interface WalletContentProps {
   onOpenWithdraw: () => void;
@@ -42,6 +43,8 @@ export function WalletContent({ onOpenWithdraw, onOpenBuyCoins }: WalletContentP
       />
 
       {/* <WalletConvertPoints /> */}
+
+      <PayoutMethodsCard />
 
       <WalletTransactionHistory transactions={transactions} />
     </View>

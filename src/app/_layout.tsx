@@ -117,6 +117,9 @@ function NavigationLayout() {
       {/* Public Shared Pages */}
       <Stack.Screen name="shared/[id]" />
       <Stack.Screen name="shared/service/[id]" />
+      <Stack.Screen name="shared/creator/[id]" />
+      {/* Referral landing. Redirects onward, so it must resolve in either auth state. */}
+      <Stack.Screen name="signup" />
     </Stack>
   );
 }

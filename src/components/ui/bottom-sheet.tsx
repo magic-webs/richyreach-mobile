@@ -8,6 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { Icon } from './icon';
 
 interface BottomSheetProps {
@@ -18,9 +19,11 @@ interface BottomSheetProps {
   children: React.ReactNode;
   snapPoints?: (string | number)[];
   hideHeaderBorder?: boolean;
+  /** Pinned to the bottom, outside the scroll area. Rides above the keyboard. */
+  footer?: React.ReactNode;
 }
 
-const DEFAULT_SNAP_POINTS = ['55%', '90%'];
+const DEFAULT_SNAP_POINTS = ['92%'];
 
 function CustomBackground({ style }: BottomSheetBackgroundProps) {
   return (
@@ -45,9 +48,12 @@ export function BottomSheet({
   children,
   snapPoints = DEFAULT_SNAP_POINTS,
   hideHeaderBorder = false,
+  footer,
 }: BottomSheetProps) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const snaps = useMemo(() => snapPoints, [snapPoints]);
+  // Open at the tallest stop. Anything smaller is still reachable by dragging down.
+  const initialIndex = Math.max(snaps.length - 1, 0);
 
   useEffect(() => {
     if (visible) {
@@ -93,12 +99,16 @@ export function BottomSheet({
     <BottomSheetModal
       ref={sheetRef}
       snapPoints={snaps}
+      index={initialIndex}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       backgroundComponent={CustomBackground}
       handleStyle={handleStyle}
       handleIndicatorStyle={handleIndicatorStyle}
       enableDynamicSizing={false}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
       {/* Header */}
       <View style={[styles.header, hideHeaderBorder && styles.headerNoBorder]}>
@@ -113,11 +123,17 @@ export function BottomSheet({
 
       {/* Scrollable body */}
       <BottomSheetScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, footer ? styles.bodyWithFooter : null]}
         showsVerticalScrollIndicator={false}
       >
         {children}
       </BottomSheetScrollView>
+
+      {footer && (
+        <KeyboardStickyView offset={{ closed: 0, opened: 8 }}>
+          <View style={styles.footer}>{footer}</View>
+        </KeyboardStickyView>
+      )}
     </BottomSheetModal>
   );
 }
@@ -163,5 +179,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 56,
+  },
+  // The footer sits on top of the body, so the last field is not hidden behind it.
+  bodyWithFooter: {
+    paddingBottom: 20,
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: Colors.creamLite,
+    borderTopWidth: 0.5,
+    borderTopColor: "rgba(63,3,11,0.07)",
   },
 });

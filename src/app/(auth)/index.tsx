@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -60,8 +60,13 @@ export default function AuthScreen() {
     _showModal(params);
   };
 
+  const { ref: refParam } = useLocalSearchParams<{ ref?: string }>();
+  const invitedCode = typeof refParam === 'string' ? refParam.trim().toUpperCase() : '';
+
   const [step, setStep] = useState<'request' | 'verify'>('request');
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  // Arriving on a referral link means signing up, and the referral field only renders in
+  // that mode -- defaulting to login would hide the code that was just handed over.
+  const [mode, setMode] = useState<'login' | 'signup'>(invitedCode ? 'signup' : 'login');
   const [method, setMethod] = useState<'email' | 'whatsapp'>('email');
   const [role, setLocalRole] = useState<'influencer' | 'brand'>('influencer');
 
@@ -71,7 +76,7 @@ export default function AuthScreen() {
   const [countryCode, setCountryCode] = useState('91');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [otp, setOtp] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(invitedCode);
   const [loading, setLoading] = useState(false);
 
   const otpInputRef = useRef<TextInput>(null);

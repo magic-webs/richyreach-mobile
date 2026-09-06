@@ -1,4 +1,13 @@
-import { ArrowLeft, Check, Plus, X } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  Image as ImageIcon,
+  Mic,
+  Plus,
+  Sticker,
+  X,
+} from 'lucide-react-native';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
@@ -106,6 +115,11 @@ export default function IceBreakersScreen() {
           )}
         </View>
 
+        <IceBreakerPreview
+          username={settingsQuery.data?.username}
+          questions={list.map((i) => i.question).filter((q) => q.trim())}
+        />
+
         {settingsQuery.isLoading ? (
           <View style={{ gap: 12 }}>
             <Skeleton width="100%" height={84} borderRadius={18} />
@@ -208,6 +222,57 @@ export default function IceBreakersScreen() {
   );
 }
 
+/**
+ * How the thread actually looks on Instagram: dark, the questions right-aligned as
+ * tappable pills under a grey caption, above the composer. Rendered from the live list
+ * so a question that is too long to fit is obvious while it is still being typed.
+ */
+function IceBreakerPreview({
+  username,
+  questions,
+}: {
+  username?: string;
+  questions: string[];
+}) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={styles.previewLabel}>Preview</Text>
+
+      <View style={styles.phone}>
+        <Text style={styles.phoneCaption}>
+          Tap to send a question suggested by {username || "you"}
+        </Text>
+
+        <View style={styles.bubbles}>
+          {questions.length === 0 ? (
+            <Text style={styles.phoneEmpty}>
+              Your questions appear here once you add them.
+            </Text>
+          ) : (
+            questions.map((q, i) => (
+              <View key={i} style={styles.bubble}>
+                <Text style={styles.bubbleText}>{q}</Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Composer, purely decorative -- it anchors the bubbles the way Instagram does. */}
+        <View style={styles.composer}>
+          <View style={styles.composerCamera}>
+            <Camera size={14} color="#fff" />
+          </View>
+          <Text style={styles.composerPlaceholder}>Message...</Text>
+          <Mic size={15} color="#c7c7c7" />
+          <ImageIcon size={15} color="#c7c7c7" />
+          <Sticker size={15} color="#c7c7c7" />
+          <Plus size={15} color="#c7c7c7" />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.creamLite },
 
@@ -287,6 +352,64 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   suggestText: { fontSize: 11.5, fontWeight: '600', color: Colors.oxblood },
+
+  previewLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.rose,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  phone: {
+    backgroundColor: '#000',
+    borderRadius: Radius.xl,
+    paddingTop: 18,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 14,
+  },
+  phoneCaption: {
+    fontSize: 11.5,
+    color: '#a8a8a8',
+    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  bubbles: { gap: 8, alignItems: 'flex-end' },
+  bubble: {
+    backgroundColor: '#262628',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxWidth: '88%',
+  },
+  // Instagram renders a tappable ice breaker in its link blue, not white.
+  bubbleText: { fontSize: 13.5, fontWeight: '700', color: '#7d8cf8' },
+  phoneEmpty: {
+    alignSelf: 'center',
+    fontSize: 11.5,
+    color: '#6b6b6b',
+    paddingVertical: 14,
+  },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 999,
+    paddingLeft: 5,
+    paddingRight: 14,
+    paddingVertical: 5,
+    marginTop: 4,
+  },
+  composerCamera: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#4b62f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  composerPlaceholder: { flex: 1, fontSize: 12.5, color: '#8e8e8e' },
 
   helper: { fontSize: 11.5, color: 'rgba(63,3,11,0.45)', lineHeight: 16 },
   errorText: { fontSize: 12, color: '#a3323f', lineHeight: 17 },

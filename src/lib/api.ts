@@ -1,6 +1,7 @@
 import { getToken } from './storage';
 import type { ChatAttachmentType, ChatMessage, ChatMessagesPage } from '@/types/chat';
 import type { ServiceOrder } from '@/types/order';
+import type { CreatePayoutMethodInput, PayoutMethod } from '@/types/payout';
 import type {
   Automation,
   AutomationDiagnostics,
@@ -163,6 +164,26 @@ export const api = {
     list: () => request('/influencers'),
     get: (id: string) => request(`/influencers/${id}`),
     marketplace: () => request('/influencers/marketplace-campaigns'),
+    /** No-auth creator profile behind a share link. Allow-listed projection, not the row. */
+    getPublic: (id: string) =>
+      request<{
+        id: string;
+        name: string;
+        instagramHandle: string | null;
+        avatar: string | null;
+        bio: string | null;
+        niche: string | null;
+        followers: number;
+        engagementRate: number;
+        verified: boolean;
+        services: {
+          id: string;
+          name: string;
+          price: number;
+          deliveryTime: string | null;
+          thumbnailUrl: string | null;
+        }[];
+      }>(`/influencers/public/${id}`),
     dashboard: () => request('/influencers/dashboard'),
     earnings: () => request<any[]>('/influencers/earnings'),
     profile: () => request('/influencers/profile'),
@@ -396,8 +417,25 @@ export const api = {
       request<any>('/wallet/create-order', { method: 'POST', body: JSON.stringify({ coins }) }),
     verifyPayment: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; coins: number }) =>
       request<any>('/wallet/verify', { method: 'POST', body: JSON.stringify(data) }),
-    withdraw: (coins: number) =>
-      request<any>('/wallet/withdraw', { method: 'POST', body: JSON.stringify({ coins }) }),
+    withdraw: (coins: number, payoutMethodId: string) =>
+      request<any>('/wallet/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({ coins, payoutMethodId }),
+      }),
+
+    /** Where withdrawals are sent. */
+    payoutMethods: {
+      list: () => request<PayoutMethod[]>('/wallet/payout-methods'),
+      create: (body: CreatePayoutMethodInput) =>
+        request<PayoutMethod>('/wallet/payout-methods', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      setDefault: (id: string) =>
+        request<PayoutMethod[]>(`/wallet/payout-methods/${id}/default`, { method: 'POST' }),
+      remove: (id: string) =>
+        request<PayoutMethod[]>(`/wallet/payout-methods/${id}`, { method: 'DELETE' }),
+    },
   },
   social: {
     instagram: {

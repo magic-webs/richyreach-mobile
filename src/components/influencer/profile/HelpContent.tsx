@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Icon } from '@/components/ui/icon';
 import { useUIStore } from '@/store/ui';
@@ -28,6 +28,11 @@ const FAQS: FaqItem[] = [
   },
 ];
 
+/** Support WhatsApp line. wa.me needs the number in full international form, digits only. */
+const SUPPORT_WHATSAPP = '15559921627';
+const SUPPORT_WHATSAPP_DISPLAY = '+1 (555) 992-1627';
+const SUPPORT_EMAIL = 'support@richyreach.com';
+
 export function HelpContent() {
   const showModal = useUIStore((s) => s.showModal);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -36,11 +41,26 @@ export function HelpContent() {
     setExpandedFaq(expandedFaq === idx ? null : idx);
   };
 
-  const handleContactSupport = (method: string) => {
-    showModal({
-      title: 'Connecting to Support 💬',
-      message: `Opening support channel via ${method}... Our support agents are available 24/7.`,
-    });
+  const openWhatsApp = async () => {
+    const text = encodeURIComponent('Hi RichyReach support, I need help with ');
+    const url = `https://wa.me/${SUPPORT_WHATSAPP}?text=${text}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // No WhatsApp installed, or the link handler refused it.
+      showModal({
+        title: 'Could not open WhatsApp',
+        message: `Message us on ${SUPPORT_WHATSAPP_DISPLAY}.`,
+      });
+    }
+  };
+
+  const openEmail = async () => {
+    try {
+      await Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=RichyReach%20support`);
+    } catch {
+      showModal({ title: 'Could not open mail', message: `Write to ${SUPPORT_EMAIL}.` });
+    }
   };
 
   return (
@@ -50,26 +70,26 @@ export function HelpContent() {
       <View style={styles.supportRow}>
         <TouchableOpacity
           style={styles.supportCard}
-          onPress={() => handleContactSupport('WhatsApp')}
+          onPress={openWhatsApp}
           activeOpacity={0.8}
         >
           <View style={[styles.iconBox, { backgroundColor: 'rgba(37,211,102,0.12)' }]}>
             <Icon name="chat" size={20} color="#25D366" />
           </View>
           <Text style={styles.supportCardTitle}>WhatsApp Support</Text>
-          <Text style={styles.supportCardSub}>Chat with us instantly</Text>
+          <Text style={styles.supportCardSub}>{SUPPORT_WHATSAPP_DISPLAY}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.supportCard}
-          onPress={() => handleContactSupport('Email')}
+          onPress={openEmail}
           activeOpacity={0.8}
         >
           <View style={[styles.iconBox, { backgroundColor: 'rgba(180,106,116,0.12)' }]}>
             <Icon name="globe" size={20} color={Colors.oxblood} />
           </View>
           <Text style={styles.supportCardTitle}>Email Support</Text>
-          <Text style={styles.supportCardSub}>support@richyreach.com</Text>
+          <Text style={styles.supportCardSub}>{SUPPORT_EMAIL}</Text>
         </TouchableOpacity>
       </View>
 

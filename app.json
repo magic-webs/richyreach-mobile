@@ -59,6 +59,11 @@
               "scheme": "https",
               "host": "app.richyreach.com",
               "path": "/onboarding"
+            },
+            {
+              "scheme": "https",
+              "host": "app.richyreach.com",
+              "path": "/signup"
             }
           ]
         }

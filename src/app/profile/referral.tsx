@@ -46,7 +46,7 @@ const STEPS = [
   {
     Icon: Gift,
     title: 'Both get rewarded!',
-    desc: 'You get ₹100 + 10,000 pts. They get ₹200 + 200,000 pts.',
+    desc: 'You get 10,000 coins (₹100). They get 20,000 coins (₹200).',
   },
 ];
 
@@ -68,7 +68,7 @@ export default function ReferralScreen() {
     try {
       const shareUrl = `https://app.richyreach.com/signup?ref=${stats.referralCode}`;
       await Share.share({
-        message: `Join me on RichyReach! Get ₹200 signup bonus with my code [${stats.referralCode}]: ${shareUrl}`,
+        message: `Join me on RichyReach and get 20,000 coins (₹200) as a signup bonus. Use my code ${stats.referralCode}: ${shareUrl}`,
       });
     } catch { }
   };
@@ -182,16 +182,16 @@ export default function ReferralScreen() {
         <View style={styles.rewardBanner}>
           <View style={styles.rewardSide}>
             <Text style={styles.rewardBadge}>YOU GET</Text>
-            <Text style={styles.rewardAmount}>₹100</Text>
-            <Text style={styles.rewardSub}>+ 10,000 pts</Text>
+            <Text style={styles.rewardAmount}>10,000</Text>
+            <Text style={styles.rewardSub}>coins · ₹100</Text>
           </View>
           <View style={styles.rewardDivider}>
             <Text style={styles.rewardDivText}>+</Text>
           </View>
           <View style={styles.rewardSide}>
             <Text style={styles.rewardBadge}>THEY GET</Text>
-            <Text style={styles.rewardAmount}>₹200</Text>
-            <Text style={styles.rewardSub}>+ 200,000 pts</Text>
+            <Text style={styles.rewardAmount}>20,000</Text>
+            <Text style={styles.rewardSub}>coins · ₹200</Text>
           </View>
         </View>
 
