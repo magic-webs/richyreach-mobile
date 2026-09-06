@@ -8,7 +8,6 @@ import { HeroCarousel } from '@/components/home/hero-carousel';
 import { HomeFooter } from '@/components/home/home-footer';
 import { HomeHeader } from '@/components/home/home-header';
 import { LiveCampaigns } from '@/components/home/live-campaigns';
-import { OfferBanner } from '@/components/home/offer-banner';
 import { TrendingAudio } from '@/components/home/trending-audio';
 import { NotificationsSheet } from '@/components/home/NotificationsSheet';
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "RichyReach",
     "slug": "richyreach",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/richyreach-logo.png",
     "scheme": "richyreachmobile",
@@ -123,8 +123,11 @@
         "projectId": "230e5696-39a8-4701-88d9-5dca07eb5cdd"
       }
     },
+    "updates": {
+      "url": "https://u.expo.dev/230e5696-39a8-4701-88d9-5dca07eb5cdd"
+    },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Colors } from '@/constants/brand';
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -95,6 +95,31 @@ export function Carousel({
   const progress = useSharedValue<number>(0);
   const slideWidth = SCREEN_W - 8;
 
+  // Slide transition: the outgoing card shrinks and fades back while the incoming
+  // one settles up to full size, instead of a flat horizontal swap. Runs on the UI
+  // thread, so it stays smooth while the home feed is scrolling.
+  const animationStyle = useCallback(
+    (value: number) => {
+      'worklet';
+      // Not clamped: slides further than one step out still travel fully off-screen.
+      const translateX = interpolate(value, [-1, 0, 1], [-slideWidth, 0, slideWidth]);
+      const scale = interpolate(value, [-1, 0, 1], [0.9, 1, 0.9], Extrapolation.CLAMP);
+      const opacity = interpolate(
+        value,
+        [-1, -0.6, 0, 0.6, 1],
+        [0, 0.9, 1, 0.9, 0],
+        Extrapolation.CLAMP
+      );
+      // Keeps the active card above its neighbours mid-swipe.
+      const zIndex = Math.round(
+        interpolate(Math.abs(value), [0, 1], [20, 0], Extrapolation.CLAMP)
+      );
+
+      return { transform: [{ translateX }, { scale }], opacity, zIndex };
+    },
+    [slideWidth]
+  );
+
   const onPressPagination = (index: number) => {
     carouselRef.current?.scrollTo({
       index,
@@ -112,7 +137,8 @@ export function Carousel({
           height={height}
           autoPlay={true}
           autoPlayInterval={autoInterval}
-          scrollAnimationDuration={700}
+          scrollAnimationDuration={650}
+          customAnimation={animationStyle}
           data={slides}
           onProgressChange={(_, absoluteProgress) => {
             progress.value = absoluteProgress;
@@ -159,7 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 12,
+    marginTop: 14,
     zIndex: 3,
   },
   dot: {

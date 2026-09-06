@@ -111,7 +111,7 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
                 <Icon name="arrow" size={13} color={Colors.roseSoft} />
               </TouchableOpacity>
             </View>
-            <Icon name="flame" size={60} color={Colors.roseSoft} />
+            <Icon name="flame" size={74} color={Colors.roseSoft} />
           </>
         );
       }
@@ -198,7 +198,7 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
 
   return (
     <View style={styles.container}>
-      <Carousel slides={slides} height={154} dotColor={Colors.oxblood} />
+      <Carousel slides={slides} height={210} dotColor={Colors.oxblood} />
     </View>
   );
 }
@@ -212,43 +212,43 @@ const styles = StyleSheet.create({
 const hero = StyleSheet.create({
   slide: {
     flex: 1,
-    padding: 22,
+    padding: 26,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24
   },
-  top: { gap: 8 },
+  top: { gap: 10 },
   eyebrow: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 1.6,
     color: 'rgba(255,255,255,0.9)',
     textTransform: 'uppercase',
   },
-  heading: { fontFamily: FontFamily.serif, fontSize: 26, fontWeight: '700', color: '#fff', lineHeight: 30 },
-  bottom: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 'auto' as any },
-  startBtn: { backgroundColor: Colors.oxblood, borderRadius: 999, paddingHorizontal: 17, paddingVertical: 10 },
-  startBtnText: { color: Colors.cream, fontSize: 13, fontWeight: '700' },
+  heading: { fontFamily: FontFamily.serif, fontSize: 30, fontWeight: '700', color: '#fff', lineHeight: 35 },
+  bottom: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 'auto' as any },
+  startBtn: { backgroundColor: Colors.oxblood, borderRadius: 999, paddingHorizontal: 19, paddingVertical: 12 },
+  startBtnText: { color: Colors.cream, fontSize: 14, fontWeight: '700' },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: 'rgba(63,3,11,0.06)',
     borderRadius: 999,
-    paddingHorizontal: 13,
-    paddingVertical: 6,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
   },
-  badgeText: { fontFamily: FontFamily.serif, fontWeight: '700', fontSize: 14, color: Colors.oxblood },
+  badgeText: { fontFamily: FontFamily.serif, fontWeight: '700', fontSize: 15, color: Colors.oxblood },
   arenaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: 'rgba(180,106,116,0.18)',
     borderRadius: 999,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    marginTop: 9,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+    marginTop: 11,
     alignSelf: 'flex-start',
   },
-  arenaBtnText: { fontSize: 12.5, color: Colors.roseSoft, fontWeight: '700' },
+  arenaBtnText: { fontSize: 13.5, color: Colors.roseSoft, fontWeight: '700' },
 });

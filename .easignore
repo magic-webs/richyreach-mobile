@@ -1,0 +1,69 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders — EAS runs prebuild itself
+/ios
+/android
+
+fixes.md
+
+# ---------------------------------------------------------------------------
+# EAS-only: present in git, but does nothing during a native build
+# ---------------------------------------------------------------------------
+
+# editors / tooling
+.vscode/
+.idea/
+*.log
+
+# agent config and docs
+.agents/
+AGENTS.md
+CLAUDE.md
+README.md
+LICENSE
+skills-lock.json
+
+# ---------------------------------------------------------------------------
+# Negations — must stay last to override the rules above
+# ---------------------------------------------------------------------------
+
+# Required by app.json `android.googleServicesFile`. It is listed in .gitignore,
+# so without this line the Android build would come up without Firebase config
+# and push notifications would break.
+!google-services.json
