@@ -1,6 +1,16 @@
 import { getToken } from './storage';
 import type { ChatAttachmentType, ChatMessage, ChatMessagesPage } from '@/types/chat';
 import type { ServiceOrder } from '@/types/order';
+import type {
+  Automation,
+  AutomationDiagnostics,
+  AutomationInput,
+  AutomationLog,
+  AutomationMedia,
+  AutomationSettings,
+  AutomationStats,
+  IceBreaker,
+} from '@/types/instagram-automation';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -448,6 +458,53 @@ export const api = {
       }>>(`/v1/social/instagram/post/${postId}/comments`),
       disconnect: () => request<void>('/v1/social/instagram/disconnect', { method: 'POST' }),
       refresh: () => request<any>('/v1/social/instagram/refresh', { method: 'POST' }),
+    },
+
+    /** Instagram automation: keyword rules that answer comments and DMs on the creator's behalf. */
+    instagramAutomation: {
+      getSettings: () => request<AutomationSettings>('/v1/social/instagram/automation/settings'),
+      updateSettings: (body: Partial<Pick<AutomationSettings, 'masterEnabled' | 'aiPersona' | 'aiModel'>>) =>
+        request<AutomationSettings>('/v1/social/instagram/automation/settings', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        }),
+      updateIceBreakers: (iceBreakers: IceBreaker[]) =>
+        request<{ iceBreakers: IceBreaker[]; synced: boolean; syncError: string | null }>(
+          '/v1/social/instagram/automation/ice-breakers',
+          { method: 'PUT', body: JSON.stringify({ iceBreakers }) }
+        ),
+
+      getStats: () => request<AutomationStats>('/v1/social/instagram/automation/stats'),
+      getDiagnostics: () =>
+        request<AutomationDiagnostics>('/v1/social/instagram/automation/diagnostics'),
+      subscribe: () =>
+        request<{ subscribed: boolean; fields: string[] }>(
+          '/v1/social/instagram/automation/subscribe',
+          { method: 'POST' }
+        ),
+      getLogs: (limit = 50, offset = 0) =>
+        request<AutomationLog[]>(`/v1/social/instagram/automation/logs?limit=${limit}&offset=${offset}`),
+      getMedia: () => request<AutomationMedia[]>('/v1/social/instagram/automation/media'),
+
+      list: () => request<Automation[]>('/v1/social/instagram/automation'),
+      get: (id: string) => request<Automation>(`/v1/social/instagram/automation/${id}`),
+      create: (body: AutomationInput) =>
+        request<Automation>('/v1/social/instagram/automation', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      update: (id: string, body: Partial<AutomationInput>) =>
+        request<Automation>(`/v1/social/instagram/automation/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        }),
+      toggle: (id: string, enabled: boolean) =>
+        request<Automation>(`/v1/social/instagram/automation/${id}/toggle`, {
+          method: 'POST',
+          body: JSON.stringify({ enabled }),
+        }),
+      remove: (id: string) =>
+        request<{ id: string }>(`/v1/social/instagram/automation/${id}`, { method: 'DELETE' }),
     },
   },
 };

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HappeningNow } from '@/components/home/happening-now';
@@ -22,6 +22,7 @@ import { useAuthStore } from '@/store/auth';
 import { useProfilesStore } from '@/store/profiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FloatingChatButton } from '@/components/floating-chat-button';
+import { useTrendingSongs } from '@/hooks/useTrendingSongs';
 
 function getRelativeTime(dateStr: string) {
   if (!dateStr) return 'now';
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const setRole = useAuthStore((s) => s.setRole);
   const session = useAuthStore((s) => s.session);
   const userName = session?.user?.name || 'Muskan';
+  const userId = session?.user?.id;
   const queryClient = useQueryClient();
 
   // Switcher and creation sheets state
@@ -85,6 +87,32 @@ export default function HomeScreen() {
     }
   }, [session?.user?.id, role, activeBrandProfileId, activeInfluencerProfileId, loadBrandProfiles, loadInfluencerProfiles]);
 
+  // Pull to refresh. Every home query is refetched by key -- heroBanners lives inside
+  // HeroCarousel but shares this QueryClient -- along with the active profile list, so
+  // the spinner stays up until the whole screen has actually caught up.
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['heroBanners'] }),
+        queryClient.refetchQueries({ queryKey: ['campaignsMarketplace'] }),
+        queryClient.refetchQueries({ queryKey: ['trendingSongs'] }),
+        queryClient.refetchQueries({ queryKey: ['notifications'] }),
+        userId
+          ? role === 'brand'
+            ? loadBrandProfiles(userId)
+            : loadInfluencerProfiles(userId)
+          : Promise.resolve(),
+      ]);
+    } catch {
+      // Each queryFn already swallows its own error, so there is nothing to surface here.
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, userId, role, loadBrandProfiles, loadInfluencerProfiles]);
+
   const { data: rawCampaignListData, isLoading: loadingCampaigns } = useQuery<any>({
     queryKey: ['campaignsMarketplace', role, role === 'brand' ? activeBrandProfileId : activeInfluencerProfileId],
     queryFn: () => {
@@ -94,12 +122,6 @@ export default function HomeScreen() {
         return api.influencers.marketplace().catch(() => []);
       }
     },
-  });
-
-  const { data: songsData } = useQuery<any[]>({
-    queryKey: ['trendingSongs'],
-    queryFn: () => api.songs.list().catch(() => []),
-    enabled: !!session?.user?.id,
   });
 
   const { data: notificationsData } = useQuery<any[]>({
@@ -138,26 +160,7 @@ export default function HomeScreen() {
     });
   }, [rawCampaignListData]);
 
-  const musicsList = React.useMemo(() => {
-    if (!songsData || songsData.length === 0) {
-      return mock.musics.map((m, idx) => ({
-        ...m,
-        instagramAudioUrl: idx % 2 === 0
-          ? 'https://www.instagram.com/reels/audio/360707759600124/'
-          : 'https://www.instagram.com/reels/audio/824355552391032/',
-      }));
-    }
-    return songsData.map((song: any) => ({
-      title: song.title,
-      artist: song.artist,
-      imageUrl: song.imageUrl,
-      reels: song.reels || '1.5M',
-      dur: song.dur || '0:20',
-      tone: song.tone || 'ox',
-      instagramAudioUrl: song.instagramAudioUrl,
-    }));
-  }, [songsData]);
-
+  const { songs: musicsList } = useTrendingSongs();
   const activityList = React.useMemo(() => {
     if (!notificationsData || notificationsData.length === 0) {
       return mock.activity;
@@ -218,6 +221,15 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.bodyContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.oxblood}
+            colors={[Colors.oxblood]}
+            progressBackgroundColor={Colors.creamLite}
+          />
+        }
       >
         {/* Hero carousel */}
         <HeroCarousel
@@ -244,7 +256,10 @@ export default function HomeScreen() {
           <HappeningNow activity={activityList} campaigns={campaignList} />
 
           {/* Trending audio */}
-          <TrendingAudio musics={musicsList} />
+          <TrendingAudio
+            musics={musicsList}
+            onSeeAllPress={() => router.push('/trending-songs')}
+          />
 
           {/* Tagline footer */}
           <HomeFooter />

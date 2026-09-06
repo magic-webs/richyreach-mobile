@@ -1,6 +1,7 @@
 import LottieView from 'lottie-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { Image } from 'expo-image';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -37,14 +38,14 @@ export function ServicesTab({
       {/* Header Row */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>My Services</Text>
-        <TouchableOpacity
-          style={styles.addServiceBtn}
-          activeOpacity={0.85}
+        <TactileButton
+          text="Add new service"
+          icon="plus"
+          variant="primary"
+          size="sm"
+          borderRadius={99}
           onPress={onAddServicePress}
-        >
-          <Icon name="plus" size={14} color={Colors.white} />
-          <Text style={styles.addServiceBtnText}>Add new service</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       {/* Services List / Horizontal Scroll */}
@@ -150,7 +151,7 @@ export function ServicesTab({
       )}
 
       {/* Stats Card */}
-      <View style={styles.statsCard}>
+      {false && <View style={styles.statsCard}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScrollContent}>
           {/* Stat 1 */}
           <View style={styles.statBox}>
@@ -193,23 +194,23 @@ export function ServicesTab({
             </View>
           </View>
         </ScrollView>
-      </View>
+      </View>}
 
       {/* Premium Pro Banner */}
-      <View style={styles.proBanner}>
-        <View style={styles.proLeft}>
-          <View style={styles.proIconCircle}>
-            <Icon name="crown" size={18} color={Colors.gold} />
+      {false && <View style={styles.proBanner}>
+          <View style={styles.proLeft}>
+            <View style={styles.proIconCircle}>
+              <Icon name="crown" size={18} color={Colors.gold} />
+            </View>
+            <View style={styles.proTexts}>
+              <Text style={styles.proTitle}>Stand out with RichyReach Pro</Text>
+              <Text style={styles.proSubtitle}>Get featured, priority in search & more brand deals.</Text>
+            </View>
           </View>
-          <View style={styles.proTexts}>
-            <Text style={styles.proTitle}>Stand out with RichyReach Pro</Text>
-            <Text style={styles.proSubtitle}>Get featured, priority in search & more brand deals.</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.proUpgradeBtn} activeOpacity={0.9}>
-          <Text style={styles.proUpgradeText}>Upgrade Now  ➔</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.proUpgradeBtn} activeOpacity={0.9}>
+            <Text style={styles.proUpgradeText}>Upgrade Now  ➔</Text>
+          </TouchableOpacity>
+        </View>}
     </View>
   );
 }

@@ -7,9 +7,10 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'r
 
 interface TrendingAudioProps {
   musics: any[];
+  onSeeAllPress?: () => void;
 }
 
-export function TrendingAudio({ musics }: TrendingAudioProps) {
+export function TrendingAudio({ musics, onSeeAllPress }: TrendingAudioProps) {
   return (
     <View style={styles.section}>
       {/* Section Header */}
@@ -23,7 +24,7 @@ export function TrendingAudio({ musics }: TrendingAudioProps) {
           <Icon name="music" size={16} color="#fff" />
         </LinearGradient>
         <Text style={styles.sectionTitle}>Trending audio</Text>
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity onPress={onSeeAllPress} activeOpacity={0.7}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>

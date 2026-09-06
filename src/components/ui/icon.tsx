@@ -75,7 +75,6 @@ const ICON_MAPPING: Record<string, string> = {
   trash: 'Trash2',
   volume: 'Volume2',
   mute: 'VolumeX',
-  instagram: 'Instagram',
   image: 'Image',
   video: 'Video',
   reply: 'CornerUpLeft',

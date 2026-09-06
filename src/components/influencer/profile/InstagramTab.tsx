@@ -25,7 +25,7 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Instagram } from '@hugeicons/core-free-icons';
 import LottieView from 'lottie-react-native';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowRight, Trash2, RefreshCw } from 'lucide-react-native';
+import { ArrowRight, RefreshCw, Trash2, Zap } from 'lucide-react-native';
 import { TactileButton } from '@/components/ui/tactile-button';
 
 // Tell WebBrowser to handle redirects
@@ -365,6 +365,31 @@ export function InstagramTab({ profile }: InstagramTabProps) {
         </View>
       )}
 
+      {/* Automation entry point */}
+      <TouchableOpacity
+        onPress={() => router.push('/instagram-automation')}
+        activeOpacity={0.9}
+        style={styles.automationCard}
+      >
+        <LinearGradient
+          colors={['#5a1018', '#3f030b', '#2a0207']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.automationGradient}
+        >
+          <View style={styles.automationIcon}>
+            <Zap size={19} color={Colors.gold} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.automationTitle}>Automation</Text>
+            <Text style={styles.automationSub}>
+              Auto-reply to comments and DMs, and greet new people
+            </Text>
+          </View>
+          <ArrowRight size={18} color={Colors.roseSoft} />
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* View Analytics Dashboard Button */}
       <TouchableOpacity
         onPress={() => setAnalyticsModalVisible(true)}
@@ -689,6 +714,40 @@ const styles = StyleSheet.create({
     color: 'rgba(63,3,11,0.5)',
     fontWeight: '600',
   },
+  automationCard: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    marginTop: 18,
+    ...Shadow.card,
+  },
+  automationGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  automationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(243,201,105,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  automationTitle: {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.cream,
+  },
+  automationSub: {
+    fontSize: 11.5,
+    color: 'rgba(232,216,204,0.62)',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+
   viewAnalyticsBtn: {
     height: 48,
     borderRadius: Radius.md,

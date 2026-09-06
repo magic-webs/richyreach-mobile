@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
 import { useUIStore } from '@/store/ui';
 import { Icon } from '@/components/ui/icon';
+import { Instagram as InstagramGlyph } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Image } from 'expo-image';
 
 // Tell WebBrowser to handle redirects
@@ -153,7 +155,7 @@ export function InstagramConnectionCard() {
             end={{ x: 1, y: 0 }}
             style={styles.iconBackground}
           >
-            <Icon name="instagram" size={20} color={Colors.white} />
+            <HugeiconsIcon icon={InstagramGlyph} size={20} strokeWidth={2} color={Colors.white} />
           </LinearGradient>
           <View>
             <Text style={styles.title}>Instagram Business</Text>
@@ -263,7 +265,7 @@ export function InstagramConnectionCard() {
                 <ActivityIndicator size="small" color={Colors.white} />
               ) : (
                 <>
-                  <Icon name="instagram" size={18} color={Colors.white} />
+                  <HugeiconsIcon icon={InstagramGlyph} size={18} strokeWidth={2} color={Colors.white} />
                   <Text style={styles.connectBtnText}>Connect Instagram</Text>
                 </>
               )}

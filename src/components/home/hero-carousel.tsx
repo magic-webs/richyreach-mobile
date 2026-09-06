@@ -137,15 +137,6 @@ export function HeroCarousel({ onArenaPress, onStartPress }: HeroCarouselProps) 
               {banner.title}
             </Text>
           )}
-          {banner.link && (
-            <TouchableOpacity
-              onPress={() => handlePress(banner)}
-              style={[hero.startBtn, { marginTop: 12, alignSelf: 'flex-start' }]}
-              activeOpacity={0.85}
-            >
-              <Text style={hero.startBtnText}>View details</Text>
-            </TouchableOpacity>
-          )}
         </View>
       );
     };

@@ -107,6 +107,11 @@ function NavigationLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="collab/[id]" />
         <Stack.Screen name="insights" />
+        <Stack.Screen name="trending-songs" />
+        <Stack.Screen name="instagram-automation" />
+        <Stack.Screen name="instagram-automation/[id]" />
+        <Stack.Screen name="instagram-automation/activity" />
+        <Stack.Screen name="instagram-automation/ice-breakers" />
       </Stack.Protected>
 
       {/* Public Shared Pages */}

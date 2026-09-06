@@ -5,8 +5,6 @@ import { InstagramConnectionCard } from '@/components/influencer/profile/Instagr
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel';
 import { AboutTab } from '@/components/influencer/profile/AboutTab';
 import { NotificationsContent } from '@/components/influencer/profile/NotificationsContent';
-import { PortfolioTab } from '@/components/influencer/profile/PortfolioTab';
-import { ReviewsTab } from '@/components/influencer/profile/ReviewsTab';
 import { ServicesTab } from '@/components/influencer/profile/ServicesTab';
 import { InstagramTab } from '@/components/influencer/profile/InstagramTab';
 import { VerificationContent } from '@/components/influencer/profile/VerificationContent';
@@ -27,11 +25,19 @@ import { useUIStore } from '@/store/ui';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type ProfileTab = 'Portfolio' | 'Services' | 'Reviews' | 'About' | 'Instagram';
+// Display order of the tab bar, and the single source of truth for ?tab= values.
+const PROFILE_TABS = ['Services', 'Instagram', 'About'] as const;
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
+// ?tab=services / ?tab=Instagram / ?tab=ABOUT all resolve; anything else is ignored.
+function resolveProfileTab(value?: string): ProfileTab | null {
+  if (!value) return null;
+  return PROFILE_TABS.find((t) => t.toLowerCase() === value.trim().toLowerCase()) ?? null;
+}
 type SheetType = 'verification' | 'notifications' | 'privacy' | 'language' | 'help' | 'referral' | null;
 
 const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
@@ -47,7 +53,7 @@ const SETTINGS: [string, string, string, SheetType | 'wallet' | 'orders'][] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { create, status, error, username } = useLocalSearchParams<{ create?: string; status?: string; error?: string; username?: string }>();
+  const { create, status, error, username, tab } = useLocalSearchParams<{ create?: string; status?: string; error?: string; username?: string; tab?: string }>();
   const queryClient = useQueryClient();
 
   const insets = useSafeAreaInsets();
@@ -82,7 +88,44 @@ export default function ProfileScreen() {
   const loadInfluencerProfiles = useProfilesStore((s) => s.loadInfluencerProfiles);
   const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('Services');
+  // The active tab lives in the route params rather than local state, so ?tab=services
+  // and ?tab=instagram deep-link straight to a tab, and navigating here again with the
+  // same value is simply a no-op instead of a stale-param miss.
+  const activeTab = resolveProfileTab(tab) ?? 'Services';
+
+  // Bringing the tab strip into view. tabsRow sits inside styles.body, which is itself a
+  // direct child of the ScrollView, so the content offset is the sum of the two layout ys.
+  const scrollRef = useRef<ScrollView>(null);
+  const bodyY = useRef(0);
+  const tabsY = useRef(0);
+  // True only when the screen mounted from a ?tab= deep link, so the first layout pass
+  // jumps to the tabs instead of leaving the reader looking at the cover photo.
+  const pendingTabScroll = useRef(Boolean(tab));
+
+  const scrollToTabs = (animated = true) => {
+    scrollRef.current?.scrollTo({ y: Math.max(bodyY.current + tabsY.current - 12, 0), animated });
+  };
+
+  // Guards against scrolling twice for the same change: a tab tap records the value it is
+  // about to write, so the param update it causes is not mistaken for an external redirect.
+  const lastScrolledTab = useRef(tab);
+
+  const setActiveTab = (next: ProfileTab) => {
+    const value = next.toLowerCase();
+    lastScrolledTab.current = value;
+    router.setParams({ tab: value });
+    scrollToTabs();
+  };
+
+  // A ?tab= that changes while the screen is already mounted means another page redirected
+  // here. The strip is already measured by then, so this scrolls straight away -- the
+  // pendingTabScroll path only covers the very first layout after a cold mount.
+  useEffect(() => {
+    if (!tab || tab === lastScrolledTab.current) return;
+    lastScrolledTab.current = tab;
+    scrollToTabs();
+  }, [tab]);
+
   const [sheet, setSheet] = useState<SheetType>(null);
 
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -204,7 +247,6 @@ export default function ProfileScreen() {
   const displayName = infProfile?.name || session?.user?.name || 'Creator';
   const displayHandle = infProfile?.instagramHandle ? `@${infProfile.instagramHandle}` : 'No Handle';
   const displayVerified = infProfile?.verified ?? false;
-  const displayBio = infProfile?.bio || '';
   const displayNiches = infProfile?.niche ? [infProfile.niche] : [];
 
   const clearedEarnings = earnings
@@ -212,6 +254,21 @@ export default function ProfileScreen() {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const displayAvailable = `₹${(coinBalance / 100).toLocaleString('en-IN')}`;
+
+  const handleShareProfile = async () => {
+    if (!infProfile?.id) return;
+    try {
+      const shareUrl = `https://app.richyreach.com/shared/creator/${infProfile.id}`;
+      const handle = infProfile.instagramHandle ? ` (@${infProfile.instagramHandle})` : '';
+      await Share.share({
+        title: displayName,
+        message: `Check out ${displayName}${handle} on RichyReach! View the profile and services here: ${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch (err) {
+      console.error('Failed to share profile:', err);
+    }
+  };
 
   const sheetContent: Partial<Record<NonNullable<SheetType>, { title: string; icon: string; content: React.ReactNode; snapPoints?: (string | number)[] }>> = {
     verification: {
@@ -268,16 +325,20 @@ export default function ProfileScreen() {
           <View style={styles.chevronWrap}><Icon name="chevDown" size={15} color={Colors.oxblood} /></View>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.8}>
-            <Icon name="share" size={18} color={Colors.oxblood} />
+          <TouchableOpacity
+            onPress={() => { setProfileInitialData(infProfile); setIsCreateProfileOpen(true); }}
+            style={styles.iconBtn}
+            activeOpacity={0.8}
+          >
+            <Icon name="edit" size={18} color={Colors.oxblood} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setSheet('help')} style={styles.iconBtn} activeOpacity={0.8}>
-            <Icon name="settings" size={18} color={Colors.oxblood} />
+          <TouchableOpacity onPress={handleShareProfile} style={styles.iconBtn} activeOpacity={0.8}>
+            <Icon name="share" size={18} color={Colors.oxblood} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
         {/* Cover + avatar */}
         <View style={{ position: 'relative' }}>
           <Image
@@ -296,7 +357,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.body}>
+        <View style={styles.body} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -327,15 +388,6 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          {loadingProfile ? (
-            <View style={{ gap: 6, marginTop: 12 }}>
-              <Skeleton variant="text" width="100%" />
-              <Skeleton variant="text" width="75%" />
-            </View>
-          ) : (
-            <Text style={styles.bio}>{displayBio}</Text>
-          )}
-
           {/* Stats */}
           <View style={styles.statsRow}>
             {stats.map((s, k) => (
@@ -350,36 +402,30 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* Actions */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={() => { setProfileInitialData(infProfile); setIsCreateProfileOpen(true); }} style={styles.editBtn} activeOpacity={0.85}>
-              <Icon name="edit" size={16} color={Colors.cream} />
-              <Text style={styles.editBtnText}>Edit profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/insights')} style={styles.insightsBtn} activeOpacity={0.85}>
-              <Icon name="chart" size={16} color={Colors.oxblood} />
-              <Text style={styles.insightsBtnText}>Insights</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Profile Banner */}
           <View style={{ marginTop: 20 }}>
             <PromoBannerCarousel position="profile_top" />
           </View>
 
           {/* Tabs */}
-          <View style={styles.tabsRow}>
-            {(['Services', 'Instagram', 'Portfolio', 'Reviews', 'About'] as ProfileTab[]).map((t) => (
+          <View
+            style={styles.tabsRow}
+            onLayout={(e) => {
+              tabsY.current = e.nativeEvent.layout.y;
+              if (pendingTabScroll.current) {
+                pendingTabScroll.current = false;
+                // Deferred a frame so the parent's onLayout has also landed and bodyY is real.
+                requestAnimationFrame(() => scrollToTabs(false));
+              }
+            }}
+          >
+            {PROFILE_TABS.map((t) => (
               <TouchableOpacity key={t} onPress={() => setActiveTab(t)} activeOpacity={0.8} style={styles.tabBtn}>
                 <Text style={[styles.tabBtnText, activeTab === t && styles.tabBtnTextActive]}>{t}</Text>
                 {activeTab === t && <View style={styles.tabIndicator} />}
               </TouchableOpacity>
             ))}
           </View>
-
-          {activeTab === 'Portfolio' && (
-            <PortfolioTab infProfile={infProfile} />
-          )}
 
           {activeTab === 'Services' && (
             <ServicesTab
@@ -399,10 +445,6 @@ export default function ProfileScreen() {
 
           {activeTab === 'Instagram' && (
             <InstagramTab profile={infProfile} />
-          )}
-
-          {activeTab === 'Reviews' && (
-            <ReviewsTab infProfile={infProfile} />
           )}
 
           {activeTab === 'About' && (
@@ -600,19 +642,12 @@ const styles = StyleSheet.create({
   body: { paddingTop: 46, paddingHorizontal: 20 },
   name: { fontFamily: FontFamily.sansMedium, fontSize: 23, fontWeight: '700', color: Colors.ink },
   handle: { fontSize: 13, color: Colors.rose, fontWeight: '600', marginTop: 1 },
-  bio: { marginTop: 12, fontSize: 14, lineHeight: 22, color: 'rgba(42,2,7,0.7)' },
 
   statsRow: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 18, paddingVertical: 14, paddingHorizontal: 6, marginTop: 16, ...Shadow.card },
   statItem: { flex: 1, alignItems: 'center' },
   statBorder: { borderRightWidth: 0.5, borderRightColor: 'rgba(63,3,11,0.1)' },
   statValue: { fontFamily: FontFamily.sansMedium, fontSize: 18, fontWeight: '700', color: Colors.oxblood },
   statLabel: { fontSize: 10.5, color: 'rgba(63,3,11,0.5)', fontWeight: '600', marginTop: 2 },
-
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  editBtn: { flex: 1, height: 44, borderRadius: 13, backgroundColor: Colors.oxblood, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  editBtnText: { fontWeight: '700', fontSize: 14, color: Colors.cream },
-  insightsBtn: { flex: 1, height: 44, borderRadius: 13, borderWidth: 1.5, borderColor: Colors.oxblood, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  insightsBtnText: { fontWeight: '700', fontSize: 14, color: Colors.oxblood },
 
   tabsRow: { flexDirection: 'row', gap: 24, marginTop: 22, borderBottomWidth: 0.5, borderBottomColor: 'rgba(63,3,11,0.1)' },
   tabBtn: { paddingBottom: 10, position: 'relative' },

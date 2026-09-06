@@ -16,6 +16,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { Colors, FontFamily, Radius, Shadow, Gradients } from '@/constants/brand';
 import { api } from '@/lib/api';
 import { Icon } from '@/components/ui/icon';
+import { Instagram as InstagramGlyph } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Image } from 'expo-image';
 import { useUIStore } from '@/store/ui';
 
@@ -378,7 +380,7 @@ export default function InstagramAnalyticsScreen() {
                     onPress={() => handleOpenPermalink(selectedPost.permalink)}
                     activeOpacity={0.85}
                   >
-                    <Icon name="instagram" size={16} color={Colors.white} />
+                    <HugeiconsIcon icon={InstagramGlyph} size={16} strokeWidth={2} color={Colors.white} />
                     <Text style={styles.modalLinkText}>View Natively on Instagram</Text>
                   </TouchableOpacity>
                 </ScrollView>
