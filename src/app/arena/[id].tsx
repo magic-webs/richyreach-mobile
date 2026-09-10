@@ -23,6 +23,7 @@ import { MapPin, ExternalLink, Trophy, CheckCircle2, XCircle, Clock, FileText, U
 import * as Clipboard from 'expo-clipboard';
 import { Colors, FontFamily, Radius, Shadow, Gradients } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { useUIStore } from '@/store/ui';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { useProfilesStore } from '@/store/profiles';
@@ -150,6 +151,7 @@ export default function ArenaDetailScreen() {
   const showModal = useUIStore((s) => s.showModal);
   const queryClient = useQueryClient();
   const { activeInfluencerProfileId } = useProfilesStore();
+  const { allowUnverifiedArenaJoin } = usePlatformSettings();
 
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -356,7 +358,12 @@ export default function ArenaDetailScreen() {
   const handleJoin = () => {
     if (!arena) return;
 
-    if (infProfile && !infProfile.verified && arena.arenaType !== 'google_review') {
+    if (
+      infProfile &&
+      !infProfile.verified &&
+      arena.arenaType !== 'google_review' &&
+      !allowUnverifiedArenaJoin
+    ) {
       showModal({
         title: 'Verification Required 🔒',
         message: 'Only verified creators can join Arena contests. Please connect your Instagram and apply for verification in your Profile settings first.',

@@ -3,6 +3,7 @@ import { PlaceholderImage } from '@/components/ui/placeholder-image';
 import { SectionHead } from '@/components/ui/section-head';
 import { Colors, FontFamily, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { CreateInfluencerProfileSheet } from '@/components/influencer/CreateInfluencerProfileSheet';
 import { ApplyCampaignSheet } from '@/components/influencer/ApplyCampaignSheet';
 import { CounterOfferSheet } from '@/components/brand/CounterOfferSheet';
@@ -159,6 +160,7 @@ export default function CollabDetail() {
   const queryClient = useQueryClient();
 
   const activeInfluencerProfileId = useProfilesStore((s) => s.activeInfluencerProfileId);
+  const { allowUnverifiedCampaignApply } = usePlatformSettings();
 
   const { savedCampaignIds, loadSavedCampaigns, toggleSaveCampaign } = useSavedCampaignsStore();
 
@@ -473,7 +475,7 @@ export default function CollabDetail() {
     }
 
     const activeProfile = profiles.find((p: any) => p.id === activeInfluencerProfileId) || profiles[0];
-    if (activeProfile && !activeProfile.verified) {
+    if (activeProfile && !activeProfile.verified && !allowUnverifiedCampaignApply) {
       useUIStore.getState().showModal({
         title: 'Verification Required 🔒',
         message: 'Only verified creators can apply for campaigns. Please connect your Instagram and apply for verification in your Profile settings first.',

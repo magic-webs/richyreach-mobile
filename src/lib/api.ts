@@ -388,6 +388,10 @@ export const api = {
   banners: {
     list: (position?: string) => request<any[]>(`/banners${position ? `?position=${position}` : ''}`),
   },
+  settings: {
+    /** Admin-controlled platform toggles; public read, no auth required. */
+    get: () => request<{ allowUnverifiedCampaignApply: boolean; allowUnverifiedArenaJoin: boolean }>('/settings'),
+  },
   songs: {
     list: () => request<any[]>('/trending-songs'),
   },
