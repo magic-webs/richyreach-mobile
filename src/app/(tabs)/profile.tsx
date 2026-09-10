@@ -13,7 +13,7 @@ import { HelpContent } from '@/components/influencer/profile/HelpContent';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { InstagramIcon } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -323,7 +323,7 @@ export default function ProfileScreen() {
             style={styles.iconBtn}
             activeOpacity={0.8}
           >
-            <Icon name="edit" size={18} color={Colors.oxblood} />
+            <HugeiconsIcon icon={PencilEdit02Icon} size={18} color={Colors.oxblood} strokeWidth={2} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShareProfile} style={styles.iconBtn} activeOpacity={0.8}>
             <Icon name="share" size={18} color={Colors.oxblood} />

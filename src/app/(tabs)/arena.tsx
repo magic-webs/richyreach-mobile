@@ -16,7 +16,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -267,35 +266,31 @@ export default function ArenaScreen() {
         }
       >
         {/* Your stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: Colors.gold }]}>
-              <Coins size={18} color={Colors.oxblood} strokeWidth={2.4} />
-            </View>
-            <View style={styles.statTextBlock}>
+        <GradientView variant="oxblood" style={styles.statsBar}>
+          <View style={styles.statItem}>
+            <View style={styles.statTopRow}>
+              <Coins size={13} color={Colors.gold} strokeWidth={2.6} />
               <Text style={styles.statValue}>{totalCoinsWon.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Coins Earned</Text>
             </View>
+            <Text style={styles.statLabel}>Coins Earned</Text>
           </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: Colors.roseDeep }]}>
-              <Swords size={18} color={Colors.cream} strokeWidth={2.4} />
-            </View>
-            <View style={styles.statTextBlock}>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={styles.statTopRow}>
+              <Swords size={13} color={Colors.roseSoft} strokeWidth={2.6} />
               <Text style={styles.statValue}>{participations.length}</Text>
-              <Text style={styles.statLabel}>Arenas Joined</Text>
             </View>
+            <Text style={styles.statLabel}>Arenas Joined</Text>
           </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconPill, { backgroundColor: Colors.green }]}>
-              <Zap size={18} color={Colors.cream} strokeWidth={2.4} />
-            </View>
-            <View style={styles.statTextBlock}>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={styles.statTopRow}>
+              <Zap size={13} color="#7fd4ab" strokeWidth={2.6} />
               <Text style={styles.statValue}>{activeParticipations}</Text>
-              <Text style={styles.statLabel}>Active Now</Text>
             </View>
+            <Text style={styles.statLabel}>Active Now</Text>
           </View>
-        </View>
+        </GradientView>
         {/* Filter tabs */}
         <ScrollView
           horizontal
@@ -446,49 +441,49 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.oxblood,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    marginBottom: 4,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: Radius.md,
-    paddingHorizontal: 10,
+  statsBar: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 2,
+    borderRadius: Radius.xl,
     paddingVertical: 13,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    borderWidth: 0.5,
-    borderColor: 'rgba(63,3,11,0.1)',
     ...Shadow.card,
+    shadowOpacity: 0.2,
   },
-  statIconPill: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statTextBlock: {
+  statItem: {
     flex: 1,
-    gap: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  statTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: 3,
+    backgroundColor: 'rgba(232,216,204,0.18)',
   },
   statValue: {
     fontFamily: FontFamily.sansMedium,
     fontSize: 16,
     fontWeight: '800',
-    color: Colors.oxblood,
+    color: Colors.white,
+    lineHeight: 19,
   },
   statLabel: {
     fontFamily: FontFamily.sansMedium,
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: 'rgba(63,3,11,0.68)',
-    lineHeight: 14,
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: 'rgba(232,216,204,0.6)',
+    lineHeight: 11,
   },
   myArenasSection: { paddingHorizontal: 18, marginTop: 16 },
   sectionLabel: {

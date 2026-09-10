@@ -1,4 +1,6 @@
-import { ArrowLeft, Check, Plus, Trash2, X } from 'lucide-react-native';
+import { Check, Plus, Trash2, X } from 'lucide-react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -206,7 +208,7 @@ export default function AutomationEditorScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
-          <ArrowLeft size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerEye}>{isNew ? 'New rule' : 'Edit rule'}</Text>

@@ -1,4 +1,6 @@
-import { ArrowLeft, BarChart2, CornerUpLeft } from 'lucide-react-native';
+import { BarChart2, CornerUpLeft } from 'lucide-react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
 import { api } from '@/lib/api';
@@ -70,7 +72,7 @@ export default function AutomationActivityScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
-          <ArrowLeft size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerEye}>Automation</Text>

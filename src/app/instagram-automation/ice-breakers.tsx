@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Camera,
   Check,
   Image as ImageIcon,
@@ -8,6 +7,8 @@ import {
   Sticker,
   X,
 } from 'lucide-react-native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TactileButton } from '@/components/ui/tactile-button';
 import { Colors, FontFamily, Radius, Shadow } from '@/constants/brand';
@@ -85,7 +86,7 @@ export default function IceBreakersScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
-          <ArrowLeft size={22} color={Colors.oxblood} />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerEye}>Automation</Text>

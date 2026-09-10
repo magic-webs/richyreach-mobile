@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   BarChart2,
   Check,
   ChevronRight,
@@ -9,7 +8,7 @@ import {
   X,
   Zap,
 } from 'lucide-react-native';
-import { Instagram } from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, Instagram } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TactileButton } from '@/components/ui/tactile-button';
@@ -444,7 +443,7 @@ function Header({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
-        <ArrowLeft size={22} color={Colors.oxblood} />
+        <HugeiconsIcon icon={ArrowLeft01Icon} size={22} color={Colors.oxblood} strokeWidth={2} />
       </TouchableOpacity>
       <View style={{ flex: 1 }}>
         <Text style={styles.headerEye}>Instagram</Text>
