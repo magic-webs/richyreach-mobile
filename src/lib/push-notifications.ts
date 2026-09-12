@@ -88,6 +88,7 @@ export async function registerForPushNotificationsAsync(): Promise<DeviceRegistr
   }
 
   if (finalStatus !== 'granted') {
+    console.warn('[push-notifications] Notification permission not granted, no token will be registered');
     return null;
   }
 
@@ -97,7 +98,17 @@ export async function registerForPushNotificationsAsync(): Promise<DeviceRegistr
     return null;
   }
 
-  const { data: expoPushToken } = await Notifications.getExpoPushTokenAsync({ projectId });
+  // Caught here rather than left to the caller's generic catch: this is the step that fails
+  // when the Expo project has no FCM credentials or Play Services is unavailable, and it is
+  // the difference between "the server sent nothing" and "this device was never registered".
+  let expoPushToken: string;
+  try {
+    ({ data: expoPushToken } = await Notifications.getExpoPushTokenAsync({ projectId }));
+  } catch (err) {
+    console.error('[push-notifications] Failed to obtain an Expo push token:', err);
+    return null;
+  }
+
   const deviceId = await getOrCreateDeviceId();
 
   return {
